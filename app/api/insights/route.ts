@@ -1,179 +1,213 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
+import { cookies } from 'next/headers'
 
-// In-memory storage for insights (in production, use a database)
-let insights = [
-  {
-    id: '1',
-    type: 'opportunity',
-    title: 'Optimization Opportunity',
-    description: 'Your "Summer Sale" campaign has a high CTR of 4.2%. Consider increasing the budget by 20% to capitalize on this performance.',
-    campaign: 'Summer Sale',
-    priority: 'high',
-    status: 'pending',
-    createdAt: '2024-11-25T10:00:00Z',
-    metrics: {
-      ctr: 4.2,
-      currentBudget: 5000,
-      suggestedBudget: 6000,
-      potentialIncrease: 1200
+export const dynamic = 'force-dynamic'
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('Missing Supabase environment variables')
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    const cookieStore = await cookies()
+    const accessToken = cookieStore.get('sb-access-token')?.value
+
+    if (!accessToken) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-  },
-  {
-    id: '2',
-    type: 'warning',
-    title: 'Attention Needed',
-    description: 'Your "New Collection" campaign has a ROAS of 1.2x, below your target of 2.0x. Consider pausing underperforming ad sets.',
-    campaign: 'New Collection',
-    priority: 'medium',
-    status: 'pending',
-    createdAt: '2024-11-25T11:30:00Z',
-    metrics: {
-      roas: 1.2,
-      targetRoas: 2.0,
-      spend: 8000,
-      revenue: 9600
+
+    const supabase = createClient(supabaseUrl, supabaseAnonKey)
+    
+    const { data: { user }, error: authError } = await supabase.auth.getUser(accessToken)
+    
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-  },
-  {
-    id: '3',
-    type: 'recommendation',
-    title: 'Creative Refresh Recommended',
-    description: 'Your "Evergreen" campaign ads are 14 days old. Refresh creative to maintain engagement and avoid ad fatigue.',
-    campaign: 'Evergreen',
-    priority: 'low',
-    status: 'pending',
-    createdAt: '2024-11-25T14:00:00Z',
-    metrics: {
-      adAge: 14,
-      avgEngagement: 2.1,
-      targetEngagement: 3.0
+
+    const status = request.nextUrl.searchParams.get('status')
+
+    let query = supabase
+      .from('ai_insights')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+
+    if (status) {
+      query = query.eq('status', status)
     }
+
+    const { data: insights, error } = await query.limit(20)
+
+    if (error) throw error
+
+    return NextResponse.json({ insights: insights || [] })
+  } catch (error: any) {
+    console.error('[v0] Get insights error:', error)
+    return NextResponse.json(
+      { error: error.message || 'Failed to fetch insights' },
+      { status: 500 }
+    )
   }
-];
-
-export async function GET() {
-  return NextResponse.json(insights);
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { action, insightId, campaignId, budget, note } = body;
+    const cookieStore = await cookies()
+    const accessToken = cookieStore.get('sb-access-token')?.value
+
+    if (!accessToken) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseAnonKey)
+    
+    const { data: { user }, error: authError } = await supabase.auth.getUser(accessToken)
+    
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const body = await request.json()
+    const { action, insightId, campaignId, newValue, note } = body
 
     if (action === 'apply') {
-      // Apply suggestion logic
-      const insight = insights.find(i => i.id === insightId);
-      if (!insight) {
-        return NextResponse.json(
-          { error: 'Insight not found' },
-          { status: 404 }
-        );
+      const { data: insight, error: fetchError } = await supabase
+        .from('ai_insights')
+        .select('*')
+        .eq('id', insightId)
+        .eq('user_id', user.id)
+        .single()
+
+      if (fetchError || !insight) {
+        return NextResponse.json({ error: 'Insight not found' }, { status: 404 })
       }
 
-      // Update insight status
-      insight.status = 'applied';
-      insight.appliedAt = new Date().toISOString();
-      insight.note = note;
+      const { error: updateError } = await supabase
+        .from('ai_insights')
+        .update({
+          status: 'applied',
+          applied_at: new Date().toISOString(),
+          applied_note: note,
+        })
+        .eq('id', insightId)
+        .eq('user_id', user.id)
 
-      // Simulate applying the suggestion
-      let result = {};
-      if (insight.type === 'opportunity' && budget) {
-        result = {
-          action: 'budget_increased',
-          campaign: insight.campaign,
-          previousBudget: insight.metrics.currentBudget,
-          newBudget: budget,
-          expectedImpact: '+20% reach, +15% conversions'
-        };
-      } else if (insight.type === 'warning') {
-        result = {
-          action: 'campaign_optimized',
-          campaign: insight.campaign,
-          changes: ['Paused underperforming ad sets', 'Reallocated budget to top performers'],
-          expectedImpact: '+0.8x ROAS improvement'
-        };
-      } else if (insight.type === 'recommendation') {
-        result = {
-          action: 'creative_refresh_scheduled',
-          campaign: insight.campaign,
-          newCreatives: 3,
-          expectedImpact: '+25% engagement, -10% CPM'
-        };
-      }
+      if (updateError) throw updateError
 
       return NextResponse.json({
         success: true,
-        insight,
-        result,
-        message: `Successfully applied suggestion for ${insight.campaign}`
-      });
+        message: `Applied insight for campaign ${insight.campaign_id}`,
+      })
     }
 
     return NextResponse.json(
       { error: 'Invalid action' },
       { status: 400 }
-    );
-  } catch (error) {
+    )
+  } catch (error: any) {
+    console.error('[v0] Apply insight error:', error)
     return NextResponse.json(
-      { error: 'Failed to process request' },
+      { error: error.message || 'Failed to apply insight' },
       { status: 500 }
-    );
+    )
   }
 }
 
 export async function PUT(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { insightId, status } = body;
+    const cookieStore = await cookies()
+    const accessToken = cookieStore.get('sb-access-token')?.value
 
-    const insight = insights.find(i => i.id === insightId);
-    if (!insight) {
+    if (!accessToken) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseAnonKey)
+    
+    const { data: { user }, error: authError } = await supabase.auth.getUser(accessToken)
+    
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const body = await request.json()
+    const { insightId, status } = body
+
+    if (!insightId || !status) {
       return NextResponse.json(
-        { error: 'Insight not found' },
-        { status: 404 }
-      );
+        { error: 'insightId and status are required' },
+        { status: 400 }
+      )
     }
 
-    insight.status = status;
+    const updateData: any = { status }
     if (status === 'dismissed') {
-      insight.dismissedAt = new Date().toISOString();
+      updateData.dismissed_at = new Date().toISOString()
     }
 
-    return NextResponse.json(insight);
-  } catch (error) {
+    const { error } = await supabase
+      .from('ai_insights')
+      .update(updateData)
+      .eq('id', insightId)
+      .eq('user_id', user.id)
+
+    if (error) throw error
+
+    return NextResponse.json({ success: true })
+  } catch (error: any) {
+    console.error('[v0] Update insight error:', error)
     return NextResponse.json(
-      { error: 'Failed to update insight' },
+      { error: error.message || 'Failed to update insight' },
       { status: 500 }
-    );
+    )
   }
 }
 
 export async function DELETE(request: NextRequest) {
   try {
-    const url = new URL(request.url);
-    const id = url.searchParams.get('id');
+    const cookieStore = await cookies()
+    const accessToken = cookieStore.get('sb-access-token')?.value
+
+    if (!accessToken) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseAnonKey)
+    
+    const { data: { user }, error: authError } = await supabase.auth.getUser(accessToken)
+    
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const { searchParams } = new URL(request.url)
+    const id = searchParams.get('id')
 
     if (!id) {
       return NextResponse.json(
-        { error: 'Missing insight ID' },
+        { error: 'id is required' },
         { status: 400 }
-      );
+      )
     }
 
-    const insightIndex = insights.findIndex(i => i.id === id);
-    if (insightIndex === -1) {
-      return NextResponse.json(
-        { error: 'Insight not found' },
-        { status: 404 }
-      );
-    }
+    const { error } = await supabase
+      .from('ai_insights')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', user.id)
 
-    const deletedInsight = insights.splice(insightIndex, 1)[0];
-    return NextResponse.json(deletedInsight);
-  } catch (error) {
+    if (error) throw error
+
+    return NextResponse.json({ success: true })
+  } catch (error: any) {
+    console.error('[v0] Delete insight error:', error)
     return NextResponse.json(
-      { error: 'Failed to delete insight' },
+      { error: error.message || 'Failed to delete insight' },
       { status: 500 }
-    );
+    )
   }
 }

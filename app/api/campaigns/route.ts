@@ -1,88 +1,119 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSupabaseClient } from '@/lib/supabase-client';
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
+import { cookies } from 'next/headers'
 
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic'
 
-export async function GET(req: NextRequest) {
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('Missing Supabase environment variables')
+}
+
+export async function GET(request: NextRequest) {
   try {
-    const userId = req.nextUrl.searchParams.get('userId');
-    if (!userId) {
-      console.error('[v0] Campaigns API: userId required');
-      return NextResponse.json({ error: 'userId required' }, { status: 400 });
+    const cookieStore = await cookies()
+    const accessToken = cookieStore.get('sb-access-token')?.value
+
+    if (!accessToken) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    console.log('[v0] Fetching campaigns for user:', userId);
+    const supabase = createClient(supabaseUrl, supabaseAnonKey)
+    
+    const { data: { user }, error: authError } = await supabase.auth.getUser(accessToken)
+    
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
 
-    const supabase = getServerSupabaseClient();
-    const { data, error } = await supabase
+    const status = request.nextUrl.searchParams.get('status')
+    const platform = request.nextUrl.searchParams.get('platform')
+
+    let query = supabase
       .from('campaigns')
       .select('*')
-      .eq('user_id', userId)
-      .order('revenue', { ascending: false });
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
 
-    if (error) {
-      console.error('[v0] Campaigns fetch error:', error);
-      throw error;
+    if (status) {
+      query = query.eq('status', status)
     }
 
-    console.log('[v0] Campaigns fetched:', data?.length || 0);
+    if (platform) {
+      query = query.eq('platform', platform)
+    }
 
-    return NextResponse.json({ campaigns: data || [] });
+    const { data: campaigns, error } = await query
+
+    if (error) throw error
+
+    console.log('[v0] Fetched', campaigns?.length || 0, 'campaigns for user', user.id)
+
+    return NextResponse.json({ campaigns: campaigns || [] })
   } catch (error: any) {
-    console.error('[v0] Campaigns API error:', error.message);
+    console.error('[v0] Get campaigns error:', error)
     return NextResponse.json(
       { error: error.message || 'Failed to fetch campaigns' },
       { status: 500 }
-    );
+    )
   }
 }
 
-export async function POST(req: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
-    const userId = req.nextUrl.searchParams.get('userId');
-    if (!userId) {
-      return NextResponse.json({ error: 'userId required' }, { status: 400 });
+    const cookieStore = await cookies()
+    const accessToken = cookieStore.get('sb-access-token')?.value
+
+    if (!accessToken) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { name, platform, budget } = await req.json();
+    const supabase = createClient(supabaseUrl, supabaseAnonKey)
+    
+    const { data: { user }, error: authError } = await supabase.auth.getUser(accessToken)
+    
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const body = await request.json()
+    const { name, platform, status, budget, dailyBudget, targetAudience } = body
 
     if (!name || !platform) {
       return NextResponse.json(
-        { error: 'name and platform required' },
+        { error: 'name and platform are required' },
         { status: 400 }
-      );
+      )
     }
 
-    console.log('[v0] Creating campaign:', name, 'on platform:', platform);
-
-    const supabase = getServerSupabaseClient();
-    const { data, error } = await supabase
+    const { data: campaign, error } = await supabase
       .from('campaigns')
       .insert({
-        user_id: userId,
+        user_id: user.id,
         name,
         platform,
+        status: status || 'draft',
         budget: budget || 0,
+        daily_budget: dailyBudget || 0,
+        target_audience: targetAudience || {},
         spend: 0,
         revenue: 0,
-        status: 'active',
       })
       .select()
-      .single();
+      .single()
 
-    if (error) {
-      console.error('[v0] Campaign creation error:', error);
-      throw error;
-    }
+    if (error) throw error
 
-    console.log('[v0] Campaign created:', data.id);
+    console.log('[v0] Created campaign:', campaign.id)
 
-    return NextResponse.json(data, { status: 201 });
+    return NextResponse.json(campaign, { status: 201 })
   } catch (error: any) {
-    console.error('[v0] Campaign POST error:', error.message);
+    console.error('[v0] Create campaign error:', error)
     return NextResponse.json(
       { error: error.message || 'Failed to create campaign' },
       { status: 500 }
-    );
+    )
   }
 }
