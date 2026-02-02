@@ -1,20 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-if (!supabaseUrl || !supabaseKey) {
-  throw new Error('Missing Supabase environment variables')
+function getSupabase() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+  return createClient(url, key)
 }
-
-const supabase = createClient(supabaseUrl, supabaseKey)
 
 export const dynamic = 'force-dynamic'
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const { id } = params
+    const supabase = getSupabase()
 
     const { error } = await supabase
       .from('ad_accounts')
@@ -37,6 +35,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   try {
     const { id } = params
     const { action } = await req.json()
+    const supabase = getSupabase()
 
     if (action === 'sync') {
       // Trigger data sync for this connection

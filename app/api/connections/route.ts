@@ -1,19 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-if (!supabaseUrl || !supabaseKey) {
-  throw new Error('Missing Supabase environment variables')
+function getSupabase() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+  return createClient(url, key)
 }
-
-const supabase = createClient(supabaseUrl, supabaseKey)
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
   try {
+    const supabase = getSupabase()
     const userId = req.nextUrl.searchParams.get('userId')
     if (!userId) {
       return NextResponse.json({ error: 'userId required' }, { status: 400 })
@@ -39,6 +37,7 @@ export async function GET(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
+    const supabase = getSupabase()
     const connectionId = req.nextUrl.searchParams.get('id')
     if (!connectionId) {
       return NextResponse.json({ error: 'Connection ID required' }, { status: 400 })
@@ -58,10 +57,5 @@ export async function DELETE(req: NextRequest) {
       { error: error.message || 'Failed to delete connection' },
       { status: 500 }
     )
-  }
-}
-      { error: error.message || 'Failed to delete connection' },
-      { status: 500 }
-    );
   }
 }

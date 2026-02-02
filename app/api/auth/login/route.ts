@@ -4,17 +4,16 @@ import { cookies } from 'next/headers'
 
 export const dynamic = 'force-dynamic'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables')
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+  )
 }
-
-const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 export async function POST(req: Request) {
   try {
+    const supabase = getSupabase()
     const { email, password } = await req.json()
 
     if (!email || !password) {
