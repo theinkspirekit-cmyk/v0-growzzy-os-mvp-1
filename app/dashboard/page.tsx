@@ -6,53 +6,35 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { LogOut, User, Mail, Calendar, AlertCircle } from 'lucide-react'
+import { LogOut, TrendingUp, DollarSign, Target, Zap, AlertCircle, Plus } from 'lucide-react'
 
 interface UserData {
   id: string
   email: string
   name?: string
-  createdAt?: string
 }
 
 export default function DashboardPage() {
   const router = useRouter()
   const [user, setUser] = useState<UserData | null>(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
 
   useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        // In a real app, you would fetch this from an API endpoint
-        // For now, we'll get it from localStorage (set during login)
-        const userData = localStorage.getItem('user')
-        if (userData) {
-          setUser(JSON.parse(userData))
-        } else {
-          // If no user data, redirect to login
-          router.push('/auth/login')
-        }
-      } catch (err) {
-        setError('Failed to load user data')
-        console.error('[v0] Error loading user:', err)
-      } finally {
-        setLoading(false)
-      }
+    const userData = localStorage.getItem('user')
+    if (!userData) {
+      router.push('/auth/login')
+      return
     }
-
-    fetchUser()
+    setUser(JSON.parse(userData))
+    setLoading(false)
   }, [router])
 
   const handleLogout = async () => {
     try {
-      await fetch('/api/auth/logout', {
-        method: 'POST',
-      })
+      await fetch('/api/auth/logout', { method: 'POST' })
       localStorage.removeItem('user')
       router.push('/auth/login')
     } catch (err) {
-      setError('Logout failed')
       console.error('[v0] Logout error:', err)
     }
   }
@@ -60,96 +42,145 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
       </div>
     )
   }
 
   return (
     <div className="min-h-screen bg-background">
-      <nav className="bg-card border-b border-border">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-foreground">Growzzy OS</h1>
-          <Button variant="destructive" onClick={handleLogout} className="gap-2">
+      <header className="bg-card border-b border-border sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">GROWZZY OS</h1>
+            <p className="text-sm text-muted-foreground">Marketing Operations Platform</p>
+          </div>
+          <Button variant="outline" onClick={handleLogout} className="gap-2">
             <LogOut className="h-4 w-4" />
             Logout
           </Button>
         </div>
-      </nav>
+      </header>
 
-      <main className="max-w-6xl mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold text-foreground mb-2">Welcome to Your Dashboard</h2>
-          <p className="text-muted-foreground">You are successfully logged in!</p>
+      <main className="max-w-7xl mx-auto px-4 py-8">
+        <h2 className="text-3xl font-bold text-foreground mb-8">
+          Welcome back, {user?.name || user?.email}!
+        </h2>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <Link href="/dashboard/analytics">
+            <Card className="p-6 border border-border hover:shadow-lg transition-shadow cursor-pointer">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="p-3 bg-blue-50 rounded-lg">
+                  <DollarSign className="w-6 h-6 text-blue-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-foreground">Analytics Dashboard</h3>
+              </div>
+              <p className="text-sm text-muted-foreground">View real-time campaign metrics and performance data</p>
+            </Card>
+          </Link>
+
+          <Link href="/dashboard/creative-generator">
+            <Card className="p-6 border border-border hover:shadow-lg transition-shadow cursor-pointer">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="p-3 bg-purple-50 rounded-lg">
+                  <Zap className="w-6 h-6 text-purple-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-foreground">AI Creative Studio</h3>
+              </div>
+              <p className="text-sm text-muted-foreground">Generate high-converting ad creatives with OpenAI</p>
+            </Card>
+          </Link>
+
+          <Link href="/dashboard/reports">
+            <Card className="p-6 border border-border hover:shadow-lg transition-shadow cursor-pointer">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="p-3 bg-green-50 rounded-lg">
+                  <TrendingUp className="w-6 h-6 text-green-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-foreground">Reports</h3>
+              </div>
+              <p className="text-sm text-muted-foreground">Generate comprehensive performance reports with AI insights</p>
+            </Card>
+          </Link>
+
+          <Link href="/dashboard/campaigns">
+            <Card className="p-6 border border-border hover:shadow-lg transition-shadow cursor-pointer">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="p-3 bg-orange-50 rounded-lg">
+                  <Target className="w-6 h-6 text-orange-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-foreground">Campaigns</h3>
+              </div>
+              <p className="text-sm text-muted-foreground">Manage and optimize your advertising campaigns</p>
+            </Card>
+          </Link>
+
+          <Link href="/dashboard/automations">
+            <Card className="p-6 border border-border hover:shadow-lg transition-shadow cursor-pointer">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="p-3 bg-red-50 rounded-lg">
+                  <AlertCircle className="w-6 h-6 text-red-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-foreground">Automations</h3>
+              </div>
+              <p className="text-sm text-muted-foreground">Set up smart workflows and automated actions</p>
+            </Card>
+          </Link>
+
+          <Link href="/dashboard/crm">
+            <Card className="p-6 border border-border hover:shadow-lg transition-shadow cursor-pointer">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="p-3 bg-indigo-50 rounded-lg">
+                  <Plus className="w-6 h-6 text-indigo-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-foreground">CRM & Leads</h3>
+              </div>
+              <p className="text-sm text-muted-foreground">Manage leads and personalized outreach campaigns</p>
+            </Card>
+          </Link>
         </div>
 
-        {error && (
-          <Alert variant="destructive" className="mb-6">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-
-        {user && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <Card className="p-6 border border-border">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-primary/10 rounded-lg">
-                  <User className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Full Name</p>
-                  <p className="text-lg font-semibold text-foreground">{user.name || 'Not set'}</p>
-                </div>
+        <Card className="mt-12 p-8 border border-border bg-gradient-to-r from-blue-50 to-indigo-50">
+          <h3 className="text-2xl font-bold text-foreground mb-4">Getting Started with GROWZZY OS</h3>
+          <ul className="space-y-3 text-foreground">
+            <li className="flex items-start gap-3">
+              <span className="text-blue-600 font-bold">1.</span>
+              <div>
+                <p className="font-semibold">Connect Your Platforms</p>
+                <p className="text-sm text-muted-foreground">OAuth integration with Meta, Google, LinkedIn, TikTok, and Shopify</p>
               </div>
-            </Card>
-
-            <Card className="p-6 border border-border">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-primary/10 rounded-lg">
-                  <Mail className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Email</p>
-                  <p className="text-lg font-semibold text-foreground">{user.email}</p>
-                </div>
+            </li>
+            <li className="flex items-start gap-3">
+              <span className="text-blue-600 font-bold">2.</span>
+              <div>
+                <p className="font-semibold">View Real-Time Analytics</p>
+                <p className="text-sm text-muted-foreground">Unified dashboard showing all your marketing metrics in real-time</p>
               </div>
-            </Card>
-
-            <Card className="p-6 border border-border">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-primary/10 rounded-lg">
-                  <Calendar className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">User ID</p>
-                  <p className="text-lg font-semibold text-foreground font-mono text-sm truncate">{user.id}</p>
-                </div>
+            </li>
+            <li className="flex items-start gap-3">
+              <span className="text-blue-600 font-bold">3.</span>
+              <div>
+                <p className="font-semibold">Generate AI Creatives</p>
+                <p className="text-sm text-muted-foreground">Use OpenAI to generate 20+ high-converting ad variations instantly</p>
               </div>
-            </Card>
-          </div>
-        )}
-
-        <div className="mt-12 p-6 bg-card border border-border rounded-lg">
-          <h3 className="text-xl font-semibold text-foreground mb-4">Getting Started</h3>
-          <ul className="space-y-2 text-muted-foreground">
-            <li className="flex items-center gap-2">
-              <span className="text-primary">✓</span> Authentication is now set up with Supabase
             </li>
-            <li className="flex items-center gap-2">
-              <span className="text-primary">✓</span> Passwords are securely hashed with bcrypt
+            <li className="flex items-start gap-3">
+              <span className="text-blue-600 font-bold">4.</span>
+              <div>
+                <p className="font-semibold">Set Up Automations</p>
+                <p className="text-sm text-muted-foreground">Create smart rules to pause, scale, and optimize campaigns automatically</p>
+              </div>
             </li>
-            <li className="flex items-center gap-2">
-              <span className="text-primary">✓</span> Sessions are stored in secure HTTP-only cookies
-            </li>
-            <li className="flex items-center gap-2">
-              <span className="text-primary">✓</span> Protected routes require authentication
+            <li className="flex items-start gap-3">
+              <span className="text-blue-600 font-bold">5.</span>
+              <div>
+                <p className="font-semibold">Generate Reports</p>
+                <p className="text-sm text-muted-foreground">Get AI-powered insights and recommendations delivered to your inbox</p>
+              </div>
             </li>
           </ul>
-        </div>
+        </Card>
       </main>
     </div>
   )
