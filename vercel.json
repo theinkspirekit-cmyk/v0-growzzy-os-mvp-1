@@ -1,12 +1,8 @@
 {
   "crons": [
     {
-      "path": "/api/cron/sync-all-platforms",
-      "schedule": "*/5 * * * *"
-    },
-    {
       "path": "/api/cron/check-automations",
-      "schedule": "*/5 * * * *"
+      "schedule": "0 0 * * *"
     }
   ],
   "buildCommand": "pnpm run build",
@@ -24,3 +20,4 @@
     "GOOGLE_CLIENT_SECRET": "@google_client_secret"
   }
 }
+
