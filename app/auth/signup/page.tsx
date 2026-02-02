@@ -1,18 +1,14 @@
 'use client'
 
-import React from "react"
-
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { signIn } from 'next-auth/react'
 import Link from 'next/link'
-import { Button } from '@/components/ui/button'
+import { useRouter } from 'next/navigation'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Loader2, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { Mail, Lock, User, Loader2, AlertCircle, Check } from 'lucide-react'
 
-export default function SignUpPage() {
+export default function SignupPage() {
   const router = useRouter()
   const [formData, setFormData] = useState({
     name: '',
@@ -20,36 +16,15 @@ export default function SignUpPage() {
     password: '',
     confirmPassword: '',
   })
-  const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+  const [loading, setLoading] = useState(false)
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }))
-  }
-
-  const validateForm = () => {
-    if (!formData.name || !formData.email || !formData.password || !formData.confirmPassword) {
-      setError('All fields are required')
-      return false
-    }
-    if (formData.password.length < 8) {
-      setError('Password must be at least 8 characters')
-      return false
-    }
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match')
-      return false
-    }
-    if (!formData.email.includes('@')) {
-      setError('Invalid email format')
-      return false
-    }
-    return true
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    })
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -57,15 +32,26 @@ export default function SignUpPage() {
     setError('')
     setSuccess(false)
 
-    if (!validateForm()) {
+    // Validation
+    if (!formData.name || !formData.email || !formData.password) {
+      setError('All fields are required')
+      return
+    }
+
+    if (formData.password.length < 8) {
+      setError('Password must be at least 8 characters')
+      return
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match')
       return
     }
 
     setLoading(true)
 
     try {
-      // Register user
-      const registerResponse = await fetch('/api/auth/register', {
+      const res = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -75,50 +61,31 @@ export default function SignUpPage() {
         }),
       })
 
-      const registerData = await registerResponse.json()
+      const data = await res.json()
 
-      if (!registerResponse.ok) {
-        throw new Error(registerData.error || 'Registration failed')
+      if (!res.ok) {
+        setError(data.error || 'Signup failed')
+        return
       }
 
       setSuccess(true)
-
-      // Auto-login after successful registration
-      const loginResult = await signIn('credentials', {
-        email: formData.email,
-        password: formData.password,
-        redirect: false,
-      })
-
-      if (loginResult?.ok) {
-        router.push('/dashboard')
-        router.refresh()
-      } else {
-        setError(loginResult?.error || 'Auto-login failed. Please sign in manually.')
-        setLoading(false)
-      }
-    } catch (err: any) {
-      setError(err.message || 'An error occurred')
-      setSuccess(false)
+      setTimeout(() => {
+        router.push('/auth/login')
+      }, 2000)
+    } catch (err) {
+      setError('An error occurred. Please try again.')
+      console.error('[v0] Signup error:', err)
+    } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:to-gray-800">
-      <div className="w-full max-w-md p-8">
-        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl p-8 border border-gray-100 dark:border-gray-800">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 to-purple-600 mb-4">
-              <span className="text-white text-2xl font-bold">G</span>
-            </div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              Create Account
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-2">
-              Start optimizing with AI
-            </p>
-          </div>
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <div className="bg-card rounded-lg shadow-lg border border-border p-8">
+          <h1 className="text-3xl font-bold text-foreground mb-2">Create Account</h1>
+          <p className="text-muted-foreground mb-8">Join us and get started in minutes</p>
 
           {error && (
             <Alert variant="destructive" className="mb-6">
@@ -128,79 +95,85 @@ export default function SignUpPage() {
           )}
 
           {success && (
-            <Alert className="mb-6 bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800">
-              <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
-              <AlertDescription className="text-green-800 dark:text-green-300">
-                Account created successfully! Redirecting...
+            <Alert className="mb-6 border-green-200 bg-green-50">
+              <Check className="h-4 w-4 text-green-600" />
+              <AlertDescription className="text-green-800">
+                Account created successfully! Redirecting to login...
               </AlertDescription>
             </Alert>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <Label htmlFor="name">Full Name</Label>
-              <Input
-                id="name"
-                name="name"
-                type="text"
-                value={formData.name}
-                onChange={handleInputChange}
-                placeholder="John Doe"
-                required
-                disabled={loading}
-                className="mt-2"
-              />
+              <label className="block text-sm font-medium text-foreground mb-2">Full Name</label>
+              <div className="relative">
+                <User className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+                <Input
+                  type="text"
+                  name="name"
+                  placeholder="John Doe"
+                  value={formData.name}
+                  onChange={handleChange}
+                  disabled={loading}
+                  className="pl-10"
+                  required
+                />
+              </div>
             </div>
 
             <div>
-              <Label htmlFor="email">Email Address</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleInputChange}
-                placeholder="you@company.com"
-                required
-                disabled={loading}
-                className="mt-2"
-              />
+              <label className="block text-sm font-medium text-foreground mb-2">Email</label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+                <Input
+                  type="email"
+                  name="email"
+                  placeholder="your@email.com"
+                  value={formData.email}
+                  onChange={handleChange}
+                  disabled={loading}
+                  className="pl-10"
+                  required
+                />
+              </div>
             </div>
 
             <div>
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                value={formData.password}
-                onChange={handleInputChange}
-                placeholder="••••••••"
-                required
-                disabled={loading}
-                className="mt-2"
-              />
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Minimum 8 characters
-              </p>
+              <label className="block text-sm font-medium text-foreground mb-2">Password</label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+                <Input
+                  type="password"
+                  name="password"
+                  placeholder="••••••••"
+                  value={formData.password}
+                  onChange={handleChange}
+                  disabled={loading}
+                  className="pl-10"
+                  required
+                />
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">At least 8 characters</p>
             </div>
 
             <div>
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
-              <Input
-                id="confirmPassword"
-                name="confirmPassword"
-                type="password"
-                value={formData.confirmPassword}
-                onChange={handleInputChange}
-                placeholder="••••••••"
-                required
-                disabled={loading}
-                className="mt-2"
-              />
+              <label className="block text-sm font-medium text-foreground mb-2">Confirm Password</label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+                <Input
+                  type="password"
+                  name="confirmPassword"
+                  placeholder="••••••••"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  disabled={loading}
+                  className="pl-10"
+                  required
+                />
+              </div>
             </div>
 
-            <Button type="submit" className="w-full" size="lg" disabled={loading}>
+            <Button type="submit" disabled={loading} className="w-full">
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -212,14 +185,12 @@ export default function SignUpPage() {
             </Button>
           </form>
 
-          <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-            <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
-              Already have an account?{' '}
-              <Link href="/auth/signin" className="text-blue-600 hover:text-blue-700 font-semibold">
-                Sign in
-              </Link>
-            </p>
-          </div>
+          <p className="text-sm text-muted-foreground mt-6 text-center">
+            Already have an account?{' '}
+            <Link href="/auth/login" className="text-primary hover:underline font-medium">
+              Sign in
+            </Link>
+          </p>
         </div>
       </div>
     </div>
