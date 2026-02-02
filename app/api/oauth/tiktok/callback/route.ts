@@ -31,48 +31,51 @@ export async function GET(request: NextRequest) {
     }
 
     // Exchange code for access token
-    const tokenResponse = await fetch('https://graph.instagram.com/v18.0/oauth/access_token', {
+    const tokenResponse = await fetch('https://ads.tiktok.com/open_api/v1.3/oauth2/token', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        client_id: process.env.NEXT_PUBLIC_META_APP_ID || '',
-        client_secret: process.env.META_APP_SECRET || '',
-        redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL}/api/oauth/meta/callback`,
-        code,
-      }).toString(),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        app_id: process.env.NEXT_PUBLIC_TIKTOK_APP_ID,
+        secret: process.env.TIKTOK_APP_SECRET,
+        auth_code: code,
+      }),
     })
 
     const tokenData = await tokenResponse.json()
 
-    if (!tokenResponse.ok) {
-      console.error('[v0] Meta token exchange error:', tokenData)
+    if (!tokenResponse.ok || !tokenData.data?.access_token) {
+      console.error('[v0] TikTok token exchange error:', tokenData)
       return NextResponse.json({ error: 'Failed to exchange code' }, { status: 400 })
     }
+
+    // Get advertiser info
+    const accountId = tokenData.data.advertiser_ids?.[0] || 'unknown'
 
     // Store in database
     const { error: dbError } = await supabase
       .from('ad_accounts')
       .insert({
         user_id: user.id,
-        platform: 'meta',
-        account_id: tokenData.user_id,
-        account_name: tokenData.user_id,
-        access_token: tokenData.access_token,
-        refresh_token: tokenData.refresh_token || null,
-        token_expires_at: tokenData.expires_in ? new Date(Date.now() + tokenData.expires_in * 1000) : null,
+        platform: 'tiktok',
+        account_id: accountId,
+        account_name: accountId,
+        access_token: tokenData.data.access_token,
+        refresh_token: tokenData.data.refresh_token || null,
+        token_expires_at: tokenData.data.expires_in ? new Date(Date.now() + tokenData.data.expires_in * 1000) : null,
         status: 'active',
         connected_at: new Date().toISOString(),
       })
 
     if (dbError) {
-      console.error('[v0] Error storing Meta account:', dbError)
+      console.error('[v0] Error storing TikTok account:', dbError)
       return NextResponse.json({ error: 'Failed to store account' }, { status: 500 })
     }
 
-    console.log('[v0] Meta account connected for user:', user.id)
+    console.log('[v0] TikTok account connected for user:', user.id)
+
     return NextResponse.redirect(new URL('/dashboard/connections?success=true', request.url))
   } catch (error: any) {
-    console.error('[v0] Meta callback error:', error)
+    console.error('[v0] TikTok callback error:', error)
     return NextResponse.redirect(new URL('/dashboard/connections?error=true', request.url))
   }
 }
