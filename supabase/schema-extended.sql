@@ -15,11 +15,11 @@ CREATE TABLE IF NOT EXISTS job_queue (
   result JSONB,
   error_message TEXT,
   created_at TIMESTAMPTZ DEFAULT now()
-);
+); 
 
 -- Analytics History for Historical Tracking
 CREATE TABLE IF NOT EXISTS analytics_history (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY, 
   date DATE NOT NULL,
   platform TEXT NOT NULL,
   spend DECIMAL(10,2) DEFAULT 0,
