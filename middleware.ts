@@ -19,7 +19,7 @@ export async function middleware(request: NextRequest) {
 
   if (!sessionCookie) {
     // Redirect to signin if not authenticated
-    const loginUrl = new URL("/auth/signin", request.url)
+    const loginUrl = new URL("/auth", request.url)
     loginUrl.searchParams.set("callbackUrl", pathname)
     return NextResponse.redirect(loginUrl)
   }
