@@ -1,24 +1,22 @@
 {
-  "buildCommand": "pnpm run build",
-  "installCommand": "pnpm install",
-
+  "crons": [
+    {
+      "path": "/api/cron/sync-all-platforms",
+      "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/check-automations",
+      "schedule": "0 0 * * *"
+    }
+  ],
+  "buildCommand": "npm run build",
+  "installCommand": "npm install",
   "env": {
     "NEXT_PUBLIC_SUPABASE_URL": "https://zezdnybwtajdvqpxgcid.supabase.co",
     "NEXT_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InplemRueWJ3dGFqZHZxcHhnY2lkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAwMzE3NTcsImV4cCI6MjA4NTYwNzc1N30.bFa4UrmdwiNFyuQP71BTzGu0zr-2QaGYltdFrnDvRVg",
     "SUPABASE_SERVICE_ROLE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InplemRueWJ3dGFqZHZxcHhnY2lkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDAzMTc1NywiZXhwIjoyMDg1NjA3NzU3fQ.lYpny5r8KU-Ug6Qoi4kzqK7rNf-SphlS7AcJ6empkaA",
-
-    "ENCRYPTION_KEY": "64a3ab9c25b04b95b197aaf8ed84551f3554c402cd724e019f82552686e04d17",
-    "CRON_SECRET": "cron_9f3b7a2d8e4c6a1f5d0b9e7c2a4f8e6b",
-
-    "OPENAI_API_KEY": "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",
-
-    "META_APP_ID": "1902584800655731",
-    "META_APP_SECRET": "9074a56d7e14551e43e97b248796af73",
-
-    "GOOGLE_CLIENT_ID": "630777222372-dlgpk81duktjj9p9964mv19joli56icv.apps.googleusercontent.com",
-    "GOOGLE_CLIENT_SECRET": "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"
+    "NEXT_PUBLIC_APP_URL": "https://v0-growzzyos.vercel.app"
   }
 }
-
 
 
