@@ -9,8 +9,8 @@
       "schedule": "0 0 * * *"
     }
   ],
-  "buildCommand": "pnpm run build",
-  "installCommand": "pnpm install",
+  "buildCommand": "npm run build",
+  "installCommand": "npm install",
   "env": {
     "NEXT_PUBLIC_SUPABASE_URL": "https://zezdnybwtajdvqpxgcid.supabase.co",
     "NEXT_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InplemRueWJ3dGFqZHZxcHhnY2lkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAwMzE3NTcsImV4cCI6MjA4NTYwNzc1N30.bFa4UrmdwiNFyuQP71BTzGu0zr-2QaGYltdFrnDvRVg",
