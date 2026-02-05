@@ -48,6 +48,7 @@ export default function AuthPage() {
         }
 
         router.push("/dashboard")
+        setIsLoading(false)
       } else {
         const response = await fetch("/api/auth/register", {
           method: "POST",
@@ -70,6 +71,7 @@ export default function AuthPage() {
         }
 
         setSuccessMessage("Account created! Please check your email to verify your account.")
+        setIsLoading(false)
         setIsLogin(true)
       }
     } catch (err: any) {
