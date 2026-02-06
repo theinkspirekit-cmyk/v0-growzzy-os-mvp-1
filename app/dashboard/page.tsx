@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import DashboardLayout from "@/components/dashboard-layout"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -14,23 +15,26 @@ import {
   BarChart3,
   RefreshCw,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  Facebook,
+  Google,
+  Linkedin,
+  Lightbulb,
+  ArrowRight
 } from "lucide-react"
-import { LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts"
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts"
 import { cn } from "@/lib/utils"
 
 export const dynamic = "force-dynamic"
-
-const COLORS = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899']
 
 export default function DashboardPage() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
   const [metrics, setMetrics] = useState<any>(null)
-  const [campaigns, setCampaigns] = useState<any[]>([])
   const [historicalData, setHistoricalData] = useState<any[]>([])
-  const [platformBreakdown, setPlatformBreakdown] = useState<any[]>([])
+  const [platformData, setPlatformData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [timeRange, setTimeRange] = useState("30d")
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -44,21 +48,15 @@ export default function DashboardPage() {
         setUser(data.user)
 
         // Fetch dashboard data
-        const [metricsRes, campaignsRes, historicalRes, platformRes] = await Promise.all([
-          fetch(`/api/analytics/summary?userId=${data.user.id}`),
-          fetch(`/api/campaigns?userId=${data.user.id}`),
-          fetch(`/api/analytics/historical?userId=${data.user.id}`),
-          fetch(`/api/analytics/aggregate?userId=${data.user.id}`),
+        const [metricsRes, historicalRes, platformRes] = await Promise.all([
+          fetch(`/api/analytics/summary?userId=${data.user.id}&range=${timeRange}`),
+          fetch(`/api/analytics/historical?userId=${data.user.id}&range=${timeRange}`),
+          fetch(`/api/analytics/platforms?userId=${data.user.id}`),
         ])
 
         if (metricsRes.ok) {
           const metricsData = await metricsRes.json()
           setMetrics(metricsData.summary)
-        }
-
-        if (campaignsRes.ok) {
-          const campaignsData = await campaignsRes.json()
-          setCampaigns(campaignsData.campaigns || [])
         }
 
         if (historicalRes.ok) {
@@ -68,7 +66,7 @@ export default function DashboardPage() {
 
         if (platformRes.ok) {
           const platformData = await platformRes.json()
-          setPlatformBreakdown(platformData.breakdown || [])
+          setPlatformData(platformData.platforms || [])
         }
       } catch (error) {
         console.error("[v0] Dashboard error:", error)
@@ -79,48 +77,186 @@ export default function DashboardPage() {
     }
 
     checkAuth()
-  }, [router])
+  }, [router, timeRange])
 
+  // SECTION A: KPI METRICS
   const MetricCard = ({ 
-    label, 
+    title, 
     value, 
     change, 
-    changeType, 
-    icon: Icon,
-    color = "text-blue-600"
+    changeType,
+    icon: Icon
   }: {
-    label: string
+    title: string
     value: string
     change: string
     changeType: 'increase' | 'decrease'
     icon: React.ComponentType<{ className?: string }>
-    color?: string
   }) => {
     const isPositive = changeType === 'increase'
     
     return (
-      <Card className="p-6 bg-white hover:shadow-lg transition-shadow border-0">
+      <Card className="p-6 bg-white hover:shadow-md transition-shadow border-0">
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <p className="text-sm text-gray-600 mb-2 font-medium">{label}</p>
+            <div className="flex items-center gap-2 mb-2">
+              <Icon className="w-5 h-5 text-gray-600" />
+              <p className="text-sm font-medium text-gray-700">{title}</p>
+            </div>
             <p className="text-3xl font-bold text-gray-900 mb-3">{value}</p>
             <div className="flex items-center gap-2">
-              <div className={cn(
-                "flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium",
-                isPositive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+              {isPositive ? (
+                <ArrowUp className="w-4 h-4 text-green-600" />
+              ) : (
+                <ArrowDown className="w-4 h-4 text-red-600" />
+              )}
+              <span className={cn(
+                "text-sm font-medium",
+                isPositive ? "text-green-600" : "text-red-600"
               )}>
-                {isPositive ? (
-                  <ArrowUp className="w-3 h-3" />
-                ) : (
-                  <ArrowDown className="w-3 h-3" />
-                )}
                 {change}
-              </div>
-              <span className="text-xs text-gray-500">vs last period</span>
+              </span>
+              <span className="text-sm text-gray-500">vs last period</span>
             </div>
           </div>
-          <div className={cn("p-3 rounded-lg bg-gray-50", color)}>
-            <Icon className="w-6 h-6" />
+        </div>
+      </Card>
+    )
+  }
+
+  // SECTION C: PLATFORM BREAKDOWN
+  const PlatformCard = ({ platform, data }: { platform: string; data: any }) => {
+    const getIcon = (platform: string) => {
+      switch (platform.toLowerCase()) {
+        case 'meta': return <Facebook className="w-5 h-5" />
+        case 'google': return <Google className="w-5 h-5" />
+        case 'linkedin': return <Linkedin className="w-5 h-5" />
+        default: return <BarChart3 className="w-5 h-5" />
+      }
+    }
+
+    const trend = data.change || 0
+    const isPositive = trend > 0
+
+    return (
+      <Card className="p-6 bg-white hover:shadow-md transition-shadow border-0">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-gray-100 rounded-lg">
+              {getIcon(platform)}
+            </div>
+            <h3 className="font-semibold text-gray-900">{platform} Ads</h3>
+          </div>
+          <div className={cn(
+            "flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full",
+            isPositive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+          )}>
+            {isPositive ? (
+              <ArrowUp className="w-3 h-3" />
+            ) : (
+              <ArrowDown className="w-3 h-3" />
+            )}
+            {Math.abs(trend).toFixed(1)}%
+          </div>
+        </div>
+        
+        <div className="space-y-3">
+          <div className="flex justify-between">
+            <span className="text-sm text-gray-600">Spend</span>
+            <span className="text-sm font-medium text-gray-900">
+              ${(data.spend || 0).toLocaleString()}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-sm text-gray-600">Revenue</span>
+            <span className="text-sm font-medium text-green-600">
+              ${(data.revenue || 0).toLocaleString()}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-sm text-gray-600">ROAS</span>
+            <span className="text-sm font-bold text-gray-900">
+              {(data.roas || 0).toFixed(2)}x
+            </span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+            <div 
+              className={cn(
+                "h-2 rounded-full",
+                isPositive ? "bg-green-600" : "bg-red-600"
+              )}
+              style={{ width: `${Math.min(Math.abs(trend) * 10, 100)}%` }}
+            ></div>
+          </div>
+        </div>
+      </Card>
+    )
+  }
+
+  // SECTION D: LEADS SNAPSHOT
+  const LeadsSummary = () => {
+    const totalLeads = metrics?.totalLeads || 0
+    const qualifiedLeads = Math.floor(totalLeads * 0.35)
+    const unqualifiedLeads = totalLeads - qualifiedLeads
+
+    return (
+      <Card className="p-6 bg-white border-0">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Leads Snapshot</h3>
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <div className="text-center p-4 bg-blue-50 rounded-lg">
+            <div className="text-2xl font-bold text-blue-600">{totalLeads}</div>
+            <div className="text-sm text-blue-800">Total Leads Today</div>
+          </div>
+          <div className="space-y-2">
+            <div className="flex justify-between">
+              <span className="text-sm text-gray-600">Qualified</span>
+              <span className="text-sm font-medium text-green-600">{qualifiedLeads}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-sm text-gray-600">Unqualified</span>
+              <span className="text-sm font-medium text-gray-600">{unqualifiedLeads}</span>
+            </div>
+          </div>
+        </div>
+        <div className="space-y-2 text-sm">
+          <div className="flex justify-between">
+            <span className="text-gray-600">Best Campaign</span>
+            <span className="font-medium text-gray-900">Summer Sale 2024</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-600">Best Platform</span>
+            <span className="font-medium text-gray-900">Meta Ads</span>
+          </div>
+        </div>
+        <Button variant="outline" className="w-full mt-4">
+          View All Leads
+          <ArrowRight className="w-4 h-4 ml-2" />
+        </Button>
+      </Card>
+    )
+  }
+
+  // SECTION E: AI INSIGHTS
+  const AIInsightCard = ({ insight }: { insight: any }) => {
+    const getTypeColor = (type: string) => {
+      switch (type) {
+        case 'opportunity': return "bg-green-100 text-green-800 border-green-200"
+        case 'warning': return "bg-yellow-100 text-yellow-800 border-yellow-200"
+        case 'action': return "bg-blue-100 text-blue-800 border-blue-200"
+        default: return "bg-gray-100 text-gray-800 border-gray-200"
+      }
+    }
+
+    return (
+      <Card className={cn("p-4 border", getTypeColor(insight.type))}>
+        <div className="flex items-start gap-3">
+          <Lightbulb className="w-4 h-4 mt-1" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-gray-900 mb-1">{insight.title}</p>
+            <p className="text-xs text-gray-600 mb-2">{insight.description}</p>
+            <Button size="sm" variant="outline" className="text-xs">
+              {insight.action}
+            </Button>
           </div>
         </div>
       </Card>
@@ -139,168 +275,182 @@ export default function DashboardPage() {
 
   if (!user) return null
 
-  const totalSpend = metrics?.totalSpend || 0
   const totalRevenue = metrics?.totalRevenue || 0
+  const totalSpend = metrics?.totalSpend || 0
+  const totalLeads = metrics?.totalLeads || 0
   const roas = metrics?.roas || 0
-  const conversions = metrics?.totalConversions || 0
+
+  const aiInsights = [
+    {
+      type: "action",
+      title: "Scale Meta Campaign Y",
+      description: "ROAS 4.2x - strong performance",
+      action: "Scale Campaign"
+    },
+    {
+      type: "warning", 
+      title: "Pause Campaign X",
+      description: "CPA increased by 23%",
+      action: "Review Campaign"
+    },
+    {
+      type: "opportunity",
+      title: "Optimize Google Ads",
+      description: "CTR below industry average",
+      action: "Get Suggestions"
+    }
+  ]
 
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        {/* Welcome Section */}
+        {/* Header */}
         <div className="flex justify-between items-start">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">
-              Welcome back, {user.full_name || user.email}!
-            </h2>
-            <p className="text-gray-600">Here's your marketing performance overview for the last 30 days.</p>
+            <h2 className="text-2xl font-bold text-gray-900">Dashboard Overview</h2>
+            <p className="text-gray-600 mt-1">Quick business health check</p>
           </div>
           <Button className="flex items-center gap-2">
             <RefreshCw className="w-4 h-4" />
-            Refresh Data
+            Refresh
           </Button>
         </div>
 
-        {/* KPI Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* SECTION A: KPI METRICS */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <MetricCard
-            label="Total Spend"
-            value={`$${totalSpend.toLocaleString('en-US', { maximumFractionDigits: 0 })}`}
+            title="Total Revenue"
+            value={`$${totalRevenue.toLocaleString('en-US', { maximumFractionDigits: 0 })}`}
             change="+12.5%"
             changeType="increase"
             icon={DollarSign}
-            color="text-blue-600"
           />
           <MetricCard
-            label="Total Revenue"
-            value={`$${totalRevenue.toLocaleString('en-US', { maximumFractionDigits: 0 })}`}
+            title="Ad Spend"
+            value={`$${totalSpend.toLocaleString('en-US', { maximumFractionDigits: 0 })}`}
             change="+8.2%"
             changeType="increase"
-            icon={TrendingUp}
-            color="text-green-600"
-          />
-          <MetricCard
-            label="ROAS"
-            value={`${roas.toFixed(2)}x`}
-            change="-2.1%"
-            changeType="decrease"
             icon={BarChart3}
-            color="text-purple-600"
           />
           <MetricCard
-            label="Conversions"
-            value={conversions.toLocaleString()}
+            title="Leads Generated"
+            value={totalLeads.toLocaleString()}
             change="+15.3%"
             changeType="increase"
             icon={Users}
-            color="text-orange-600"
+          />
+          <MetricCard
+            title="ROAS"
+            value={`${roas.toFixed(2)}x`}
+            change="-2.1%"
+            changeType="decrease"
+            icon={Target}
           />
         </div>
 
-        {/* Charts Section */}
+        {/* SECTION B: PERFORMANCE OVERVIEW */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Performance Chart */}
+          {/* Left (8 columns) - Performance Chart */}
           <Card className="lg:col-span-2 p-6 bg-white border-0">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Performance Trend</h3>
-            {historicalData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={historicalData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="date" stroke="#6b7280" style={{ fontSize: '12px' }} />
-                  <YAxis stroke="#6b7280" style={{ fontSize: '12px' }} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'white',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '8px',
-                    }}
-                  />
-                  <Legend />
-                  <Line type="monotone" dataKey="spend" stroke="#3b82f6" strokeWidth={2} dot={false} name="Spend" />
-                  <Line type="monotone" dataKey="revenue" stroke="#10b981" strokeWidth={2} dot={false} name="Revenue" />
-                </LineChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-72 flex items-center justify-center text-gray-500">
-                <p>No data available. Connect platforms to see trends.</p>
-              </div>
-            )}
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-semibold text-gray-900">Performance Overview</h3>
+              <Select value={timeRange} onValueChange={setTimeRange}>
+                <SelectTrigger className="w-24">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="7d">7d</SelectItem>
+                  <SelectItem value="30d">30d</SelectItem>
+                  <SelectItem value="90d">90d</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={historicalData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis 
+                  dataKey="date" 
+                  stroke="#6b7280" 
+                  style={{ fontSize: '12px' }}
+                  tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                />
+                <YAxis 
+                  stroke="#6b7280" 
+                  style={{ fontSize: '12px' }}
+                  tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'white',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                  }}
+                  formatter={(value: any) => [`$${value.toLocaleString()}`, '']}
+                />
+                <Legend />
+                <Line type="monotone" dataKey="revenue" stroke="#10b981" strokeWidth={2} name="Revenue" />
+                <Line type="monotone" dataKey="spend" stroke="#3b82f6" strokeWidth={2} name="Spend" />
+              </LineChart>
+            </ResponsiveContainer>
           </Card>
 
-          {/* Platform Breakdown */}
+          {/* Right (4 columns) - Performance Metrics */}
           <Card className="p-6 bg-white border-0">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Spend by Platform</h3>
-            {platformBreakdown.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={platformBreakdown}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, value }) => `${name}: $${value}`}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {platformBreakdown.map((entry: any, index: number) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'white',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '8px',
-                    }}
-                    formatter={(value) => `$${value.toLocaleString()}`}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-72 flex items-center justify-center text-gray-500">
-                <p>No platform data</p>
+            <h3 className="text-lg font-semibold text-gray-900 mb-6">Performance Metrics</h3>
+            <div className="space-y-4">
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <div className="text-2xl font-bold text-gray-900 mb-1">3.2%</div>
+                <div className="text-sm text-gray-600">Conversion Rate</div>
+                <div className="text-xs text-green-600 mt-1">+0.3% vs last period</div>
               </div>
-            )}
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <div className="text-2xl font-bold text-gray-900 mb-1">$2.45</div>
+                <div className="text-sm text-gray-600">CPC</div>
+                <div className="text-xs text-red-600 mt-1">+0.12 vs last period</div>
+              </div>
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <div className="text-2xl font-bold text-gray-900 mb-1">$76.80</div>
+                <div className="text-sm text-gray-600">CPA</div>
+                <div className="text-xs text-green-600 mt-1">-5.2% vs last period</div>
+              </div>
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <div className="text-2xl font-bold text-gray-900 mb-1">2.8%</div>
+                <div className="text-sm text-gray-600">CTR</div>
+                <div className="text-xs text-green-600 mt-1">+0.4% vs last period</div>
+              </div>
+            </div>
           </Card>
         </div>
 
-        {/* Recent Campaigns */}
-        <Card className="p-6 bg-white border-0">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Campaigns</h3>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Campaign</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Platform</th>
-                  <th className="text-right py-3 px-4 text-sm font-medium text-gray-700">Spend</th>
-                  <th className="text-right py-3 px-4 text-sm font-medium text-gray-700">Revenue</th>
-                  <th className="text-right py-3 px-4 text-sm font-medium text-gray-700">ROAS</th>
-                </tr>
-              </thead>
-              <tbody>
-                {campaigns.slice(0, 5).map((campaign: any) => (
-                  <tr key={campaign.id} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="py-3 px-4 text-sm font-medium text-gray-900">{campaign.name}</td>
-                    <td className="py-3 px-4 text-sm text-gray-600 capitalize">{campaign.platform}</td>
-                    <td className="py-3 px-4 text-sm text-right text-gray-900">
-                      ${(campaign.spend || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}
-                    </td>
-                    <td className="py-3 px-4 text-sm text-right text-green-600">
-                      ${(campaign.revenue || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}
-                    </td>
-                    <td className="py-3 px-4 text-sm text-right font-medium">
-                      <span className={campaign.roas > 2 ? 'text-green-600' : campaign.roas > 1 ? 'text-yellow-600' : 'text-red-600'}>
-                        {(campaign.roas || 0).toFixed(2)}x
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
+        {/* SECTION C: PLATFORM BREAKDOWN */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {platformData.map((platform: any) => (
+            <PlatformCard 
+              key={platform.name} 
+              platform={platform.name}
+              data={platform}
+            />
+          ))}
+        </div>
+
+        {/* SECTION D & E: LEADS SNAPSHOT + AI INSIGHTS */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <LeadsSummary />
+          
+          <Card className="p-6 bg-white border-0">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">AI Insights</h3>
+            <div className="space-y-3">
+              {aiInsights.map((insight, index) => (
+                <AIInsightCard key={index} insight={insight} />
+              ))}
+            </div>
+            <Button className="w-full mt-4">
+              Open AI Copilot
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          </Card>
+        </div>
       </div>
     </DashboardLayout>
   )
