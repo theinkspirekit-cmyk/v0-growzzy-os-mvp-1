@@ -3,7 +3,7 @@
  * Syncs actual data from connected platforms to the dashboard
  */
 
-import { supabaseAdmin } from "@/lib/supabaseAdmin"
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin"
 import { decrypt } from "@/lib/crypto"
 
 export async function syncPlatformData(userId: string, platforms: string[]): Promise<void> {
@@ -27,6 +27,7 @@ export async function syncAllPlatforms(userId: string): Promise<{ synced: number
     console.log(`[v0] Starting platform sync for user ${userId}`)
 
     // Get all active platform connections for this user
+    const supabaseAdmin = getSupabaseAdmin()
     const { data: connections, error: connError } = await supabaseAdmin
       .from("platform_connections")
       .select("*")
@@ -63,6 +64,7 @@ export async function syncAllPlatforms(userId: string): Promise<{ synced: number
 async function syncPlatformCampaigns(userId: string, connection: any): Promise<{ count: number; campaigns: any[] }> {
   const platform = connection.platform
   const accessToken = decrypt(connection.access_token)
+  const supabaseAdmin = getSupabaseAdmin()
 
   const syncedCampaigns = []
 
