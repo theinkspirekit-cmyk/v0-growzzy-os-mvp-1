@@ -17,7 +17,7 @@ import {
   ArrowUp,
   ArrowDown,
   Facebook,
-  Google,
+  Search,
   Linkedin,
   Lightbulb,
   ArrowRight
@@ -79,7 +79,7 @@ export default function DashboardPage() {
     checkAuth()
   }, [router, timeRange])
 
-  // SECTION A: KPI METRICS
+  // SECTION A: KPI METRICS - Nexus Style
   const MetricCard = ({ 
     title, 
     value, 
@@ -96,14 +96,16 @@ export default function DashboardPage() {
     const isPositive = changeType === 'increase'
     
     return (
-      <Card className="p-6 bg-white hover:shadow-md transition-shadow border-0">
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <div className="flex items-center gap-2 mb-2">
-              <Icon className="w-5 h-5 text-gray-600" />
+            <div className="flex items-center gap-3 mb-3">
+              <div className="p-2 bg-gray-50 rounded-lg">
+                <Icon className="w-5 h-5 text-gray-600" />
+              </div>
               <p className="text-sm font-medium text-gray-700">{title}</p>
             </div>
-            <p className="text-3xl font-bold text-gray-900 mb-3">{value}</p>
+            <p className="text-3xl font-bold text-gray-900 mb-2">{value}</p>
             <div className="flex items-center gap-2">
               {isPositive ? (
                 <ArrowUp className="w-4 h-4 text-green-600" />
@@ -120,16 +122,89 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
-      </Card>
+      </div>
     )
   }
 
-  // SECTION C: PLATFORM BREAKDOWN
+  // SECTION B: PERFORMANCE OVERVIEW - Nexus Style
+  const PerformanceChart = () => (
+    <div className="bg-white rounded-lg border border-gray-200 p-6">
+      <div className="flex justify-between items-center mb-6">
+        <h3 className="text-lg font-semibold text-gray-900">Performance Overview</h3>
+        <Select value={timeRange} onValueChange={setTimeRange}>
+          <SelectTrigger className="w-20 h-8 text-sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="7d">7d</SelectItem>
+            <SelectItem value="30d">30d</SelectItem>
+            <SelectItem value="90d">90d</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      
+      <ResponsiveContainer width="100%" height={280}>
+        <LineChart data={historicalData}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+          <XAxis 
+            dataKey="date" 
+            stroke="#6b7280" 
+            style={{ fontSize: '12px' }}
+            tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+          />
+          <YAxis 
+            stroke="#6b7280" 
+            style={{ fontSize: '12px' }}
+            tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
+          />
+          <Tooltip
+            contentStyle={{
+              backgroundColor: 'white',
+              border: '1px solid #e5e7eb',
+              borderRadius: '8px',
+            }}
+            formatter={(value: any) => [`$${value.toLocaleString()}`, '']}
+          />
+          <Legend />
+          <Line type="monotone" dataKey="revenue" stroke="#10b981" strokeWidth={2} name="Revenue" />
+          <Line type="monotone" dataKey="spend" stroke="#3b82f6" strokeWidth={2} name="Spend" />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  )
+
+  // Performance Metrics - Right Side
+  const PerformanceMetrics = () => (
+    <div className="space-y-4">
+      <div className="bg-white rounded-lg border border-gray-200 p-4">
+        <div className="text-2xl font-bold text-gray-900 mb-1">3.2%</div>
+        <div className="text-sm text-gray-600 mb-2">Conversion Rate</div>
+        <div className="text-xs text-green-600">+0.3% vs last period</div>
+      </div>
+      <div className="bg-white rounded-lg border border-gray-200 p-4">
+        <div className="text-2xl font-bold text-gray-900 mb-1">$2.45</div>
+        <div className="text-sm text-gray-600 mb-2">CPC</div>
+        <div className="text-xs text-red-600">+0.12 vs last period</div>
+      </div>
+      <div className="bg-white rounded-lg border border-gray-200 p-4">
+        <div className="text-2xl font-bold text-gray-900 mb-1">$76.80</div>
+        <div className="text-sm text-gray-600 mb-2">CPA</div>
+        <div className="text-xs text-green-600">-5.2% vs last period</div>
+      </div>
+      <div className="bg-white rounded-lg border border-gray-200 p-4">
+        <div className="text-2xl font-bold text-gray-900 mb-1">2.8%</div>
+        <div className="text-sm text-gray-600 mb-2">CTR</div>
+        <div className="text-xs text-green-600">+0.4% vs last period</div>
+      </div>
+    </div>
+  )
+
+  // SECTION C: PLATFORM BREAKDOWN - Nexus Style
   const PlatformCard = ({ platform, data }: { platform: string; data: any }) => {
     const getIcon = (platform: string) => {
       switch (platform.toLowerCase()) {
         case 'meta': return <Facebook className="w-5 h-5" />
-        case 'google': return <Google className="w-5 h-5" />
+        case 'google': return <Search className="w-5 h-5" />
         case 'linkedin': return <Linkedin className="w-5 h-5" />
         default: return <BarChart3 className="w-5 h-5" />
       }
@@ -139,10 +214,10 @@ export default function DashboardPage() {
     const isPositive = trend > 0
 
     return (
-      <Card className="p-6 bg-white hover:shadow-md transition-shadow border-0">
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-gray-100 rounded-lg">
+            <div className="p-2 bg-gray-50 rounded-lg">
               {getIcon(platform)}
             </div>
             <h3 className="font-semibold text-gray-900">{platform} Ads</h3>
@@ -179,7 +254,7 @@ export default function DashboardPage() {
               {(data.roas || 0).toFixed(2)}x
             </span>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+          <div className="w-full bg-gray-200 rounded-full h-2 mt-3">
             <div 
               className={cn(
                 "h-2 rounded-full",
@@ -189,18 +264,18 @@ export default function DashboardPage() {
             ></div>
           </div>
         </div>
-      </Card>
+      </div>
     )
   }
 
-  // SECTION D: LEADS SNAPSHOT
+  // SECTION D: LEADS SNAPSHOT - Nexus Style
   const LeadsSummary = () => {
     const totalLeads = metrics?.totalLeads || 0
     const qualifiedLeads = Math.floor(totalLeads * 0.35)
     const unqualifiedLeads = totalLeads - qualifiedLeads
 
     return (
-      <Card className="p-6 bg-white border-0">
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Leads Snapshot</h3>
         <div className="grid grid-cols-2 gap-4 mb-4">
           <div className="text-center p-4 bg-blue-50 rounded-lg">
@@ -218,7 +293,7 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
-        <div className="space-y-2 text-sm">
+        <div className="space-y-2 text-sm mb-4">
           <div className="flex justify-between">
             <span className="text-gray-600">Best Campaign</span>
             <span className="font-medium text-gray-900">Summer Sale 2024</span>
@@ -228,27 +303,27 @@ export default function DashboardPage() {
             <span className="font-medium text-gray-900">Meta Ads</span>
           </div>
         </div>
-        <Button variant="outline" className="w-full mt-4">
+        <Button variant="outline" className="w-full">
           View All Leads
           <ArrowRight className="w-4 h-4 ml-2" />
         </Button>
-      </Card>
+      </div>
     )
   }
 
-  // SECTION E: AI INSIGHTS
+  // SECTION E: AI INSIGHTS - Nexus Style
   const AIInsightCard = ({ insight }: { insight: any }) => {
     const getTypeColor = (type: string) => {
       switch (type) {
-        case 'opportunity': return "bg-green-100 text-green-800 border-green-200"
-        case 'warning': return "bg-yellow-100 text-yellow-800 border-yellow-200"
-        case 'action': return "bg-blue-100 text-blue-800 border-blue-200"
-        default: return "bg-gray-100 text-gray-800 border-gray-200"
+        case 'opportunity': return "bg-green-50 text-green-800 border-green-200"
+        case 'warning': return "bg-yellow-50 text-yellow-800 border-yellow-200"
+        case 'action': return "bg-blue-50 text-blue-800 border-blue-200"
+        default: return "bg-gray-50 text-gray-800 border-gray-200"
       }
     }
 
     return (
-      <Card className={cn("p-4 border", getTypeColor(insight.type))}>
+      <div className={cn("rounded-lg border p-4", getTypeColor(insight.type))}>
         <div className="flex items-start gap-3">
           <Lightbulb className="w-4 h-4 mt-1" />
           <div className="flex-1">
@@ -259,7 +334,7 @@ export default function DashboardPage() {
             </Button>
           </div>
         </div>
-      </Card>
+      </div>
     )
   }
 
@@ -303,7 +378,7 @@ export default function DashboardPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 bg-gray-50/50 p-6 rounded-lg">
         {/* Header */}
         <div className="flex justify-between items-start">
           <div>
@@ -317,7 +392,7 @@ export default function DashboardPage() {
         </div>
 
         {/* SECTION A: KPI METRICS */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <MetricCard
             title="Total Revenue"
             value={`$${totalRevenue.toLocaleString('en-US', { maximumFractionDigits: 0 })}`}
@@ -350,81 +425,16 @@ export default function DashboardPage() {
 
         {/* SECTION B: PERFORMANCE OVERVIEW */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left (8 columns) - Performance Chart */}
-          <Card className="lg:col-span-2 p-6 bg-white border-0">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-semibold text-gray-900">Performance Overview</h3>
-              <Select value={timeRange} onValueChange={setTimeRange}>
-                <SelectTrigger className="w-24">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="7d">7d</SelectItem>
-                  <SelectItem value="30d">30d</SelectItem>
-                  <SelectItem value="90d">90d</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={historicalData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis 
-                  dataKey="date" 
-                  stroke="#6b7280" 
-                  style={{ fontSize: '12px' }}
-                  tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                />
-                <YAxis 
-                  stroke="#6b7280" 
-                  style={{ fontSize: '12px' }}
-                  tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: 'white',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '8px',
-                  }}
-                  formatter={(value: any) => [`$${value.toLocaleString()}`, '']}
-                />
-                <Legend />
-                <Line type="monotone" dataKey="revenue" stroke="#10b981" strokeWidth={2} name="Revenue" />
-                <Line type="monotone" dataKey="spend" stroke="#3b82f6" strokeWidth={2} name="Spend" />
-              </LineChart>
-            </ResponsiveContainer>
-          </Card>
-
-          {/* Right (4 columns) - Performance Metrics */}
-          <Card className="p-6 bg-white border-0">
-            <h3 className="text-lg font-semibold text-gray-900 mb-6">Performance Metrics</h3>
-            <div className="space-y-4">
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <div className="text-2xl font-bold text-gray-900 mb-1">3.2%</div>
-                <div className="text-sm text-gray-600">Conversion Rate</div>
-                <div className="text-xs text-green-600 mt-1">+0.3% vs last period</div>
-              </div>
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <div className="text-2xl font-bold text-gray-900 mb-1">$2.45</div>
-                <div className="text-sm text-gray-600">CPC</div>
-                <div className="text-xs text-red-600 mt-1">+0.12 vs last period</div>
-              </div>
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <div className="text-2xl font-bold text-gray-900 mb-1">$76.80</div>
-                <div className="text-sm text-gray-600">CPA</div>
-                <div className="text-xs text-green-600 mt-1">-5.2% vs last period</div>
-              </div>
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <div className="text-2xl font-bold text-gray-900 mb-1">2.8%</div>
-                <div className="text-sm text-gray-600">CTR</div>
-                <div className="text-xs text-green-600 mt-1">+0.4% vs last period</div>
-              </div>
-            </div>
-          </Card>
+          <div className="lg:col-span-2">
+            <PerformanceChart />
+          </div>
+          <div>
+            <PerformanceMetrics />
+          </div>
         </div>
 
         {/* SECTION C: PLATFORM BREAKDOWN */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {platformData.map((platform: any) => (
             <PlatformCard 
               key={platform.name} 
@@ -438,7 +448,7 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <LeadsSummary />
           
-          <Card className="p-6 bg-white border-0">
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">AI Insights</h3>
             <div className="space-y-3">
               {aiInsights.map((insight, index) => (
@@ -449,7 +459,7 @@ export default function DashboardPage() {
               Open AI Copilot
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
-          </Card>
+          </div>
         </div>
       </div>
     </DashboardLayout>
