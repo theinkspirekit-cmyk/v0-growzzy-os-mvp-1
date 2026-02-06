@@ -78,7 +78,7 @@ export default function DashboardPage() {
     checkAuth()
   }, [router, timeRange])
 
-  // Exact Metric Card from reference image
+  // Metric Card with strong hierarchy
   const MetricCard = ({ 
     title, 
     value, 
@@ -101,7 +101,7 @@ export default function DashboardPage() {
             <div className="w-10 h-10 bg-gray-50 rounded-lg flex items-center justify-center">
               <Icon className="w-5 h-5 text-gray-600" />
             </div>
-            <p className="text-sm font-medium text-gray-900">{title}</p>
+            <p className="text-sm text-gray-500 font-medium">{title}</p>
           </div>
           <div className={cn(
             "flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium",
@@ -115,13 +115,13 @@ export default function DashboardPage() {
             {change}
           </div>
         </div>
-        <div className="text-2xl font-bold text-gray-900">{value}</div>
-        <div className="text-xs text-gray-500 mt-1">vs last period</div>
+        <div className="text-3xl font-bold text-gray-900 mb-1">{value}</div>
+        <div className="text-xs text-gray-400">vs last period</div>
       </div>
     )
   }
 
-  // Performance Chart - exact match to reference
+  // Performance Chart
   const PerformanceChart = () => (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
       <div className="flex justify-between items-center mb-6">
@@ -169,49 +169,49 @@ export default function DashboardPage() {
     </div>
   )
 
-  // Performance Metrics - exact match to reference
+  // Performance Metrics with strong hierarchy
   const PerformanceMetrics = () => (
     <div className="space-y-4">
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-        <div className="text-2xl font-bold text-gray-900">3.2%</div>
-        <div className="text-sm text-gray-600 mb-1">Conversion Rate</div>
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+        <div className="text-3xl font-bold text-gray-900 mb-2">3.2%</div>
+        <div className="text-sm text-gray-500 mb-3">Conversion Rate</div>
         <div className="flex items-center gap-1 text-xs text-green-600">
           <ArrowUp className="w-3 h-3" />
           <span>+0.3%</span>
-          <span className="text-gray-500">vs last period</span>
+          <span className="text-gray-400">vs last period</span>
         </div>
       </div>
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-        <div className="text-2xl font-bold text-gray-900">$2.45</div>
-        <div className="text-sm text-gray-600 mb-1">CPC</div>
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+        <div className="text-3xl font-bold text-gray-900 mb-2">$2.45</div>
+        <div className="text-sm text-gray-500 mb-3">CPC</div>
         <div className="flex items-center gap-1 text-xs text-red-600">
           <ArrowUp className="w-3 h-3" />
           <span>+0.12</span>
-          <span className="text-gray-500">vs last period</span>
+          <span className="text-gray-400">vs last period</span>
         </div>
       </div>
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-        <div className="text-2xl font-bold text-gray-900">$76.80</div>
-        <div className="text-sm text-gray-600 mb-1">CPA</div>
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+        <div className="text-3xl font-bold text-gray-900 mb-2">$76.80</div>
+        <div className="text-sm text-gray-500 mb-3">CPA</div>
         <div className="flex items-center gap-1 text-xs text-green-600">
           <ArrowDown className="w-3 h-3" />
           <span>-5.2%</span>
-          <span className="text-gray-500">vs last period</span>
+          <span className="text-gray-400">vs last period</span>
         </div>
       </div>
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-        <div className="text-2xl font-bold text-gray-900">2.8%</div>
-        <div className="text-sm text-gray-600 mb-1">CTR</div>
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+        <div className="text-3xl font-bold text-gray-900 mb-2">2.8%</div>
+        <div className="text-sm text-gray-500 mb-3">CTR</div>
         <div className="flex items-center gap-1 text-xs text-green-600">
           <ArrowUp className="w-3 h-3" />
           <span>+0.4%</span>
-          <span className="text-gray-500">vs last period</span>
+          <span className="text-gray-400">vs last period</span>
         </div>
       </div>
     </div>
   )
 
-  // Platform Cards - exact match to reference
+  // Platform Cards with strong hierarchy
   const PlatformCard = ({ platform, data }: { platform: string; data: any }) => {
     const getIcon = (platform: string) => {
       switch (platform.toLowerCase()) {
@@ -227,7 +227,7 @@ export default function DashboardPage() {
 
     return (
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-gray-50 rounded-lg flex items-center justify-center">
               {getIcon(platform)}
@@ -247,26 +247,26 @@ export default function DashboardPage() {
           </div>
         </div>
         
-        <div className="space-y-3">
+        <div className="space-y-4">
           <div className="flex justify-between">
-            <span className="text-sm text-gray-600">Spend</span>
-            <span className="text-sm font-medium text-gray-900">
+            <span className="text-sm text-gray-500">Spend</span>
+            <span className="text-lg font-bold text-gray-900">
               ${(data.spend || 0).toLocaleString()}
             </span>
           </div>
           <div className="flex justify-between">
-            <span className="text-sm text-gray-600">Revenue</span>
-            <span className="text-sm font-medium text-green-600">
+            <span className="text-sm text-gray-500">Revenue</span>
+            <span className="text-lg font-bold text-green-600">
               ${(data.revenue || 0).toLocaleString()}
             </span>
           </div>
           <div className="flex justify-between">
-            <span className="text-sm text-gray-600">ROAS</span>
-            <span className="text-sm font-bold text-gray-900">
+            <span className="text-sm text-gray-500">ROAS</span>
+            <span className="text-lg font-bold text-gray-900">
               {(data.roas || 0).toFixed(2)}x
             </span>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-2 mt-3">
+          <div className="w-full bg-gray-200 rounded-full h-2 mt-4">
             <div 
               className={cn(
                 "h-2 rounded-full",
@@ -280,42 +280,50 @@ export default function DashboardPage() {
     )
   }
 
-  // Leads Snapshot - exact match to reference
+  // Leads Snapshot - FIXED with strong hierarchy
   const LeadsSummary = () => {
     const totalLeads = metrics?.totalLeads || 0
     const qualifiedLeads = Math.floor(totalLeads * 0.35)
     const unqualifiedLeads = totalLeads - qualifiedLeads
 
     return (
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Leads Snapshot</h3>
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <div className="text-center p-4 bg-blue-50 rounded-lg">
-            <div className="text-2xl font-bold text-blue-600">{totalLeads}</div>
-            <div className="text-sm text-blue-700">Total Leads Today</div>
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-8">
+        <h3 className="text-lg font-semibold text-gray-900 mb-8">Leads Snapshot</h3>
+        
+        {/* Top: Large bold number */}
+        <div className="text-center mb-8">
+          <div className="text-5xl font-bold text-gray-900 mb-2">{totalLeads}</div>
+          <div className="text-sm text-gray-500">Total Leads Today</div>
+        </div>
+        
+        {/* Middle: Two-column stats */}
+        <div className="grid grid-cols-2 gap-8 mb-8">
+          <div className="text-center">
+            <div className="text-2xl font-bold text-green-600 mb-1">{qualifiedLeads}</div>
+            <div className="text-sm text-gray-500">Qualified</div>
           </div>
-          <div className="space-y-2">
+          <div className="text-center">
+            <div className="text-2xl font-bold text-gray-600 mb-1">{unqualifiedLeads}</div>
+            <div className="text-sm text-gray-500">Unqualified</div>
+          </div>
+        </div>
+        
+        {/* Bottom: Divider and details */}
+        <div className="border-t border-gray-200 pt-6 mb-6">
+          <div className="space-y-3">
             <div className="flex justify-between">
-              <span className="text-sm text-gray-600">Qualified</span>
-              <span className="text-sm font-medium text-green-600">{qualifiedLeads}</span>
+              <span className="text-sm text-gray-500">Best Campaign</span>
+              <span className="text-sm font-bold text-gray-900">Summer Sale 2024</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-sm text-gray-600">Unqualified</span>
-              <span className="text-sm font-medium text-gray-600">{unqualifiedLeads}</span>
+              <span className="text-sm text-gray-500">Best Platform</span>
+              <span className="text-sm font-bold text-gray-900">Meta Ads</span>
             </div>
           </div>
         </div>
-        <div className="space-y-2 text-sm mb-4">
-          <div className="flex justify-between">
-            <span className="text-gray-600">Best Campaign</span>
-            <span className="font-medium text-gray-900">Summer Sale 2024</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-gray-600">Best Platform</span>
-            <span className="font-medium text-gray-900">Meta Ads</span>
-          </div>
-        </div>
-        <Button variant="outline" className="w-full border-gray-200 text-gray-700 hover:bg-gray-50">
+        
+        {/* CTA: High contrast button */}
+        <Button className="w-full bg-blue-600 text-white hover:bg-blue-700 font-medium py-3">
           View All Leads
           <ArrowRight className="w-4 h-4 ml-2" />
         </Button>
@@ -323,25 +331,27 @@ export default function DashboardPage() {
     )
   }
 
-  // AI Insights - exact match to reference
+  // AI Insights - FIXED with premium feel
   const AIInsightCard = ({ insight }: { insight: any }) => {
-    const getTypeColor = (type: string) => {
+    const getBorderColor = (type: string) => {
       switch (type) {
-        case 'opportunity': return "bg-green-50 text-green-800 border-green-200"
-        case 'warning': return "bg-yellow-50 text-yellow-800 border-yellow-200"
-        case 'action': return "bg-blue-50 text-blue-800 border-blue-200"
-        default: return "bg-gray-50 text-gray-800 border-gray-200"
+        case 'opportunity': return "border-l-4 border-l-green-500"
+        case 'warning': return "border-l-4 border-l-yellow-500"
+        case 'action': return "border-l-4 border-l-blue-500"
+        default: return "border-l-4 border-l-gray-500"
       }
     }
 
     return (
-      <div className={cn("rounded-xl border p-4", getTypeColor(insight.type))}>
-        <div className="flex items-start gap-3">
-          <Lightbulb className="w-4 h-4 mt-1" />
+      <div className={cn("bg-white rounded-xl border border-gray-200 shadow-sm p-6", getBorderColor(insight.type))}>
+        <div className="flex items-start gap-4">
+          <div className="w-8 h-8 bg-gray-50 rounded-lg flex items-center justify-center flex-shrink-0">
+            <Lightbulb className="w-4 h-4 text-gray-600" />
+          </div>
           <div className="flex-1">
-            <p className="text-sm font-medium text-gray-900 mb-1">{insight.title}</p>
-            <p className="text-xs text-gray-600 mb-2">{insight.description}</p>
-            <Button size="sm" variant="outline" className="text-xs border-current">
+            <h4 className="font-bold text-gray-900 mb-2">{insight.title}</h4>
+            <p className="text-sm text-gray-500 mb-4">{insight.description}</p>
+            <Button size="sm" className="bg-blue-600 text-white hover:bg-blue-700">
               {insight.action}
             </Button>
           </div>
@@ -371,19 +381,19 @@ export default function DashboardPage() {
     {
       type: "action",
       title: "Scale Meta Campaign Y",
-      description: "ROAS 4.2x - strong performance",
+      description: "ROAS 4.2x — performing above benchmark",
       action: "Scale Campaign"
     },
     {
       type: "warning", 
       title: "Pause Campaign X",
-      description: "CPA increased by 23%",
+      description: "CPA increased by 23% — underperforming",
       action: "Review Campaign"
     },
     {
       type: "opportunity",
       title: "Optimize Google Ads",
-      description: "CTR below industry average",
+      description: "CTR below industry average — improvement needed",
       action: "Get Suggestions"
     }
   ]
@@ -394,10 +404,10 @@ export default function DashboardPage() {
         {/* Header */}
         <div className="flex justify-between items-start mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Dashboard Overview</h1>
-            <p className="text-gray-600 mt-1">Quick business health check</p>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard Overview</h1>
+            <p className="text-gray-500">Quick business health check</p>
           </div>
-          <Button className="flex items-center gap-2 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50">
+          <Button className="flex items-center gap-2 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 font-medium">
             <RefreshCw className="w-4 h-4" />
             Refresh
           </Button>
@@ -461,13 +471,13 @@ export default function DashboardPage() {
           <LeadsSummary />
           
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">AI Insights</h3>
-            <div className="space-y-3">
+            <h3 className="text-lg font-semibold text-gray-900 mb-6">AI Insights</h3>
+            <div className="space-y-4">
               {aiInsights.map((insight, index) => (
                 <AIInsightCard key={index} insight={insight} />
               ))}
             </div>
-            <Button className="w-full mt-4 bg-blue-600 text-white hover:bg-blue-700">
+            <Button className="w-full mt-6 bg-blue-600 text-white hover:bg-blue-700 font-medium py-3">
               Open AI Copilot
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
