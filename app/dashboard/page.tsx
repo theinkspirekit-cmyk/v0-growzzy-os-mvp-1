@@ -79,7 +79,7 @@ export default function DashboardPage() {
     checkAuth()
   }, [router, timeRange])
 
-  // SECTION A: KPI METRICS - Nexus Style
+  // SECTION A: KPI METRICS - Black and White Theme
   const MetricCard = ({ 
     title, 
     value, 
@@ -103,7 +103,7 @@ export default function DashboardPage() {
               <div className="p-2 bg-gray-50 rounded-lg">
                 <Icon className="w-5 h-5 text-gray-600" />
               </div>
-              <p className="text-sm font-medium text-gray-700">{title}</p>
+              <p className="text-sm font-medium text-gray-900">{title}</p>
             </div>
             <p className="text-3xl font-bold text-gray-900 mb-2">{value}</p>
             <div className="flex items-center gap-2">
@@ -118,7 +118,7 @@ export default function DashboardPage() {
               )}>
                 {change}
               </span>
-              <span className="text-sm text-gray-500">vs last period</span>
+              <span className="text-sm text-gray-600">vs last period</span>
             </div>
           </div>
         </div>
@@ -126,7 +126,7 @@ export default function DashboardPage() {
     )
   }
 
-  // SECTION B: PERFORMANCE OVERVIEW - Nexus Style
+  // SECTION B: PERFORMANCE OVERVIEW - Black and White Theme
   const PerformanceChart = () => (
     <div className="bg-white rounded-lg border border-gray-200 p-6">
       <div className="flex justify-between items-center mb-6">
@@ -199,7 +199,7 @@ export default function DashboardPage() {
     </div>
   )
 
-  // SECTION C: PLATFORM BREAKDOWN - Nexus Style
+  // SECTION C: PLATFORM BREAKDOWN - Black and White Theme
   const PlatformCard = ({ platform, data }: { platform: string; data: any }) => {
     const getIcon = (platform: string) => {
       switch (platform.toLowerCase()) {
@@ -268,7 +268,7 @@ export default function DashboardPage() {
     )
   }
 
-  // SECTION D: LEADS SNAPSHOT - Nexus Style
+  // SECTION D: LEADS SNAPSHOT - Black and White Theme
   const LeadsSummary = () => {
     const totalLeads = metrics?.totalLeads || 0
     const qualifiedLeads = Math.floor(totalLeads * 0.35)
@@ -278,9 +278,9 @@ export default function DashboardPage() {
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Leads Snapshot</h3>
         <div className="grid grid-cols-2 gap-4 mb-4">
-          <div className="text-center p-4 bg-blue-50 rounded-lg">
-            <div className="text-2xl font-bold text-blue-600">{totalLeads}</div>
-            <div className="text-sm text-blue-800">Total Leads Today</div>
+          <div className="text-center p-4 bg-gray-50 rounded-lg">
+            <div className="text-2xl font-bold text-gray-900">{totalLeads}</div>
+            <div className="text-sm text-gray-700">Total Leads Today</div>
           </div>
           <div className="space-y-2">
             <div className="flex justify-between">
@@ -311,13 +311,13 @@ export default function DashboardPage() {
     )
   }
 
-  // SECTION E: AI INSIGHTS - Nexus Style
+  // SECTION E: AI INSIGHTS - Black and White Theme
   const AIInsightCard = ({ insight }: { insight: any }) => {
     const getTypeColor = (type: string) => {
       switch (type) {
         case 'opportunity': return "bg-green-50 text-green-800 border-green-200"
         case 'warning': return "bg-yellow-50 text-yellow-800 border-yellow-200"
-        case 'action': return "bg-blue-50 text-blue-800 border-blue-200"
+        case 'action': return "bg-gray-50 text-gray-800 border-gray-200"
         default: return "bg-gray-50 text-gray-800 border-gray-200"
       }
     }
@@ -342,7 +342,7 @@ export default function DashboardPage() {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-800"></div>
         </div>
       </DashboardLayout>
     )

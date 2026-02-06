@@ -117,7 +117,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           className={cn(
             "w-full justify-start gap-3 h-10",
             level > 0 && "ml-4",
-            active && "bg-secondary"
+            active && "bg-gray-100 text-gray-900"
           )}
           onClick={() => {
             if (hasChildren) {
@@ -157,7 +157,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Logo */}
         <div className="p-4 border-b border-gray-200">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-gray-800 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-sm">G</span>
             </div>
             {sidebarOpen && (

@@ -88,7 +88,7 @@ export default function CampaignsPage() {
               <div className="p-2 bg-gray-50 rounded-lg">
                 <Icon className="w-5 h-5 text-gray-600" />
               </div>
-              <p className="text-sm font-medium text-gray-700">{title}</p>
+              <p className="text-sm font-medium text-gray-900">{title}</p>
             </div>
             <p className="text-3xl font-bold text-gray-900 mb-2">{value}</p>
             <div className="flex items-center gap-2">
@@ -103,7 +103,7 @@ export default function CampaignsPage() {
               )}>
                 {change}
               </span>
-              <span className="text-sm text-gray-500">vs last period</span>
+              <span className="text-sm text-gray-600">vs last period</span>
             </div>
           </div>
         </div>
@@ -227,7 +227,7 @@ export default function CampaignsPage() {
         <div className="flex justify-between items-start">
           <div>
             <h2 className="text-2xl font-bold text-gray-900">Campaign Management</h2>
-            <p className="text-gray-600 mt-1">Monitor and optimize your ad campaigns</p>
+            <p className="text-gray-700 mt-1">Monitor and optimize your ad campaigns</p>
           </div>
           <div className="flex gap-3">
             <Select value={timeRange} onValueChange={setTimeRange}>
@@ -380,7 +380,7 @@ export default function CampaignsPage() {
             ) : (
               <div className="bg-white rounded-lg border border-gray-200 p-6">
                 <div className="text-center text-gray-500">
-                  <Target className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                  <Target className="w-12 h-12 mx-auto mb-4 text-gray-400" />
                   <p>Select a campaign to view details</p>
                 </div>
               </div>

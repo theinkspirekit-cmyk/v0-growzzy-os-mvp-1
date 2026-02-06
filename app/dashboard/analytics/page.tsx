@@ -89,7 +89,7 @@ export default function AnalyticsOverviewPage() {
               <div className="p-2 bg-gray-50 rounded-lg">
                 <Icon className="w-5 h-5 text-gray-600" />
               </div>
-              <p className="text-sm font-medium text-gray-700">{title}</p>
+              <p className="text-sm font-medium text-gray-900">{title}</p>
             </div>
             <p className="text-3xl font-bold text-gray-900 mb-2">{value}</p>
             <div className="flex items-center gap-2">
@@ -104,7 +104,7 @@ export default function AnalyticsOverviewPage() {
               )}>
                 {change}
               </span>
-              <span className="text-sm text-gray-500">vs last period</span>
+              <span className="text-sm text-gray-600">vs last period</span>
             </div>
           </div>
         </div>
@@ -136,7 +136,7 @@ export default function AnalyticsOverviewPage() {
         <div className="flex justify-between items-start">
           <div>
             <h2 className="text-2xl font-bold text-gray-900">Analytics Overview</h2>
-            <p className="text-gray-600 mt-1">Deep dive into your performance metrics</p>
+            <p className="text-gray-700 mt-1">Deep dive into your performance metrics</p>
           </div>
           <div className="flex gap-3">
             <Select value={timeRange} onValueChange={setTimeRange}>
