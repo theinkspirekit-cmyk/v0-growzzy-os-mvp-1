@@ -1,13 +1,23 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { useEffect, useState, useMemo } from "react"
-import { Loader2, LogOut, BarChart3, Users, Zap, TrendingUp, RefreshCw, Clock, ArrowUp, ArrowDown, ChevronDown } from "lucide-react"
+import DashboardLayout from "@/components/dashboard-layout"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { useSyncStatus, formatLastSync } from "@/hooks/use-sync-status"
+import { 
+  TrendingUp, 
+  TrendingDown, 
+  DollarSign, 
+  Target, 
+  Users, 
+  BarChart3,
+  RefreshCw,
+  ArrowUp,
+  ArrowDown
+} from "lucide-react"
 import { LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts"
+import { cn } from "@/lib/utils"
 
 export const dynamic = "force-dynamic"
 
@@ -21,26 +31,19 @@ export default function DashboardPage() {
   const [historicalData, setHistoricalData] = useState<any[]>([])
   const [platformBreakdown, setPlatformBreakdown] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [sortBy, setSortBy] = useState<'revenue' | 'spend' | 'roas' | 'name'>('revenue')
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
-  const { syncStatus, isSyncing, triggerSync } = useSyncStatus(user?.id)
 
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        console.log("[v0] Dashboard - Checking auth...")
-        const response = await fetch("/api/auth/me", { credentials: "include" })
-        console.log("[v0] Dashboard - Auth response status:", response.status)
+        const response = await fetch("/api/auth/me")
         if (!response.ok) {
-          console.log("[v0] Dashboard - Auth failed, redirecting to auth page")
           router.push("/auth")
           return
         }
         const data = await response.json()
-        console.log("[v0] Dashboard - Auth success, user:", data.user?.email)
         setUser(data.user)
 
-        // Fetch all analytics data
+        // Fetch dashboard data
         const [metricsRes, campaignsRes, historicalRes, platformRes] = await Promise.all([
           fetch(`/api/analytics/summary?userId=${data.user.id}`),
           fetch(`/api/campaigns?userId=${data.user.id}`),
@@ -51,25 +54,21 @@ export default function DashboardPage() {
         if (metricsRes.ok) {
           const metricsData = await metricsRes.json()
           setMetrics(metricsData.summary)
-          console.log("[v0] Metrics loaded:", metricsData.summary)
         }
 
         if (campaignsRes.ok) {
           const campaignsData = await campaignsRes.json()
           setCampaigns(campaignsData.campaigns || [])
-          console.log("[v0] Campaigns loaded:", campaignsData.campaigns?.length || 0)
         }
 
         if (historicalRes.ok) {
           const histData = await historicalRes.json()
           setHistoricalData(histData.data || [])
-          console.log("[v0] Historical data loaded")
         }
 
         if (platformRes.ok) {
           const platformData = await platformRes.json()
           setPlatformBreakdown(platformData.breakdown || [])
-          console.log("[v0] Platform breakdown loaded")
         }
       } catch (error) {
         console.error("[v0] Dashboard error:", error)
@@ -82,52 +81,47 @@ export default function DashboardPage() {
     checkAuth()
   }, [router])
 
-  const handleLogout = async () => {
-    await fetch("/api/auth/logout", { method: "POST" })
-    router.push("/auth")
-  }
-
-  // Sort campaigns
-  const sortedCampaigns = useMemo(() => {
-    if (!campaigns) return []
-    const sorted = [...campaigns].sort((a, b) => {
-      let aVal = a[sortBy] || 0
-      let bVal = b[sortBy] || 0
-      if (sortBy === 'name') {
-        return sortOrder === 'desc' ? bVal.localeCompare(aVal) : aVal.localeCompare(bVal)
-      }
-      return sortOrder === 'desc' ? bVal - aVal : aVal - bVal
-    })
-    return sorted.slice(0, 10)
-  }, [campaigns, sortBy, sortOrder])
-
-  // Calculate trend percentages
-  const calculateTrend = (current: number, previous: number) => {
-    if (previous === 0) return 0
-    return (((current - previous) / previous) * 100).toFixed(1)
-  }
-
-  // Metric card component
-  const MetricCard = ({ label, value, trend, icon: Icon, color = "text-blue-600" }: any) => {
-    const isPositive = parseFloat(trend) >= 0
+  const MetricCard = ({ 
+    label, 
+    value, 
+    change, 
+    changeType, 
+    icon: Icon,
+    color = "text-blue-600"
+  }: {
+    label: string
+    value: string
+    change: string
+    changeType: 'increase' | 'decrease'
+    icon: React.ComponentType<{ className?: string }>
+    color?: string
+  }) => {
+    const isPositive = changeType === 'increase'
+    
     return (
-      <Card className="p-6 bg-card hover:shadow-md transition-shadow">
+      <Card className="p-6 bg-white hover:shadow-lg transition-shadow border-0">
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <p className="text-sm text-muted-foreground mb-2">{label}</p>
-            <p className="text-3xl font-bold mb-3">{value}</p>
-            <div className="flex items-center gap-1">
-              {isPositive ? (
-                <ArrowUp className="w-4 h-4 text-green-600" />
-              ) : (
-                <ArrowDown className="w-4 h-4 text-red-600" />
-              )}
-              <span className={`text-sm font-medium ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
-                {trend}% vs last period
-              </span>
+            <p className="text-sm text-gray-600 mb-2 font-medium">{label}</p>
+            <p className="text-3xl font-bold text-gray-900 mb-3">{value}</p>
+            <div className="flex items-center gap-2">
+              <div className={cn(
+                "flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium",
+                isPositive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+              )}>
+                {isPositive ? (
+                  <ArrowUp className="w-3 h-3" />
+                ) : (
+                  <ArrowDown className="w-3 h-3" />
+                )}
+                {change}
+              </div>
+              <span className="text-xs text-gray-500">vs last period</span>
             </div>
           </div>
-          <Icon className={`w-8 h-8 ${color} opacity-50`} />
+          <div className={cn("p-3 rounded-lg bg-gray-50", color)}>
+            <Icon className="w-6 h-6" />
+          </div>
         </div>
       </Card>
     )
@@ -135,12 +129,11 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-8 h-8 text-primary animate-spin" />
-          <p className="text-muted-foreground">Loading dashboard...</p>
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </div>
-      </div>
+      </DashboardLayout>
     )
   }
 
@@ -152,115 +145,75 @@ export default function DashboardPage() {
   const conversions = metrics?.totalConversions || 0
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Navigation */}
-      <nav className="border-b bg-card sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-primary">GROWZZY OS</h1>
-          <div className="flex gap-4 items-center">
-            <nav className="hidden md:flex gap-6">
-              <Link href="/dashboard" className="text-foreground hover:text-primary font-medium transition-colors">Dashboard</Link>
-              <Link href="/connections" className="text-muted-foreground hover:text-primary transition-colors">Connections</Link>
-              <Link href="/dashboard/creative" className="text-muted-foreground hover:text-primary transition-colors">Creative Studio</Link>
-              <Link href="/dashboard/automations" className="text-muted-foreground hover:text-primary transition-colors">Automations</Link>
-              <Link href="/dashboard/reports" className="text-muted-foreground hover:text-primary transition-colors">Reports</Link>
-            </nav>
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 bg-destructive hover:bg-destructive/90 text-destructive-foreground px-4 py-2 rounded transition-colors"
-            >
-              <LogOut className="w-4 h-4" />
-              Sign Out
-            </button>
-          </div>
-        </div>
-      </nav>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Welcome */}
-        <div className="mb-8 flex justify-between items-start">
+    <DashboardLayout>
+      <div className="space-y-6">
+        {/* Welcome Section */}
+        <div className="flex justify-between items-start">
           <div>
-            <h2 className="text-3xl font-bold mb-2">Welcome back, {user.full_name || user.email}!</h2>
-            <p className="text-muted-foreground">Here's your marketing performance overview for the last 30 days.</p>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              Welcome back, {user.full_name || user.email}!
+            </h2>
+            <p className="text-gray-600">Here's your marketing performance overview for the last 30 days.</p>
           </div>
-          <Button
-            onClick={triggerSync}
-            disabled={isSyncing}
-            className="flex items-center gap-2"
-            size="lg"
-          >
-            <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
-            {isSyncing ? 'Syncing...' : 'Refresh Data'}
+          <Button className="flex items-center gap-2">
+            <RefreshCw className="w-4 h-4" />
+            Refresh Data
           </Button>
         </div>
 
-        {/* KPI Cards with Trends */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        {/* KPI Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <MetricCard
             label="Total Spend"
             value={`$${totalSpend.toLocaleString('en-US', { maximumFractionDigits: 0 })}`}
-            trend={calculateTrend(totalSpend, totalSpend * 0.9)}
-            icon={Zap}
+            change="+12.5%"
+            changeType="increase"
+            icon={DollarSign}
             color="text-blue-600"
           />
           <MetricCard
             label="Total Revenue"
             value={`$${totalRevenue.toLocaleString('en-US', { maximumFractionDigits: 0 })}`}
-            trend={calculateTrend(totalRevenue, totalRevenue * 0.85)}
+            change="+8.2%"
+            changeType="increase"
             icon={TrendingUp}
             color="text-green-600"
           />
           <MetricCard
             label="ROAS"
             value={`${roas.toFixed(2)}x`}
-            trend={calculateTrend(roas, roas * 0.95)}
+            change="-2.1%"
+            changeType="decrease"
             icon={BarChart3}
-            color={roas > 2 ? 'text-green-600' : roas > 1 ? 'text-yellow-600' : 'text-red-600'}
+            color="text-purple-600"
           />
           <MetricCard
             label="Conversions"
             value={conversions.toLocaleString()}
-            trend={calculateTrend(conversions, conversions * 0.92)}
+            change="+15.3%"
+            changeType="increase"
             icon={Users}
-            color="text-purple-600"
+            color="text-orange-600"
           />
         </div>
 
-        {/* Sync Status */}
-        {syncStatus && (
-          <Card className="p-4 mb-8 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 dark:from-blue-950/20 dark:to-indigo-950/20 dark:border-blue-900/30">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Clock className="w-5 h-5 text-blue-600" />
-                <div>
-                  <p className="text-sm font-medium text-foreground">Auto-Synced from Connected Platforms</p>
-                  <p className="text-xs text-muted-foreground">
-                    Last synced: {formatLastSync(syncStatus.lastSyncTime)}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </Card>
-        )}
-
         {/* Charts Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Performance Chart */}
-          <Card className="lg:col-span-2 p-6">
-            <h3 className="text-lg font-semibold mb-4">Performance Trend (Last 30 Days)</h3>
+          <Card className="lg:col-span-2 p-6 bg-white border-0">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Performance Trend</h3>
             {historicalData.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={historicalData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-                  <XAxis dataKey="date" stroke="var(--color-muted-foreground)" style={{ fontSize: '12px' }} />
-                  <YAxis stroke="var(--color-muted-foreground)" style={{ fontSize: '12px' }} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey="date" stroke="#6b7280" style={{ fontSize: '12px' }} />
+                  <YAxis stroke="#6b7280" style={{ fontSize: '12px' }} />
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: 'var(--color-card)',
-                      border: '1px solid var(--color-border)',
+                      backgroundColor: 'white',
+                      border: '1px solid #e5e7eb',
                       borderRadius: '8px',
                     }}
-                    labelStyle={{ color: 'var(--color-foreground)' }}
                   />
                   <Legend />
                   <Line type="monotone" dataKey="spend" stroke="#3b82f6" strokeWidth={2} dot={false} name="Spend" />
@@ -268,15 +221,15 @@ export default function DashboardPage() {
                 </LineChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-72 flex items-center justify-center text-muted-foreground">
+              <div className="h-72 flex items-center justify-center text-gray-500">
                 <p>No data available. Connect platforms to see trends.</p>
               </div>
             )}
           </Card>
 
           {/* Platform Breakdown */}
-          <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Spend by Platform</h3>
+          <Card className="p-6 bg-white border-0">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Spend by Platform</h3>
             {platformBreakdown.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
@@ -296,8 +249,8 @@ export default function DashboardPage() {
                   </Pie>
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: 'var(--color-card)',
-                      border: '1px solid var(--color-border)',
+                      backgroundColor: 'white',
+                      border: '1px solid #e5e7eb',
                       borderRadius: '8px',
                     }}
                     formatter={(value) => `$${value.toLocaleString()}`}
@@ -305,98 +258,50 @@ export default function DashboardPage() {
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-72 flex items-center justify-center text-muted-foreground">
+              <div className="h-72 flex items-center justify-center text-gray-500">
                 <p>No platform data</p>
               </div>
             )}
           </Card>
         </div>
 
-        {/* Campaigns Table */}
-        <Card className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold">Top 10 Campaigns</h3>
-            <div className="flex gap-2">
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
-                className="px-3 py-1 text-sm border border-input rounded bg-background text-foreground"
-              >
-                <option value="revenue">Sort by Revenue</option>
-                <option value="spend">Sort by Spend</option>
-                <option value="roas">Sort by ROAS</option>
-                <option value="name">Sort by Name</option>
-              </select>
-              <button
-                onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
-                className="px-3 py-1 text-sm border border-input rounded bg-background hover:bg-muted text-foreground"
-              >
-                {sortOrder === 'desc' ? '↓ Desc' : '↑ Asc'}
-              </button>
-            </div>
-          </div>
-
+        {/* Recent Campaigns */}
+        <Card className="p-6 bg-white border-0">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Campaigns</h3>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full">
               <thead>
-                <tr className="border-b">
-                  <th className="text-left py-3 px-4 font-medium">Campaign Name</th>
-                  <th className="text-left py-3 px-4 font-medium">Platform</th>
-                  <th className="text-right py-3 px-4 font-medium">Spend</th>
-                  <th className="text-right py-3 px-4 font-medium">Revenue</th>
-                  <th className="text-right py-3 px-4 font-medium">ROAS</th>
-                  <th className="text-center py-3 px-4 font-medium">Status</th>
+                <tr className="border-b border-gray-200">
+                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Campaign</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Platform</th>
+                  <th className="text-right py-3 px-4 text-sm font-medium text-gray-700">Spend</th>
+                  <th className="text-right py-3 px-4 text-sm font-medium text-gray-700">Revenue</th>
+                  <th className="text-right py-3 px-4 text-sm font-medium text-gray-700">ROAS</th>
                 </tr>
               </thead>
               <tbody>
-                {sortedCampaigns.length > 0 ? (
-                  sortedCampaigns.map((campaign: any) => (
-                    <tr key={campaign.id} className="border-b hover:bg-muted/50 transition-colors">
-                      <td className="py-3 px-4 font-medium">{campaign.name}</td>
-                      <td className="py-3 px-4 text-muted-foreground capitalize">{campaign.platform}</td>
-                      <td className="py-3 px-4 text-right font-medium">${(campaign.spend || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}</td>
-                      <td className="py-3 px-4 text-right font-medium text-green-600">${(campaign.revenue || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}</td>
-                      <td className="py-3 px-4 text-right font-semibold">
-                        <span className={campaign.roas > 2 ? 'text-green-600' : campaign.roas > 1 ? 'text-yellow-600' : 'text-red-600'}>
-                          {(campaign.roas || 0).toFixed(2)}x
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          campaign.status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
-                          campaign.status === 'paused' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
-                          'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400'
-                        }`}>
-                          {campaign.status === 'active' ? '🟢 Active' : campaign.status === 'paused' ? '🟡 Paused' : '🔴 Learning'}
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={6} className="py-8 px-4 text-center text-muted-foreground">
-                      <Link href="/connections" className="text-primary hover:underline">
-                        Connect platforms to see campaigns
-                      </Link>
+                {campaigns.slice(0, 5).map((campaign: any) => (
+                  <tr key={campaign.id} className="border-b border-gray-100 hover:bg-gray-50">
+                    <td className="py-3 px-4 text-sm font-medium text-gray-900">{campaign.name}</td>
+                    <td className="py-3 px-4 text-sm text-gray-600 capitalize">{campaign.platform}</td>
+                    <td className="py-3 px-4 text-sm text-right text-gray-900">
+                      ${(campaign.spend || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                    </td>
+                    <td className="py-3 px-4 text-sm text-right text-green-600">
+                      ${(campaign.revenue || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                    </td>
+                    <td className="py-3 px-4 text-sm text-right font-medium">
+                      <span className={campaign.roas > 2 ? 'text-green-600' : campaign.roas > 1 ? 'text-yellow-600' : 'text-red-600'}>
+                        {(campaign.roas || 0).toFixed(2)}x
+                      </span>
                     </td>
                   </tr>
-                )}
+                ))}
               </tbody>
             </table>
           </div>
-
-          {sortedCampaigns.length > 0 && (
-            <div className="mt-4 pt-4 border-t flex justify-between items-center">
-              <p className="text-sm text-muted-foreground">
-                Showing {sortedCampaigns.length} of {campaigns.length} campaigns
-              </p>
-              <Link href="/dashboard/analytics" className="text-sm text-primary hover:underline font-medium">
-                View all campaigns →
-              </Link>
-            </div>
-          )}
         </Card>
       </div>
-    </div>
+    </DashboardLayout>
   )
 }

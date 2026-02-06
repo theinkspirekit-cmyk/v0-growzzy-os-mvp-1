@@ -1,304 +1,415 @@
-'use client';
-import { useState, useEffect } from 'react';
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { SearchInput } from '@/components/ui/search-input';
-import { FilterDropdown } from '@/components/ui/filter-dropdown';
-import { showToast } from '@/components/Toast';
-import { TrendingUp, AlertCircle, BarChart3, PieChart as PieChartIcon } from 'lucide-react';
+"use client"
 
-interface Campaign {
-  id: string;
-  name: string;
-  platform: string;
-  spend: number;
-  revenue: number;
-  roas: number;
-  status: string;
-  conversions?: number;
-}
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
+import DashboardLayout from "@/components/dashboard-layout"
+import { Card } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { 
+  TrendingUp,
+  TrendingDown,
+  DollarSign,
+  Target,
+  Users,
+  BarChart3,
+  Calendar,
+  Download,
+  Filter
+} from "lucide-react"
+import { LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts"
+import { cn } from "@/lib/utils"
 
-interface KPIs {
-  totalSpend: number;
-  totalRevenue: number;
-  avgRoas: string;
-  totalConversions: number;
-}
+export const dynamic = "force-dynamic"
 
 export default function AnalyticsPage() {
-  const [dateRange, setDateRange] = useState('Last 30 days');
-  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  const [kpis, setKpis] = useState<KPIs>({
-    totalSpend: 0,
-    totalRevenue: 0,
-    avgRoas: '0',
-    totalConversions: 0
-  });
-  const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filters, setFilters] = useState<Record<string, any>>({});
+  const router = useRouter()
+  const [user, setUser] = useState<any>(null)
+  const [analytics, setAnalytics] = useState<any>(null)
+  const [historicalData, setHistoricalData] = useState<any[]>([])
+  const [platformData, setPlatformData] = useState<any[]>([])
+  const [funnelData, setFunnelData] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [timeRange, setTimeRange] = useState("30d")
+  const [selectedMetric, setSelectedMetric] = useState("revenue")
 
   useEffect(() => {
-    fetchAnalyticsData();
-  }, [dateRange, searchQuery, filters]);
+    const checkAuth = async () => {
+      try {
+        const response = await fetch("/api/auth/me")
+        if (!response.ok) {
+          router.push("/auth")
+          return
+        }
+        const data = await response.json()
+        setUser(data.user)
 
-  const fetchAnalyticsData = async () => {
-    try {
-      setLoading(true);
-      
-      // Get user settings from localStorage
-      const settings = localStorage.getItem('growzzy-settings');
-      if (!settings) {
-        // No integrations found, show empty state
-        setCampaigns([]);
-        setKpis({
-          totalSpend: 0,
-          totalRevenue: 0,
-          avgRoas: '0',
-          totalConversions: 0
-        });
-        setLoading(false);
-        return;
+        // Fetch analytics data
+        const [analyticsRes, historicalRes, platformRes, funnelRes] = await Promise.all([
+          fetch(`/api/analytics/summary?userId=${data.user.id}&range=${timeRange}`),
+          fetch(`/api/analytics/historical?userId=${data.user.id}&range=${timeRange}`),
+          fetch(`/api/analytics/platforms?userId=${data.user.id}`),
+          fetch(`/api/analytics/funnel?userId=${data.user.id}`),
+        ])
+
+        if (analyticsRes.ok) {
+          const analyticsData = await analyticsRes.json()
+          setAnalytics(analyticsData.summary)
+        }
+
+        if (historicalRes.ok) {
+          const histData = await historicalRes.json()
+          setHistoricalData(histData.data || [])
+        }
+
+        if (platformRes.ok) {
+          const platformData = await platformRes.json()
+          setPlatformData(platformData.platforms || [])
+        }
+
+        if (funnelRes.ok) {
+          const funnelData = await funnelRes.json()
+          setFunnelData(funnelData.stages || [])
+        }
+      } catch (error) {
+        console.error("[v0] Analytics error:", error)
+        router.push("/auth")
+      } finally {
+        setLoading(false)
       }
+    }
 
-      const response = await fetch('/api/platforms/data', {
-        headers: {
-          'x-user-settings': settings
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        const realCampaigns = data.campaigns || [];
-        
-        // Apply filters
-        let filteredCampaigns = realCampaigns;
-        
-        if (searchQuery) {
-          filteredCampaigns = filteredCampaigns.filter((campaign: Campaign) =>
-            campaign.name.toLowerCase().includes(searchQuery.toLowerCase())
-          );
-        }
-        
-        if (filters.platform) {
-          filteredCampaigns = filteredCampaigns.filter((campaign: Campaign) =>
-            campaign.platform === filters.platform
-          );
-        }
-        
-        if (filters.status) {
-          filteredCampaigns = filteredCampaigns.filter((campaign: Campaign) =>
-            campaign.status === filters.status
-          );
-        }
-        
-        setCampaigns(filteredCampaigns);
-        
-        // Calculate KPIs
-        const totalSpend = filteredCampaigns.reduce((sum: number, c: Campaign) => sum + (c.spend || 0), 0);
-        const totalRevenue = filteredCampaigns.reduce((sum: number, c: Campaign) => sum + (c.revenue || 0), 0);
-        const totalConversions = filteredCampaigns.reduce((sum: number, c: Campaign) => sum + (c.conversions || 0), 0);
-        const avgRoas = totalSpend > 0 ? (totalRevenue / totalSpend).toFixed(2) : '0';
-        
-        setKpis({
-          totalSpend,
-          totalRevenue,
-          avgRoas,
-          totalConversions
-        });
+    checkAuth()
+  }, [router, timeRange])
+
+  const MetricCard = ({ 
+    title, 
+    value, 
+    change, 
+    changeType,
+    icon: Icon,
+    format = "number"
+  }: {
+    title: string
+    value: number
+    change: number
+    changeType: 'increase' | 'decrease'
+    icon: React.ComponentType<{ className?: string }>
+    format?: 'number' | 'currency' | 'percentage'
+  }) => {
+    const isPositive = changeType === 'increase'
+    
+    const formatValue = (val: number) => {
+      switch (format) {
+        case 'currency':
+          return `$${val.toLocaleString('en-US', { maximumFractionDigits: 0 })}`
+        case 'percentage':
+          return `${val.toFixed(1)}%`
+        default:
+          return val.toLocaleString()
       }
-    } catch (error) {
-      console.error('Failed to fetch analytics data:', error);
-      showToast('Failed to fetch analytics data', 'error');
-    } finally {
-      setLoading(false);
     }
-  };
 
-  const handleDateRangeChange = (newRange: string) => {
-    setDateRange(newRange);
-  };
-
-  const filterOptions = [
-    {
-      key: 'platform',
-      label: 'Platform',
-      type: 'select' as const,
-      options: [
-        { label: 'All', value: '' },
-        { label: 'Meta', value: 'meta' },
-        { label: 'Google', value: 'google' },
-        { label: 'LinkedIn', value: 'linkedin' },
-        { label: 'Shopify', value: 'shopify' },
-      ]
-    },
-    {
-      key: 'status',
-      label: 'Status',
-      type: 'select' as const,
-      options: [
-        { label: 'All', value: '' },
-        { label: 'Active', value: 'active' },
-        { label: 'Paused', value: 'paused' },
-        { label: 'Completed', value: 'completed' },
-      ]
-    }
-  ];
+    return (
+      <Card className="p-6 bg-white border border-gray-200">
+        <div className="flex items-center justify-between mb-4">
+          <div className="p-2 bg-gray-50 rounded-lg">
+            <Icon className="w-5 h-5 text-gray-600" />
+          </div>
+          <div className={cn(
+            "flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium",
+            isPositive ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"
+          )}>
+            {isPositive ? (
+              <TrendingUp className="w-3 h-3" />
+            ) : (
+              <TrendingDown className="w-3 h-3" />
+            )}
+            {Math.abs(change).toFixed(1)}%
+          </div>
+        </div>
+        <div>
+          <div className="text-2xl font-bold text-gray-900 mb-1">
+            {formatValue(value)}
+          </div>
+          <div className="text-sm text-gray-600">{title}</div>
+        </div>
+      </Card>
+    )
+  }
 
   if (loading) {
     return (
-      <DashboardLayout activeTab="analytics">
-        <div className="space-y-6">
-          <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 rounded w-1/3 mb-2"></div>
-            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[1,2,3,4].map(i => (
-              <div key={i} className="p-6 bg-white rounded-lg shadow animate-pulse">
-                <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
-                <div className="h-8 bg-gray-200 rounded w-3/4"></div>
-              </div>
-            ))}
-          </div>
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </div>
       </DashboardLayout>
-    );
+    )
   }
 
+  if (!user) return null
+
   return (
-    <DashboardLayout activeTab="analytics">
+    <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-start">
           <div>
-            <h1 className="text-3xl font-bold">Analytics & Performance</h1>
-            <p className="text-gray-600 mt-1">Unified view of all marketing channels</p>
+            <h2 className="text-2xl font-bold text-gray-900">Analytics Overview</h2>
+            <p className="text-gray-600 mt-1">Comprehensive performance metrics and insights</p>
           </div>
-          <div className="flex gap-2">
-            <select
-              value={dateRange}
-              onChange={(e) => handleDateRangeChange(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg text-sm"
-            >
-              <option>Today</option>
-              <option>Last 7 days</option>
-              <option>Last 30 days</option>
-              <option>Custom</option>
-            </select>
+          <div className="flex gap-3">
+            <Select value={timeRange} onValueChange={setTimeRange}>
+              <SelectTrigger className="w-32">
+                <Calendar className="w-4 h-4 mr-2" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="7d">Last 7 days</SelectItem>
+                <SelectItem value="30d">Last 30 days</SelectItem>
+                <SelectItem value="90d">Last 90 days</SelectItem>
+                <SelectItem value="1y">Last year</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button variant="outline" className="flex items-center gap-2">
+              <Download className="w-4 h-4" />
+              Export
+            </Button>
           </div>
         </div>
 
-        {/* Search and Filters */}
-        <div className="flex gap-4">
-          <SearchInput
-            placeholder="Search campaigns..."
-            onSearch={setSearchQuery}
-            className="flex-1 max-w-sm"
-          />
-          <FilterDropdown
-            filters={filterOptions}
-            onFilterChange={setFilters}
-          />
-        </div>
-
-        {/* KPI Cards */}
+        {/* KPI Metrics */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="p-6">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-gray-600 text-sm">Total Spend</p>
-                <p className="text-3xl font-bold mt-2">₹{(kpis.totalSpend / 100000).toFixed(1)}L</p>
-              </div>
-              <BarChart3 className="h-8 w-8 text-blue-500" />
-            </div>
-            <p className="text-green-600 text-sm mt-4">+12% vs last period</p>
+          <MetricCard
+            title="Total Revenue"
+            value={analytics?.totalRevenue || 0}
+            change={12.5}
+            changeType="increase"
+            icon={DollarSign}
+            format="currency"
+          />
+          <MetricCard
+            title="Ad Spend"
+            value={analytics?.totalSpend || 0}
+            change={8.2}
+            changeType="increase"
+            icon={BarChart3}
+            format="currency"
+          />
+          <MetricCard
+            title="ROAS"
+            value={analytics?.roas || 0}
+            change={-2.1}
+            changeType="decrease"
+            icon={Target}
+            format="number"
+          />
+          <MetricCard
+            title="Conversions"
+            value={analytics?.totalConversions || 0}
+            change={15.3}
+            changeType="increase"
+            icon={Users}
+            format="number"
+          />
+        </div>
+
+        {/* Performance Chart */}
+        <Card className="p-6 bg-white border border-gray-200">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-lg font-semibold text-gray-900">Performance Trend</h3>
+            <Select value={selectedMetric} onValueChange={setSelectedMetric}>
+              <SelectTrigger className="w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="revenue">Revenue</SelectItem>
+                <SelectItem value="spend">Spend</SelectItem>
+                <SelectItem value="conversions">Conversions</SelectItem>
+                <SelectItem value="roas">ROAS</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <ResponsiveContainer width="100%" height={350}>
+            <AreaChart data={historicalData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <XAxis 
+                dataKey="date" 
+                stroke="#6b7280" 
+                style={{ fontSize: '12px' }}
+                tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              />
+              <YAxis 
+                stroke="#6b7280" 
+                style={{ fontSize: '12px' }}
+                tickFormatter={(value) => {
+                  if (selectedMetric === 'revenue' || selectedMetric === 'spend') {
+                    return `$${(value / 1000).toFixed(0)}k`
+                  }
+                  return value.toLocaleString()
+                }}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: 'white',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                }}
+                formatter={(value: any) => {
+                  if (selectedMetric === 'revenue' || selectedMetric === 'spend') {
+                    return [`$${value.toLocaleString()}`, selectedMetric.charAt(0).toUpperCase() + selectedMetric.slice(1)]
+                  }
+                  return [value.toLocaleString(), selectedMetric.charAt(0).toUpperCase() + selectedMetric.slice(1)]
+                }}
+              />
+              <Area 
+                type="monotone" 
+                dataKey={selectedMetric} 
+                stroke="#3b82f6" 
+                fill="#3b82f6" 
+                fillOpacity={0.1}
+                strokeWidth={2}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </Card>
+
+        {/* Platform Performance & Funnel */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Platform Performance */}
+          <Card className="p-6 bg-white border border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900 mb-6">Platform Performance</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={platformData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis 
+                  dataKey="platform" 
+                  stroke="#6b7280" 
+                  style={{ fontSize: '12px' }}
+                />
+                <YAxis 
+                  stroke="#6b7280" 
+                  style={{ fontSize: '12px' }}
+                  tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'white',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                  }}
+                  formatter={(value: any) => [`$${value.toLocaleString()}`, 'Revenue']}
+                />
+                <Bar dataKey="revenue" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="spend" fill="#ef4444" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
           </Card>
 
-          <Card className="p-6">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-gray-600 text-sm">Revenue Generated</p>
-                <p className="text-3xl font-bold mt-2">₹{(kpis.totalRevenue / 100000).toFixed(1)}L</p>
-              </div>
-              <TrendingUp className="h-8 w-8 text-green-500" />
+          {/* Conversion Funnel */}
+          <Card className="p-6 bg-white border border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900 mb-6">Conversion Funnel</h3>
+            <div className="space-y-4">
+              {funnelData.map((stage, index) => (
+                <div key={stage.name} className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium text-gray-900">{stage.name}</span>
+                    <span className="text-sm text-gray-600">{stage.count.toLocaleString()}</span>
+                  </div>
+                  <div className="relative">
+                    <div className="w-full bg-gray-200 rounded-full h-8">
+                      <div 
+                        className="bg-blue-600 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium"
+                        style={{ width: `${(stage.count / funnelData[0].count) * 100}%` }}
+                      >
+                        {((stage.count / funnelData[0].count) * 100).toFixed(1)}%
+                      </div>
+                    </div>
+                    {index < funnelData.length - 1 && (
+                      <div className="flex justify-between mt-1">
+                        <span className="text-xs text-gray-500">
+                          {((1 - stage.count / funnelData[index + 1].count) * 100).toFixed(1)}% drop-off
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
-            <p className="text-green-600 text-sm mt-4">+24% vs last period</p>
-          </Card>
-
-          <Card className="p-6">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-gray-600 text-sm">Blended ROAS</p>
-                <p className="text-3xl font-bold mt-2">{kpis.avgRoas}x</p>
-              </div>
-              <PieChartIcon className="h-8 w-8 text-purple-500" />
-            </div>
-            <p className="text-green-600 text-sm mt-4">+18% vs last period</p>
-          </Card>
-
-          <Card className="p-6">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-gray-600 text-sm">Conversions</p>
-                <p className="text-3xl font-bold mt-2">{kpis.totalConversions.toLocaleString()}</p>
-              </div>
-              <AlertCircle className="h-8 w-8 text-orange-500" />
-            </div>
-            <p className="text-green-600 text-sm mt-4">+8% vs last period</p>
           </Card>
         </div>
 
-        {/* Campaigns Table */}
-        <Card className="p-6">
-          <h2 className="text-xl font-bold mb-4">Campaign Performance</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-3 px-4">Campaign Name</th>
-                  <th className="text-left py-3 px-4">Platform</th>
-                  <th className="text-left py-3 px-4">Status</th>
-                  <th className="text-left py-3 px-4">Spend</th>
-                  <th className="text-left py-3 px-4">Revenue</th>
-                  <th className="text-left py-3 px-4">ROAS</th>
-                  <th className="text-left py-3 px-4">Conversions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {campaigns.map((campaign) => (
-                  <tr key={campaign.id} className="border-b hover:bg-gray-50">
-                    <td className="px-4 py-3 font-semibold">{campaign.name}</td>
-                    <td className="px-4 py-3 capitalize">{campaign.platform}</td>
-                    <td className="px-4 py-3">
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                        campaign.status === 'active'
-                          ? 'bg-green-100 text-green-800'
-                          : campaign.status === 'paused'
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : 'bg-gray-100 text-gray-800'
-                      }`}>
-                        {campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">₹{(campaign.spend / 1000).toFixed(0)}K</td>
-                    <td className="px-4 py-3">₹{(campaign.revenue / 1000).toFixed(0)}K</td>
-                    <td className="px-4 py-3 font-bold text-green-600">{campaign.roas}x</td>
-                    <td className="px-4 py-3">{campaign.conversions || 0}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            
-            {campaigns.length === 0 && (
-              <div className="text-center py-8 text-gray-500">
-                No campaigns found matching your criteria
+        {/* Attribution Analysis */}
+        <Card className="p-6 bg-white border border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900 mb-6">Attribution Analysis</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="text-center">
+              <div className="text-3xl font-bold text-gray-900 mb-2">
+                {analytics?.firstTouchAttribution || 0}%
               </div>
-            )}
+              <div className="text-sm text-gray-600">First Touch</div>
+              <div className="text-xs text-gray-500 mt-1">
+                Initial interaction credit
+              </div>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl font-bold text-gray-900 mb-2">
+                {analytics?.lastTouchAttribution || 0}%
+              </div>
+              <div className="text-sm text-gray-600">Last Touch</div>
+              <div className="text-xs text-gray-500 mt-1">
+                Final conversion credit
+              </div>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl font-bold text-gray-900 mb-2">
+                {analytics?.multiTouchAttribution || 0}%
+              </div>
+              <div className="text-sm text-gray-600">Multi-Touch</div>
+              <div className="text-xs text-gray-500 mt-1">
+                Distributed credit model
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        {/* Customer Acquisition Cost */}
+        <Card className="p-6 bg-white border border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900 mb-6">Customer Acquisition Analysis</h3>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div>
+              <div className="text-2xl font-bold text-gray-900 mb-2">
+                ${(analytics?.cac || 0).toFixed(2)}
+              </div>
+              <div className="text-sm text-gray-600">CAC</div>
+              <div className="text-xs text-gray-500 mt-1">Customer Acquisition Cost</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-gray-900 mb-2">
+                ${(analytics?.ltv || 0).toFixed(2)}
+              </div>
+              <div className="text-sm text-gray-600">LTV</div>
+              <div className="text-xs text-gray-500 mt-1">Lifetime Value</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-green-600 mb-2">
+                {((analytics?.ltv || 0) / (analytics?.cac || 1)).toFixed(1)}x
+              </div>
+              <div className="text-sm text-gray-600">LTV:CAC Ratio</div>
+              <div className="text-xs text-gray-500 mt-1">Efficiency metric</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-gray-900 mb-2">
+                {((analytics?.paybackPeriod || 0)).toFixed(1)} mo
+              </div>
+              <div className="text-sm text-gray-600">Payback Period</div>
+              <div className="text-xs text-gray-500 mt-1">Time to recover CAC</div>
+            </div>
           </div>
         </Card>
       </div>
     </DashboardLayout>
-  );
+  )
 }

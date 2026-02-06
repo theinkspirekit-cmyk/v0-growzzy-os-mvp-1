@@ -1,462 +1,408 @@
 "use client"
 
-import type React from "react"
-
-import { useState, useEffect } from "react"
-import * as XLSX from "xlsx"
-import { DndContext, type DragEndEvent, closestCorners } from "@dnd-kit/core"
-import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable"
-import { useSortable } from "@dnd-kit/sortable"
-import { CSS } from "@dnd-kit/utilities"
-import { Card, CardContent } from "@/components/ui/card"
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
+import DashboardLayout from "@/components/dashboard-layout"
+import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { toast } from "@/components/ui/use-toast"
-import { Plus, Mail, Phone, MoreVertical, MessageCircle, Upload } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { 
+  Search,
+  Filter,
+  Download,
+  Eye,
+  Edit,
+  Trash2,
+  Mail,
+  Phone,
+  Calendar,
+  MapPin,
+  MoreHorizontal,
+  ChevronDown,
+  Users,
+  Target,
+  TrendingUp
+} from "lucide-react"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
-export type Lead = {
-  id: string
-  name: string
-  email: string
-  phone: string
-  company: string
-  value: number
-  status: "new" | "contacted" | "qualified" | "meeting" | "closed"
-  source: string
-  notes: string
-  last_contact: string | null
-  tags: string[]
-}
+export const dynamic = "force-dynamic"
 
-const COLUMNS = [
-  { id: "new", title: "New", color: "bg-blue-500" },
-  { id: "contacted", title: "Contacted", color: "bg-yellow-500" },
-  { id: "qualified", title: "Qualified", color: "bg-purple-500" },
-  { id: "meeting", title: "Meeting", color: "bg-orange-500" },
-  { id: "closed", title: "Closed", color: "bg-green-500" },
-] as const
-
-type ColumnId = (typeof COLUMNS)[number]["id"]
-
-function LeadCard({ lead }: { lead: Lead }) {
-  const { setNodeRef, transform, transition, attributes, listeners } = useSortable({ id: lead.id })
-  const style: React.CSSProperties = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  }
-  const initials = lead.name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2)
-
-  return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <Card className="mb-2 cursor-move hover:shadow-lg transition">
-        <CardContent className="p-4">
-          <div className="flex justify-between items-start mb-2">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-semibold">
-                {initials}
-              </div>
-              <div>
-                <h4 className="font-semibold text-sm">{lead.name}</h4>
-                <p className="text-xs text-muted-foreground">{lead.company}</p>
-              </div>
-            </div>
-            <MoreVertical className="w-4 h-4 text-muted-foreground" />
-          </div>
-          <div className="space-y-1 text-xs text-muted-foreground mb-3">
-            <div className="flex items-center">
-              <Mail className="w-3 h-3 mr-1" />
-              {lead.email}
-            </div>
-            {lead.phone && (
-              <div className="flex items-center">
-                <Phone className="w-3 h-3 mr-1" />
-                {lead.phone}
-              </div>
-            )}
-          </div>
-          <div className="flex gap-1 mb-3">
-            <Button size="sm" variant="outline" className="h-7 px-2 text-xs bg-transparent">
-              <Mail className="w-3 h-3 mr-1" />
-              Email
-            </Button>
-            {lead.phone && (
-              <Button size="sm" variant="outline" className="h-7 px-2 text-xs bg-transparent">
-                <Phone className="w-3 h-3 mr-1" />
-                Call
-              </Button>
-            )}
-            <Button size="sm" variant="outline" className="h-7 px-2 text-xs bg-transparent">
-              <MessageCircle className="w-3 h-3 mr-1" />
-              WhatsApp
-            </Button>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-green-600 text-xs font-semibold">₹{lead.value.toLocaleString()}</span>
-            <div className="flex gap-1">
-              {(lead.tags || []).slice(0, 2).map((tag) => (
-                <span key={tag} className="bg-blue-100 text-blue-800 rounded px-2 py-0.5 text-xs">
-                  {tag}
-                </span>
-              ))}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  )
-}
-
-import { DashboardLayout } from "@/components/dashboard/DashboardLayout"
-
-export default function CRMPage() {
-  const [leads, setLeads] = useState<Lead[]>([])
+export default function LeadsPage() {
+  const router = useRouter()
+  const [user, setUser] = useState<any>(null)
+  const [leads, setLeads] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [showAdd, setShowAdd] = useState(false)
-  const [showImport, setShowImport] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const [importing, setImporting] = useState(false)
-  const [form, setForm] = useState<Partial<Lead>>({ status: "new" })
+  const [searchTerm, setSearchTerm] = useState("")
+  const [selectedStatus, setSelectedStatus] = useState("all")
+  const [selectedLead, setSelectedLead] = useState<any>(null)
 
   useEffect(() => {
-    fetchLeads()
-  }, [])
+    const checkAuth = async () => {
+      try {
+        const response = await fetch("/api/auth/me")
+        if (!response.ok) {
+          router.push("/auth")
+          return
+        }
+        const data = await response.json()
+        setUser(data.user)
 
-  const fetchLeads = async () => {
-    try {
-      const response = await fetch("/api/leads")
-      if (!response.ok) throw new Error("Failed to fetch leads")
-      const data = await response.json()
-      setLeads(data || [])
-    } catch (error) {
-      console.error("[v0] Fetch leads error:", error)
-      toast({ title: "Error", description: "Failed to fetch leads" })
-    } finally {
-      setLoading(false)
+        // Fetch leads data
+        const leadsRes = await fetch(`/api/leads?userId=${data.user.id}`)
+        if (leadsRes.ok) {
+          const leadsData = await leadsRes.json()
+          setLeads(leadsData.leads || [])
+        }
+      } catch (error) {
+        console.error("[v0] Leads error:", error)
+        router.push("/auth")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    checkAuth()
+  }, [router])
+
+  const filteredLeads = leads.filter(lead => {
+    const matchesSearch = lead.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         lead.email?.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesStatus = selectedStatus === "all" || lead.status === selectedStatus
+    return matchesSearch && matchesStatus
+  })
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "new": return "bg-blue-100 text-blue-800"
+      case "contacted": return "bg-yellow-100 text-yellow-800"
+      case "qualified": return "bg-green-100 text-green-800"
+      case "converted": return "bg-purple-100 text-purple-800"
+      default: return "bg-gray-100 text-gray-800"
     }
   }
 
-  const onDragEnd = async (e: DragEndEvent) => {
-    const { active, over } = e
-    if (!over) return
-    const id = active.id as string
-    const newStatus = over.id as ColumnId
-    // Optimistic update
-    const previousLeads = [...leads]
-    setLeads((prev) => prev.map((l) => (l.id === id ? { ...l, status: newStatus } : l)))
-    try {
-      const res = await fetch(`/api/leads/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
-      })
-      if (!res.ok) throw new Error("Failed to update status")
-    } catch (err) {
-      // Revert on error
-      setLeads(previousLeads)
-      toast({ title: "Failed to update status", variant: "destructive" })
-    }
+  const getScoreColor = (score: number) => {
+    if (score >= 80) return "text-green-600"
+    if (score >= 60) return "text-yellow-600"
+    return "text-red-600"
   }
 
-  const importLeadsFromCSV = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-    setImporting(true)
-    try {
-      let rows: string[][]
-      if (file.name.endsWith(".csv")) {
-        const text = await file.text()
-        rows = text
-          .split("\n")
-          .filter(Boolean)
-          .map((r) => r.split(",").map((c) => c.trim()))
-      } else {
-        // Excel file
-        const buffer = await file.arrayBuffer()
-        const workbook = XLSX.read(buffer, { type: "array" })
-        const sheetName = workbook.SheetNames[0]
-        const worksheet = workbook.Sheets[sheetName]
-        const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][]
-        rows = data.map((row) => row.map((cell) => String(cell || "").trim()))
-      }
-
-      if (rows.length < 2) {
-        toast({ title: "File must have at least one row of data", variant: "destructive" })
-        return
-      }
-
-      const headers = rows[0].map((h) => h.toLowerCase())
-      const nameIdx = headers.findIndex((h) => h.includes("name"))
-      const emailIdx = headers.findIndex((h) => h.includes("email"))
-      const phoneIdx = headers.findIndex((h) => h.includes("phone"))
-      const companyIdx = headers.findIndex((h) => h.includes("company"))
-      const valueIdx = headers.findIndex((h) => h.includes("value") || h.includes("deal"))
-      const sourceIdx = headers.findIndex((h) => h.includes("source"))
-      const notesIdx = headers.findIndex((h) => h.includes("note"))
-
-      if (nameIdx === -1 || emailIdx === -1) {
-        toast({ title: 'File must have "name" and "email" columns', variant: "destructive" })
-        return
-      }
-
-      const newLeads: Partial<Lead>[] = []
-      for (let i = 1; i < rows.length; i++) {
-        const cols = rows[i]
-        if (!cols[nameIdx] || !cols[emailIdx]) continue
-        newLeads.push({
-          name: cols[nameIdx],
-          email: cols[emailIdx],
-          phone: cols[phoneIdx] || "",
-          company: cols[companyIdx] || "",
-          value: cols[valueIdx] ? Number(cols[valueIdx]) : 0,
-          source: cols[sourceIdx] || "Import",
-          notes: cols[notesIdx] || "",
-          status: "new",
-        })
-      }
-
-      // Bulk insert
-      console.log("Sending to API:", { leads: newLeads })
-      const res = await fetch("/api/leads/bulk", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ leads: newLeads }),
-      })
-      console.log("API response status:", res.status)
-      if (!res.ok) {
-        const errorText = await res.text()
-        console.error("API error response:", errorText)
-        throw new Error(`Failed to import: ${errorText}`)
-      }
-      const created = await res.json()
-      console.log("Created leads:", created)
-      setLeads((prev) => [...prev, ...created])
-      setShowImport(false)
-      toast({ title: `Imported ${newLeads.length} leads` })
-    } catch (e: any) {
-      toast({ title: "Import failed", description: e.message, variant: "destructive" })
-    } finally {
-      setImporting(false)
-    }
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        </div>
+      </DashboardLayout>
+    )
   }
 
-  const handleAddLead = async () => {
-    if (!form.name || !form.email) {
-      toast({ title: "Error", description: "Name and email are required" })
-      return
-    }
-
-    setSaving(true)
-    try {
-      const response = await fetch("/api/leads", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: form.name,
-          email: form.email,
-          phone: form.phone || "",
-          company: form.company || "",
-          value: Number(form.value) || 0,
-          source: form.source || "Manual",
-          status: form.status || "new",
-        }),
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || "Failed to create lead")
-      }
-
-      const newLead = await response.json()
-      setLeads([newLead, ...leads])
-      setShowAdd(false)
-      setForm({ status: "new" })
-      toast({ title: "Success", description: "Lead added successfully" })
-    } catch (error: any) {
-      console.error("[v0] Add lead error:", error)
-      toast({ title: "Error", description: error.message || "Failed to add lead" })
-    } finally {
-      setSaving(false)
-    }
-  }
+  if (!user) return null
 
   return (
-    <DashboardLayout activeTab="leads">
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold">CRM Pipeline</h1>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setShowImport(true)}>
-              Import Leads
-            </Button>
-            <Button onClick={() => setShowAdd(true)}>
-              <Plus className="w-4 h-4 mr-1" /> Add Lead
-            </Button>
+    <DashboardLayout>
+      <div className="flex h-full">
+        {/* Main Content */}
+        <div className="flex-1 flex flex-col">
+          {/* Header */}
+          <div className="bg-white border-b border-gray-200 px-6 py-4">
+            <div className="flex justify-between items-center mb-4">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900">Lead Management</h2>
+                <p className="text-sm text-gray-600 mt-1">Manage and track your leads across all platforms</p>
+              </div>
+              <div className="flex gap-3">
+                <Button variant="outline" className="flex items-center gap-2">
+                  <Download className="w-4 h-4" />
+                  Export
+                </Button>
+                <Button className="flex items-center gap-2">
+                  <Users className="w-4 h-4" />
+                  Add Lead
+                </Button>
+              </div>
+            </div>
+
+            {/* Filters */}
+            <div className="flex gap-4 items-center">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Input
+                  placeholder="Search leads..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="flex items-center gap-2">
+                    <Filter className="w-4 h-4" />
+                    Status: {selectedStatus === "all" ? "All" : selectedStatus}
+                    <ChevronDown className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={() => setSelectedStatus("all")}>All Status</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setSelectedStatus("new")}>New</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setSelectedStatus("contacted")}>Contacted</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setSelectedStatus("qualified")}>Qualified</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setSelectedStatus("converted")}>Converted</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+
+          {/* Stats Cards */}
+          <div className="bg-white px-6 py-4 border-b border-gray-200">
+            <div className="grid grid-cols-4 gap-4">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-gray-900">{leads.length}</div>
+                <div className="text-sm text-gray-600">Total Leads</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-blue-600">
+                  {leads.filter(l => l.status === "new").length}
+                </div>
+                <div className="text-sm text-gray-600">New</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-yellow-600">
+                  {leads.filter(l => l.status === "contacted").length}
+                </div>
+                <div className="text-sm text-gray-600">Contacted</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-green-600">
+                  {leads.filter(l => l.status === "qualified").length}
+                </div>
+                <div className="text-sm text-gray-600">Qualified</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Leads Table */}
+          <div className="flex-1 bg-white overflow-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="text-left py-3 px-6 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Lead
+                  </th>
+                  <th className="text-left py-3 px-6 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Contact
+                  </th>
+                  <th className="text-left py-3 px-6 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Source
+                  </th>
+                  <th className="text-left py-3 px-6 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Score
+                  </th>
+                  <th className="text-left py-3 px-6 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="text-left py-3 px-6 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Date
+                  </th>
+                  <th className="text-right py-3 px-6 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredLeads.map((lead) => (
+                  <tr 
+                    key={lead.id} 
+                    className="hover:bg-gray-50 cursor-pointer"
+                    onClick={() => setSelectedLead(lead)}
+                  >
+                    <td className="py-4 px-6">
+                      <div className="flex items-center">
+                        <div className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center mr-3">
+                          <span className="text-sm font-medium text-gray-700">
+                            {lead.name?.split(' ').map(n => n[0]).join('').toUpperCase()}
+                          </span>
+                        </div>
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">{lead.name}</div>
+                          <div className="text-sm text-gray-500">ID: {lead.id}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-4 px-6">
+                      <div className="text-sm text-gray-900">{lead.email}</div>
+                      <div className="text-sm text-gray-500">{lead.phone}</div>
+                    </td>
+                    <td className="py-4 px-6">
+                      <div className="text-sm text-gray-900">{lead.platform}</div>
+                      <div className="text-sm text-gray-500">{lead.campaign}</div>
+                    </td>
+                    <td className="py-4 px-6">
+                      <div className={`text-sm font-medium ${getScoreColor(lead.score || 0)}`}>
+                        {lead.score || 0}/100
+                      </div>
+                    </td>
+                    <td className="py-4 px-6">
+                      <Badge className={getStatusColor(lead.status)}>
+                        {lead.status}
+                      </Badge>
+                    </td>
+                    <td className="py-4 px-6">
+                      <div className="text-sm text-gray-900">
+                        {new Date(lead.created_at).toLocaleDateString()}
+                      </div>
+                    </td>
+                    <td className="py-4 px-6">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <MoreHorizontal className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                          <DropdownMenuItem>
+                            <Eye className="w-4 h-4 mr-2" />
+                            View Details
+                          </DropdownMenuItem>
+                          <DropdownMenuItem>
+                            <Edit className="w-4 h-4 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="text-red-600">
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-          {COLUMNS.map((c) => {
-            const list = leads.filter((l) => l.status === c.id)
-            const value = list.reduce((s, l) => s + l.value, 0)
-            return (
-              <Card key={c.id} className="p-4">
-                <p className="text-sm text-muted-foreground mb-1">{c.title}</p>
-                <p className="text-2xl font-bold">{list.length}</p>
-                <p className="text-xs">₹{value.toLocaleString()}</p>
-              </Card>
-            )
-          })}
-          <Card className="p-4">
-            <p className="text-sm text-muted-foreground mb-1">Conversion Rate</p>
-            <p className="text-2xl font-bold">
-              {leads.length > 0
-                ? Math.round((leads.filter((l) => l.status === "closed").length / leads.length) * 100)
-                : 0}
-              %
-            </p>
-            <p className="text-xs">Closed / Total</p>
-          </Card>
-        </div>
-
-        {/* Kanban */}
-        {!loading && (
-          <DndContext collisionDetection={closestCorners} onDragEnd={onDragEnd}>
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 overflow-x-auto">
-              {COLUMNS.map((col) => (
-                <div key={col.id} className="bg-slate-50 p-3 rounded-lg min-h-[500px]">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className={`w-3 h-3 rounded-full ${col.color}`} />
-                    <h3 className="text-sm font-semibold">
-                      {col.title} ({leads.filter((l) => l.status === col.id).length})
-                    </h3>
-                  </div>
-                  <SortableContext
-                    items={leads.filter((l) => l.status === col.id).map((l) => l.id)}
-                    strategy={verticalListSortingStrategy}
-                  >
-                    {leads
-                      .filter((l) => l.status === col.id)
-                      .map((lead) => (
-                        <LeadCard key={lead.id} lead={lead} />
-                      ))}
-                  </SortableContext>
+        {/* Right Sidebar - Lead Details */}
+        {selectedLead && (
+          <div className="w-96 bg-white border-l border-gray-200 flex flex-col">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">{selectedLead.name}</h3>
+                  <p className="text-sm text-gray-600">Lead Details</p>
                 </div>
-              ))}
-            </div>
-          </DndContext>
-        )}
-
-        {/* Add Lead dialog */}
-        <Dialog open={showAdd} onOpenChange={setShowAdd}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Add Lead</DialogTitle>
-            </DialogHeader>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Name *</Label>
-                <Input value={form.name || ""} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-              </div>
-              <div>
-                <Label>Email *</Label>
-                <Input
-                  type="email"
-                  value={form.email || ""}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label>Phone</Label>
-                <Input value={form.phone || ""} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-              </div>
-              <div>
-                <Label>Company</Label>
-                <Input value={form.company || ""} onChange={(e) => setForm({ ...form, company: e.target.value })} />
-              </div>
-              <div>
-                <Label>Source</Label>
-                <select
-                  value={form.source || "Manual"}
-                  onChange={(e) => setForm({ ...form, source: e.target.value })}
-                  className="w-full mt-1 px-3 py-2 border rounded text-sm"
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => setSelectedLead(null)}
                 >
-                  <option value="Manual">Manual</option>
-                  <option value="Meta Ads">Meta Ads</option>
-                  <option value="Google Ads">Google Ads</option>
-                  <option value="LinkedIn">LinkedIn</option>
-                  <option value="Referral">Referral</option>
-                </select>
-              </div>
-              <div className="col-span-2">
-                <Label>Deal Value</Label>
-                <Input
-                  type="number"
-                  value={form.value || ""}
-                  onChange={(e) => setForm({ ...form, value: +e.target.value })}
-                />
-              </div>
-              <div className="col-span-2">
-                <Label>Notes</Label>
-                <Textarea
-                  value={form.notes || ""}
-                  rows={3}
-                  onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                />
+                  ×
+                </Button>
               </div>
             </div>
-            <div className="flex justify-end gap-2 mt-4">
-              <Button variant="outline" onClick={() => setShowAdd(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleAddLead} disabled={saving}>
-                {saving ? "Saving..." : "Add Lead"}
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
 
-        {/* Import Leads dialog */}
-        <Dialog open={showImport} onOpenChange={setShowImport}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Import Leads from CSV or Excel</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Upload a CSV or Excel file with columns: name, email, phone, company, value, source, notes
-              </p>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                <Upload className="mx-auto h-8 w-8 text-gray-400 mb-2" />
-                <label htmlFor="csv-upload" className="cursor-pointer">
-                  <span className="text-sm text-gray-600">Click to upload or drag and drop</span>
-                  <input
-                    id="csv-upload"
-                    type="file"
-                    accept=".csv,.xlsx,.xls"
-                    className="hidden"
-                    onChange={importLeadsFromCSV}
-                    disabled={importing}
-                  />
-                </label>
+            <div className="flex-1 overflow-auto p-6 space-y-6">
+              {/* Contact Information */}
+              <div>
+                <h4 className="text-sm font-medium text-gray-900 mb-3">Contact Information</h4>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <Mail className="w-4 h-4 text-gray-400" />
+                    <span className="text-sm text-gray-900">{selectedLead.email}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Phone className="w-4 h-4 text-gray-400" />
+                    <span className="text-sm text-gray-900">{selectedLead.phone}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <MapPin className="w-4 h-4 text-gray-400" />
+                    <span className="text-sm text-gray-900">{selectedLead.location || "Not specified"}</span>
+                  </div>
+                </div>
               </div>
-              {importing && <div className="text-center text-sm text-gray-600">Importing...</div>}
+
+              {/* Lead Score */}
+              <div>
+                <h4 className="text-sm font-medium text-gray-900 mb-3">Lead Score</h4>
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-gray-900">Score</span>
+                    <span className={`text-lg font-bold ${getScoreColor(selectedLead.score || 0)}`}>
+                      {selectedLead.score || 0}/100
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="bg-blue-600 h-2 rounded-full"
+                      style={{ width: `${selectedLead.score || 0}%` }}
+                    ></div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Campaign Source */}
+              <div>
+                <h4 className="text-sm font-medium text-gray-900 mb-3">Campaign Source</h4>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Platform</span>
+                    <span className="text-sm font-medium text-gray-900">{selectedLead.platform}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Campaign</span>
+                    <span className="text-sm font-medium text-gray-900">{selectedLead.campaign}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Ad Set</span>
+                    <span className="text-sm font-medium text-gray-900">{selectedLead.ad_set || "N/A"}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Activity Timeline */}
+              <div>
+                <h4 className="text-sm font-medium text-gray-900 mb-3">Activity Timeline</h4>
+                <div className="space-y-3">
+                  <div className="flex gap-3">
+                    <div className="w-2 h-2 bg-blue-600 rounded-full mt-2"></div>
+                    <div>
+                      <div className="text-sm font-medium text-gray-900">Lead Created</div>
+                      <div className="text-xs text-gray-500">
+                        {new Date(selectedLead.created_at).toLocaleString()}
+                      </div>
+                    </div>
+                  </div>
+                  {selectedLead.status === "contacted" && (
+                    <div className="flex gap-3">
+                      <div className="w-2 h-2 bg-yellow-600 rounded-full mt-2"></div>
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">Contact Attempted</div>
+                        <div className="text-xs text-gray-500">2 days ago</div>
+                      </div>
+                    </div>
+                  )}
+                  {selectedLead.status === "qualified" && (
+                    <div className="flex gap-3">
+                      <div className="w-2 h-2 bg-green-600 rounded-full mt-2"></div>
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">Lead Qualified</div>
+                        <div className="text-xs text-gray-500">1 day ago</div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="space-y-2">
+                <Button className="w-full">Contact Lead</Button>
+                <Button variant="outline" className="w-full">View Full Profile</Button>
+              </div>
             </div>
-            <div className="flex justify-end">
-              <Button variant="outline" onClick={() => setShowImport(false)} disabled={importing}>
-                Cancel
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+          </div>
+        )}
       </div>
     </DashboardLayout>
   )
