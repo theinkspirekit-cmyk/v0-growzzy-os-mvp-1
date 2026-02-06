@@ -3,35 +3,30 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import DashboardLayout from "@/components/dashboard-layout"
-import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { 
-  TrendingUp,
-  TrendingDown,
-  DollarSign,
   Target,
+  DollarSign,
+  TrendingUp,
   Users,
-  BarChart3,
-  Calendar,
-  Download,
-  Filter
+  RefreshCw,
+  ArrowUp,
+  ArrowDown,
+  BarChart3
 } from "lucide-react"
-import { LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts"
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts"
 import { cn } from "@/lib/utils"
 
 export const dynamic = "force-dynamic"
 
-export default function AnalyticsPage() {
+export default function AnalyticsOverviewPage() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
   const [analytics, setAnalytics] = useState<any>(null)
   const [historicalData, setHistoricalData] = useState<any[]>([])
-  const [platformData, setPlatformData] = useState<any[]>([])
-  const [funnelData, setFunnelData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [timeRange, setTimeRange] = useState("30d")
-  const [selectedMetric, setSelectedMetric] = useState("revenue")
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -45,11 +40,9 @@ export default function AnalyticsPage() {
         setUser(data.user)
 
         // Fetch analytics data
-        const [analyticsRes, historicalRes, platformRes, funnelRes] = await Promise.all([
+        const [analyticsRes, historicalRes] = await Promise.all([
           fetch(`/api/analytics/summary?userId=${data.user.id}&range=${timeRange}`),
           fetch(`/api/analytics/historical?userId=${data.user.id}&range=${timeRange}`),
-          fetch(`/api/analytics/platforms?userId=${data.user.id}`),
-          fetch(`/api/analytics/funnel?userId=${data.user.id}`),
         ])
 
         if (analyticsRes.ok) {
@@ -60,16 +53,6 @@ export default function AnalyticsPage() {
         if (historicalRes.ok) {
           const histData = await historicalRes.json()
           setHistoricalData(histData.data || [])
-        }
-
-        if (platformRes.ok) {
-          const platformData = await platformRes.json()
-          setPlatformData(platformData.platforms || [])
-        }
-
-        if (funnelRes.ok) {
-          const funnelData = await funnelRes.json()
-          setFunnelData(funnelData.stages || [])
         }
       } catch (error) {
         console.error("[v0] Analytics error:", error)
@@ -82,59 +65,50 @@ export default function AnalyticsPage() {
     checkAuth()
   }, [router, timeRange])
 
+  // Reuse exact same MetricCard component from Dashboard
   const MetricCard = ({ 
     title, 
     value, 
     change, 
     changeType,
-    icon: Icon,
-    format = "number"
+    icon: Icon
   }: {
     title: string
-    value: number
-    change: number
+    value: string
+    change: string
     changeType: 'increase' | 'decrease'
     icon: React.ComponentType<{ className?: string }>
-    format?: 'number' | 'currency' | 'percentage'
   }) => {
     const isPositive = changeType === 'increase'
     
-    const formatValue = (val: number) => {
-      switch (format) {
-        case 'currency':
-          return `$${val.toLocaleString('en-US', { maximumFractionDigits: 0 })}`
-        case 'percentage':
-          return `${val.toFixed(1)}%`
-        default:
-          return val.toLocaleString()
-      }
-    }
-
     return (
-      <Card className="p-6 bg-white border border-gray-200">
-        <div className="flex items-center justify-between mb-4">
-          <div className="p-2 bg-gray-50 rounded-lg">
-            <Icon className="w-5 h-5 text-gray-600" />
-          </div>
-          <div className={cn(
-            "flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium",
-            isPositive ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"
-          )}>
-            {isPositive ? (
-              <TrendingUp className="w-3 h-3" />
-            ) : (
-              <TrendingDown className="w-3 h-3" />
-            )}
-            {Math.abs(change).toFixed(1)}%
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="p-2 bg-gray-50 rounded-lg">
+                <Icon className="w-5 h-5 text-gray-600" />
+              </div>
+              <p className="text-sm font-medium text-gray-700">{title}</p>
+            </div>
+            <p className="text-3xl font-bold text-gray-900 mb-2">{value}</p>
+            <div className="flex items-center gap-2">
+              {isPositive ? (
+                <ArrowUp className="w-4 h-4 text-green-600" />
+              ) : (
+                <ArrowDown className="w-4 h-4 text-red-600" />
+              )}
+              <span className={cn(
+                "text-sm font-medium",
+                isPositive ? "text-green-600" : "text-red-600"
+              )}>
+                {change}
+              </span>
+              <span className="text-sm text-gray-500">vs last period</span>
+            </div>
           </div>
         </div>
-        <div>
-          <div className="text-2xl font-bold text-gray-900 mb-1">
-            {formatValue(value)}
-          </div>
-          <div className="text-sm text-gray-600">{title}</div>
-        </div>
-      </Card>
+      </div>
     )
   }
 
@@ -150,90 +124,88 @@ export default function AnalyticsPage() {
 
   if (!user) return null
 
+  const sessions = analytics?.sessions || 0
+  const conversions = analytics?.conversions || 0
+  const revenue = analytics?.revenue || 0
+  const conversionRate = analytics?.conversionRate || 0
+
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 bg-gray-50/50 p-6 rounded-lg">
         {/* Header */}
         <div className="flex justify-between items-start">
           <div>
             <h2 className="text-2xl font-bold text-gray-900">Analytics Overview</h2>
-            <p className="text-gray-600 mt-1">Comprehensive performance metrics and insights</p>
+            <p className="text-gray-600 mt-1">Deep dive into your performance metrics</p>
           </div>
           <div className="flex gap-3">
             <Select value={timeRange} onValueChange={setTimeRange}>
-              <SelectTrigger className="w-32">
-                <Calendar className="w-4 h-4 mr-2" />
+              <SelectTrigger className="w-20 h-8 text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="7d">Last 7 days</SelectItem>
-                <SelectItem value="30d">Last 30 days</SelectItem>
-                <SelectItem value="90d">Last 90 days</SelectItem>
-                <SelectItem value="1y">Last year</SelectItem>
+                <SelectItem value="7d">7d</SelectItem>
+                <SelectItem value="30d">30d</SelectItem>
+                <SelectItem value="90d">90d</SelectItem>
               </SelectContent>
             </Select>
-            <Button variant="outline" className="flex items-center gap-2">
-              <Download className="w-4 h-4" />
-              Export
+            <Button className="flex items-center gap-2">
+              <RefreshCw className="w-4 h-4" />
+              Refresh
             </Button>
           </div>
         </div>
 
-        {/* KPI Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Top KPI Cards - Same style as Dashboard */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <MetricCard
-            title="Total Revenue"
-            value={analytics?.totalRevenue || 0}
-            change={12.5}
+            title="Sessions"
+            value={sessions.toLocaleString()}
+            change="+18.2%"
             changeType="increase"
-            icon={DollarSign}
-            format="currency"
-          />
-          <MetricCard
-            title="Ad Spend"
-            value={analytics?.totalSpend || 0}
-            change={8.2}
-            changeType="increase"
-            icon={BarChart3}
-            format="currency"
-          />
-          <MetricCard
-            title="ROAS"
-            value={analytics?.roas || 0}
-            change={-2.1}
-            changeType="decrease"
-            icon={Target}
-            format="number"
+            icon={Users}
           />
           <MetricCard
             title="Conversions"
-            value={analytics?.totalConversions || 0}
-            change={15.3}
+            value={conversions.toLocaleString()}
+            change="+12.5%"
             changeType="increase"
-            icon={Users}
-            format="number"
+            icon={Target}
+          />
+          <MetricCard
+            title="Revenue"
+            value={`$${revenue.toLocaleString()}`}
+            change="+15.3%"
+            changeType="increase"
+            icon={DollarSign}
+          />
+          <MetricCard
+            title="Conversion Rate"
+            value={`${conversionRate.toFixed(1)}%`}
+            change="+0.8%"
+            changeType="increase"
+            icon={TrendingUp}
           />
         </div>
 
-        {/* Performance Chart */}
-        <Card className="p-6 bg-white border border-gray-200">
+        {/* Main Analytics Chart - Same style as Dashboard */}
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
           <div className="flex justify-between items-center mb-6">
-            <h3 className="text-lg font-semibold text-gray-900">Performance Trend</h3>
-            <Select value={selectedMetric} onValueChange={setSelectedMetric}>
-              <SelectTrigger className="w-32">
+            <h3 className="text-lg font-semibold text-gray-900">Analytics Overview</h3>
+            <Select value={timeRange} onValueChange={setTimeRange}>
+              <SelectTrigger className="w-20 h-8 text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="revenue">Revenue</SelectItem>
-                <SelectItem value="spend">Spend</SelectItem>
-                <SelectItem value="conversions">Conversions</SelectItem>
-                <SelectItem value="roas">ROAS</SelectItem>
+                <SelectItem value="7d">7d</SelectItem>
+                <SelectItem value="30d">30d</SelectItem>
+                <SelectItem value="90d">90d</SelectItem>
               </SelectContent>
             </Select>
           </div>
           
-          <ResponsiveContainer width="100%" height={350}>
-            <AreaChart data={historicalData}>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={historicalData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis 
                 dataKey="date" 
@@ -244,12 +216,7 @@ export default function AnalyticsPage() {
               <YAxis 
                 stroke="#6b7280" 
                 style={{ fontSize: '12px' }}
-                tickFormatter={(value) => {
-                  if (selectedMetric === 'revenue' || selectedMetric === 'spend') {
-                    return `$${(value / 1000).toFixed(0)}k`
-                  }
-                  return value.toLocaleString()
-                }}
+                tickFormatter={(value) => value.toLocaleString()}
               />
               <Tooltip
                 contentStyle={{
@@ -257,158 +224,15 @@ export default function AnalyticsPage() {
                   border: '1px solid #e5e7eb',
                   borderRadius: '8px',
                 }}
-                formatter={(value: any) => {
-                  if (selectedMetric === 'revenue' || selectedMetric === 'spend') {
-                    return [`$${value.toLocaleString()}`, selectedMetric.charAt(0).toUpperCase() + selectedMetric.slice(1)]
-                  }
-                  return [value.toLocaleString(), selectedMetric.charAt(0).toUpperCase() + selectedMetric.slice(1)]
-                }}
+                formatter={(value: any) => [value.toLocaleString(), '']}
               />
-              <Area 
-                type="monotone" 
-                dataKey={selectedMetric} 
-                stroke="#3b82f6" 
-                fill="#3b82f6" 
-                fillOpacity={0.1}
-                strokeWidth={2}
-              />
-            </AreaChart>
+              <Legend />
+              <Line type="monotone" dataKey="sessions" stroke="#3b82f6" strokeWidth={2} name="Sessions" />
+              <Line type="monotone" dataKey="conversions" stroke="#10b981" strokeWidth={2} name="Conversions" />
+              <Line type="monotone" dataKey="revenue" stroke="#f59e0b" strokeWidth={2} name="Revenue" />
+            </LineChart>
           </ResponsiveContainer>
-        </Card>
-
-        {/* Platform Performance & Funnel */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Platform Performance */}
-          <Card className="p-6 bg-white border border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900 mb-6">Platform Performance</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={platformData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis 
-                  dataKey="platform" 
-                  stroke="#6b7280" 
-                  style={{ fontSize: '12px' }}
-                />
-                <YAxis 
-                  stroke="#6b7280" 
-                  style={{ fontSize: '12px' }}
-                  tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: 'white',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '8px',
-                  }}
-                  formatter={(value: any) => [`$${value.toLocaleString()}`, 'Revenue']}
-                />
-                <Bar dataKey="revenue" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="spend" fill="#ef4444" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </Card>
-
-          {/* Conversion Funnel */}
-          <Card className="p-6 bg-white border border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900 mb-6">Conversion Funnel</h3>
-            <div className="space-y-4">
-              {funnelData.map((stage, index) => (
-                <div key={stage.name} className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium text-gray-900">{stage.name}</span>
-                    <span className="text-sm text-gray-600">{stage.count.toLocaleString()}</span>
-                  </div>
-                  <div className="relative">
-                    <div className="w-full bg-gray-200 rounded-full h-8">
-                      <div 
-                        className="bg-blue-600 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium"
-                        style={{ width: `${(stage.count / funnelData[0].count) * 100}%` }}
-                      >
-                        {((stage.count / funnelData[0].count) * 100).toFixed(1)}%
-                      </div>
-                    </div>
-                    {index < funnelData.length - 1 && (
-                      <div className="flex justify-between mt-1">
-                        <span className="text-xs text-gray-500">
-                          {((1 - stage.count / funnelData[index + 1].count) * 100).toFixed(1)}% drop-off
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
         </div>
-
-        {/* Attribution Analysis */}
-        <Card className="p-6 bg-white border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 mb-6">Attribution Analysis</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="text-center">
-              <div className="text-3xl font-bold text-gray-900 mb-2">
-                {analytics?.firstTouchAttribution || 0}%
-              </div>
-              <div className="text-sm text-gray-600">First Touch</div>
-              <div className="text-xs text-gray-500 mt-1">
-                Initial interaction credit
-              </div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold text-gray-900 mb-2">
-                {analytics?.lastTouchAttribution || 0}%
-              </div>
-              <div className="text-sm text-gray-600">Last Touch</div>
-              <div className="text-xs text-gray-500 mt-1">
-                Final conversion credit
-              </div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold text-gray-900 mb-2">
-                {analytics?.multiTouchAttribution || 0}%
-              </div>
-              <div className="text-sm text-gray-600">Multi-Touch</div>
-              <div className="text-xs text-gray-500 mt-1">
-                Distributed credit model
-              </div>
-            </div>
-          </div>
-        </Card>
-
-        {/* Customer Acquisition Cost */}
-        <Card className="p-6 bg-white border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 mb-6">Customer Acquisition Analysis</h3>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div>
-              <div className="text-2xl font-bold text-gray-900 mb-2">
-                ${(analytics?.cac || 0).toFixed(2)}
-              </div>
-              <div className="text-sm text-gray-600">CAC</div>
-              <div className="text-xs text-gray-500 mt-1">Customer Acquisition Cost</div>
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-gray-900 mb-2">
-                ${(analytics?.ltv || 0).toFixed(2)}
-              </div>
-              <div className="text-sm text-gray-600">LTV</div>
-              <div className="text-xs text-gray-500 mt-1">Lifetime Value</div>
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-green-600 mb-2">
-                {((analytics?.ltv || 0) / (analytics?.cac || 1)).toFixed(1)}x
-              </div>
-              <div className="text-sm text-gray-600">LTV:CAC Ratio</div>
-              <div className="text-xs text-gray-500 mt-1">Efficiency metric</div>
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-gray-900 mb-2">
-                {((analytics?.paybackPeriod || 0)).toFixed(1)} mo
-              </div>
-              <div className="text-sm text-gray-600">Payback Period</div>
-              <div className="text-xs text-gray-500 mt-1">Time to recover CAC</div>
-            </div>
-          </div>
-        </Card>
       </div>
     </DashboardLayout>
   )
