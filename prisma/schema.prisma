@@ -1,0 +1,143 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ═══════════════════════════════════════════════════
+// AUTHENTICATION & USERS
+// ═══════════════════════════════════════════════════
+
+model User {
+  id                    String                 @id @default(cuid())
+  email                 String                 @unique
+  name                  String?
+  password              String
+  emailVerified         Boolean                @default(true)
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  
+  // Relations
+  platformConnections   PlatformConnection[]
+  campaigns             Campaign[]
+  reports               Report[]
+  sessions              Session[]
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  userId       String
+  sessionToken String   @unique
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+  
+  @@index([userId])
+}
+
+// ═══════════════════════════════════════════════════
+// PLATFORM CONNECTIONS
+// ═══════════════════════════════════════════════════
+
+model PlatformConnection {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  platform        String    // meta, google, shopify, linkedin
+  accessToken     String    @db.Text
+  refreshToken    String?   @db.Text
+  expiresAt       DateTime?
+  
+  accountId       String?
+  accountName     String?
+  accountInfo     Json?
+  
+  active          Boolean   @default(true)
+  connectedAt     DateTime  @default(now())
+  lastSyncedAt    DateTime?
+  
+  campaigns       Campaign[]
+  
+  @@unique([userId, platform])
+  @@index([userId])
+}
+
+// ═══════════════════════════════════════════════════
+// CAMPAIGNS & ANALYTICS
+// ═══════════════════════════════════════════════════
+
+model Campaign {
+  id                  String              @id @default(cuid())
+  userId              String
+  user                User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  connectionId        String
+  connection          PlatformConnection  @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  
+  platform            String
+  platformCampaignId  String
+  
+  name                String
+  status              String
+  objective           String?
+  
+  // Metrics
+  spend               Decimal             @default(0) @db.Decimal(10, 2)
+  revenue             Decimal             @default(0) @db.Decimal(10, 2)
+  impressions         Int                 @default(0)
+  clicks              Int                 @default(0)
+  conversions         Int                 @default(0)
+  ctr                 Decimal?            @db.Decimal(5, 2)
+  cpc                 Decimal?            @db.Decimal(10, 2)
+  cpm                 Decimal?            @db.Decimal(10, 2)
+  roas                Decimal?            @db.Decimal(10, 2)
+  bounceRate          Decimal?            @db.Decimal(5, 2)
+  
+  // Demographics
+  ageGenderData       Json?               // Store age/gender breakdown
+  sourceData          Json?               // Store traffic sources
+  
+  startDate           DateTime?
+  endDate             DateTime?
+  lastUpdated         DateTime            @default(now())
+  createdAt           DateTime            @default(now())
+  
+  @@unique([platformCampaignId, platform])
+  @@index([userId])
+  @@index([platform])
+}
+
+// ═══════════════════════════════════════════════════
+// REPORTS
+// ═══════════════════════════════════════════════════
+
+model Report {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  title           String
+  type            String    @default("analytics")
+  
+  dateFrom        DateTime
+  dateTo          DateTime
+  
+  // Report data (matches the image structure)
+  data            Json      // Contains all metrics, charts data
+  
+  // File
+  fileUrl         String?
+  fileName        String?
+  pdfBase64       String?   @db.Text
+  
+  createdAt       DateTime  @default(now())
+  
+  @@index([userId])
+}
