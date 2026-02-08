@@ -1,1 +1,1 @@
-{"crons": [{"path": "/api/cron/sync-all-platforms", "schedule": "0 2 * * *"}, {"path": "/api/cron/check-automations", "schedule": "0 3 * * *"}], "buildCommand": "npm run build", "installCommand": "npm install"}
+{"crons": [{"path": "/api/cron/sync-all-platforms", "schedule": "0 2 * * *"}, {"path": "/api/cron/check-automations", "schedule": "0 3 * * *"}], "buildCommand": "npm run prisma:generate && npm run build", "installCommand": "npm install"}

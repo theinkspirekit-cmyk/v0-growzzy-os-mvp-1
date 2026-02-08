@@ -1,5 +1,5 @@
 import { cookies } from "next/headers"
-import { createServerClient } from "@supabase/supabase-js"
+import { createServerClient } from "@supabase/ssr"
 import { NextResponse } from "next/server"
 
 const appUrl = "https://your-app-url.com" // Replace with your actual app URL
