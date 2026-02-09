@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { cookies } from "next/headers"
 import { type NextRequest, NextResponse } from "next/server"
 
@@ -103,3 +104,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Failed to initiate OAuth" }, { status: 500 })
   }
 }
+

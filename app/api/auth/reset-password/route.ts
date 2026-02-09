@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { NextResponse } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
@@ -58,3 +59,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: error.message || "Failed to reset password" }, { status: 500 })
   }
 }
+

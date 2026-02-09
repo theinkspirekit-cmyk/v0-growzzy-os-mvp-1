@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { NextResponse } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
@@ -123,3 +124,4 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Failed to generate report" }, { status: 500 })
   }
 }
+

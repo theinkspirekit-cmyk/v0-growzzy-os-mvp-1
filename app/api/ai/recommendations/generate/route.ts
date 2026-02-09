@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 /**
  * Generate AI Recommendations API
  * Analyzes real platform data and generates actionable recommendations
@@ -28,3 +29,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error.message || "Failed to generate recommendations" }, { status: 500 })
   }
 }
+

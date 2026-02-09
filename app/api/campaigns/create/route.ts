@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { type NextRequest, NextResponse } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
@@ -348,3 +349,4 @@ async function createMetaAd(campaignId: string, adData: any, accessToken: string
 
   return await adResponse.json()
 }
+

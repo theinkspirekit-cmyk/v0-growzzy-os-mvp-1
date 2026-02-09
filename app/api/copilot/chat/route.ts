@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { type NextRequest, NextResponse } from "next/server"
 import OpenAI from "openai"
 
@@ -101,3 +102,4 @@ Your current blended ROAS is around 2.8x. There's room for improvement to reach 
 
 What specific aspect of your campaigns would you like to discuss?`
 }
+

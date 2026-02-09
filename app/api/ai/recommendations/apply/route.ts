@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 /**
  * Apply AI Recommendation API
  * Actually executes AI recommendations on the connected platforms
@@ -27,3 +28,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error.message || "Failed to apply recommendation" }, { status: 500 })
   }
 }
+

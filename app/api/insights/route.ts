@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server';
 
 // In-memory storage for insights (in production, use a database)
@@ -177,3 +178,4 @@ export async function DELETE(request: NextRequest) {
     );
   }
 }
+

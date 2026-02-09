@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 import { type NextRequest, NextResponse } from "next/server"
@@ -95,3 +96,4 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`/dashboard/settings?error=shopify_auth_failed`, { status: 302 })
   }
 }
+

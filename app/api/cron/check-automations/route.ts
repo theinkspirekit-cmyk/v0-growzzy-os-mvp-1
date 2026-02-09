@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { NextResponse } from "next/server"
 import { supabaseAdmin } from "@/lib/supabaseAdmin"
 
@@ -169,3 +170,4 @@ async function executeAutomationActions(automation: any): Promise<{ success: boo
       return { success: false, message: `Unknown action type: ${action_type}` }
   }
 }
+

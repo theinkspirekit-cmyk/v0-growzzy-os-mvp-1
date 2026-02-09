@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { type NextRequest, NextResponse } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
@@ -119,3 +120,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: err.message || "Failed to create lead" }, { status: 500 })
   }
 }
+

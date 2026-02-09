@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 import { NextResponse, type NextRequest } from "next/server"
@@ -109,3 +110,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Failed to save credentials" }, { status: 500 })
   }
 }
+

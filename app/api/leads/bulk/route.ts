@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 
@@ -36,3 +37,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: err.message || 'Bulk insert failed' }, { status: 500 })
   }
 }
+

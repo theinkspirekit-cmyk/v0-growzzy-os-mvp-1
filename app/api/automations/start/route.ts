@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server';
 import { automationEngine } from '@/lib/automation-engine';
 
@@ -34,3 +35,4 @@ export async function DELETE(request: NextRequest) {
     );
   }
 }
+

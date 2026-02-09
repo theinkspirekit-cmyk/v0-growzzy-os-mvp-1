@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { NextResponse, NextRequest } from 'next/server';
 import OpenAI from 'openai';
 
@@ -115,3 +116,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Server error' }, { status: 500 });
   }
 }
+

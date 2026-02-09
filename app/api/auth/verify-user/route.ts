@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { createServerClient } from "@supabase/ssr"
 import { type NextRequest, NextResponse } from "next/server"
 
@@ -63,3 +64,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Verification failed" }, { status: 500 })
   }
 }
+

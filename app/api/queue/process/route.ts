@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
@@ -414,3 +415,4 @@ function calculateAvgProcessingTime(jobs: any[]) {
 
   return totalTime / completedJobs.length / 1000; // Convert to seconds
 }
+

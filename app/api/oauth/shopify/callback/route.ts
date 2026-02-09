@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getOAuthConfig } from '@/lib/oauth-config';
@@ -120,3 +121,4 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+

@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { NextResponse } from "next/server"
 
 export async function POST(req: Request) {
@@ -74,3 +75,4 @@ Be specific and use the actual numbers from the data. Return only valid JSON.`,
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }
+

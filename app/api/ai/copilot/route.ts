@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { type NextRequest, NextResponse } from "next/server"
 
 export async function POST(request: NextRequest) {
@@ -92,3 +93,4 @@ function generateFallbackResponse(message: string): string {
 
   return `🤖 **AI Co-Pilot Assistant:**\n\nI can help you with:\n- Campaign optimization strategies\n- Budget allocation recommendations\n- Lead generation improvements\n- Performance analysis\n\nWhat would you like to optimize?`
 }
+

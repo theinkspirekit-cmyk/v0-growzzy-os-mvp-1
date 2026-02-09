@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { cookies } from "next/headers"
 import { createServerClient } from "@supabase/ssr"
 import { NextResponse } from "next/server"
@@ -64,3 +65,4 @@ export async function GET(request) {
 
   return NextResponse.redirect(`${appUrl}/dashboard/settings?success=google_connected`, { status: 302 })
 }
+

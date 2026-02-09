@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { signIn } from "next-auth/react"
-import { ArrowLeft, Layers, Mail, Lock, User, Loader2, AlertCircle } from "lucide-react"
+import { ArrowLeft, ArrowRight, Layers, Mail, Lock, User, Loader2, AlertCircle } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export default function AuthPage() {

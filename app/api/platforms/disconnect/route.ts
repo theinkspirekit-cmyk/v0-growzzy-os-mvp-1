@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
@@ -43,3 +44,4 @@ export async function POST(request: Request) {
 
   return NextResponse.json({ success: true, message: `Disconnected from ${platform}` })
 }
+

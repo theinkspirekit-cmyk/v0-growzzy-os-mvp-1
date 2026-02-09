@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
@@ -353,3 +354,4 @@ function calculateRetention(data: any[]) {
 
   return firstConversions > 0 ? (secondConversions / firstConversions) * 100 : 0;
 }
+

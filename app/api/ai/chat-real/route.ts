@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { NextResponse } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
@@ -66,3 +67,4 @@ Provide specific, actionable advice. If suggesting changes, include metrics. Kee
     return NextResponse.json({ error: error.message || "Failed to process chat" }, { status: 500 })
   }
 }
+
