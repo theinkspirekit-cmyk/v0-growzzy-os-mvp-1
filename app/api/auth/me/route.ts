@@ -1,22 +1,17 @@
 import { NextResponse } from 'next/server'
-import { getSupabaseServer } from '@/lib/supabase/server'
+import { auth } from '@/lib/auth'
 
 export async function GET() {
   try {
-    const supabase = getSupabaseServer()
+    const session = await auth()
 
-    const {
-      data: { user },
-      error
-    } = await supabase.auth.getUser()
-
-    if (error || !user) {
+    if (!session || !session.user) {
       return NextResponse.json({ user: null }, { status: 401 })
     }
 
-    return NextResponse.json({ user })
+    return NextResponse.json({ user: session.user })
   } catch (err) {
     console.error('[api/auth/me] fatal error:', err)
-    return NextResponse.json({ user: null }, { status: 401 })
+    return NextResponse.json({ user: null }, { status: 500 })
   }
 }

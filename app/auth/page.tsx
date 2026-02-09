@@ -39,12 +39,7 @@ export default function AuthPage() {
         }
 
         console.log("[v0] Login successful, redirecting...")
-        router.push("/dashboard")
-
-        // Fallback hard redirect
-        setTimeout(() => {
-          window.location.href = "/dashboard"
-        }, 500)
+        router.replace("/dashboard")
       } else {
         const response = await fetch("/api/auth/register", {
           method: "POST",

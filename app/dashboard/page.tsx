@@ -2,15 +2,16 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import { useSession } from "next-auth/react"
 import DashboardLayout from "@/components/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  DollarSign, 
-  Target, 
-  Users, 
+import {
+  TrendingUp,
+  TrendingDown,
+  DollarSign,
+  Target,
+  Users,
   BarChart3,
   RefreshCw,
   ArrowUp,
@@ -28,7 +29,7 @@ export const dynamic = "force-dynamic"
 
 export default function DashboardPage() {
   const router = useRouter()
-  const [user, setUser] = useState<any>(null)
+  const { data: session, status } = useSession()
   const [metrics, setMetrics] = useState<any>(null)
   const [historicalData, setHistoricalData] = useState<any[]>([])
   const [platformData, setPlatformData] = useState<any[]>([])
@@ -36,53 +37,52 @@ export default function DashboardPage() {
   const [timeRange, setTimeRange] = useState("30d")
 
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const response = await fetch("/api/auth/me")
-        if (!response.ok) {
-          router.push("/auth")
-          return
-        }
-        const data = await response.json()
-        setUser(data.user)
-
-        // Fetch dashboard data
-        const [metricsRes, historicalRes, platformRes] = await Promise.all([
-          fetch(`/api/analytics/summary?userId=${data.user.id}&range=${timeRange}`),
-          fetch(`/api/analytics/historical?userId=${data.user.id}&range=${timeRange}`),
-          fetch(`/api/analytics/platforms?userId=${data.user.id}`),
-        ])
-
-        if (metricsRes.ok) {
-          const metricsData = await metricsRes.json()
-          setMetrics(metricsData.summary)
-        }
-
-        if (historicalRes.ok) {
-          const histData = await historicalRes.json()
-          setHistoricalData(histData.data || [])
-        }
-
-        if (platformRes.ok) {
-          const platformData = await platformRes.json()
-          setPlatformData(platformData.platforms || [])
-        }
-      } catch (error) {
-        console.error("[v0] Dashboard error:", error)
-        router.push("/auth")
-      } finally {
-        setLoading(false)
-      }
+    if (status === "unauthenticated") {
+      router.push("/auth")
+      return
     }
 
-    checkAuth()
-  }, [router, timeRange])
+    if (status === "authenticated" && session?.user) {
+      const fetchDashboardData = async () => {
+        try {
+          const userId = (session.user as any).id
+          // Fetch dashboard data
+          const [metricsRes, historicalRes, platformRes] = await Promise.all([
+            fetch(`/api/analytics/summary?userId=${userId}&range=${timeRange}`),
+            fetch(`/api/analytics/historical?userId=${userId}&range=${timeRange}`),
+            fetch(`/api/analytics/platforms?userId=${userId}`),
+          ])
+
+          if (metricsRes.ok) {
+            const metricsData = await metricsRes.json()
+            setMetrics(metricsData.summary)
+          }
+
+          if (historicalRes.ok) {
+            const histData = await historicalRes.json()
+            setHistoricalData(histData.data || [])
+          }
+
+          if (platformRes.ok) {
+            const platformData = await platformRes.json()
+            setPlatformData(platformData.platforms || [])
+          }
+        } catch (error) {
+          console.error("[v0] Dashboard data error:", error)
+        } finally {
+          setLoading(false)
+        }
+      }
+
+      fetchDashboardData()
+    }
+  }, [session, status, router, timeRange])
 
   // Metric Card with strong hierarchy
-  const MetricCard = ({ 
-    title, 
-    value, 
-    change, 
+  const MetricCard = ({
+    title,
+    value,
+    change,
     changeType,
     icon: Icon
   }: {
@@ -93,7 +93,7 @@ export default function DashboardPage() {
     icon: React.ComponentType<{ className?: string }>
   }) => {
     const isPositive = changeType === 'increase'
-    
+
     return (
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
         <div className="flex items-center justify-between mb-4">
@@ -137,18 +137,18 @@ export default function DashboardPage() {
           </SelectContent>
         </Select>
       </div>
-      
+
       <ResponsiveContainer width="100%" height={300}>
         <LineChart data={historicalData}>
           <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f5" />
-          <XAxis 
-            dataKey="date" 
-            stroke="#9ca3af" 
+          <XAxis
+            dataKey="date"
+            stroke="#9ca3af"
             style={{ fontSize: '12px' }}
             tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
           />
-          <YAxis 
-            stroke="#9ca3af" 
+          <YAxis
+            stroke="#9ca3af"
             style={{ fontSize: '12px' }}
             tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
           />
@@ -246,7 +246,7 @@ export default function DashboardPage() {
             {Math.abs(trend).toFixed(1)}%
           </div>
         </div>
-        
+
         <div className="space-y-4">
           <div className="flex justify-between">
             <span className="text-sm text-gray-500">Spend</span>
@@ -267,7 +267,7 @@ export default function DashboardPage() {
             </span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2 mt-4">
-            <div 
+            <div
               className={cn(
                 "h-2 rounded-full",
                 isPositive ? "bg-green-500" : "bg-red-500"
@@ -289,13 +289,13 @@ export default function DashboardPage() {
     return (
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-8">
         <h3 className="text-lg font-semibold text-gray-900 mb-8">Leads Snapshot</h3>
-        
+
         {/* Top: Large bold number */}
         <div className="text-center mb-8">
           <div className="text-5xl font-bold text-gray-900 mb-2">{totalLeads}</div>
           <div className="text-sm text-gray-500">Total Leads Today</div>
         </div>
-        
+
         {/* Middle: Two-column stats */}
         <div className="grid grid-cols-2 gap-8 mb-8">
           <div className="text-center">
@@ -307,7 +307,7 @@ export default function DashboardPage() {
             <div className="text-sm text-gray-500">Unqualified</div>
           </div>
         </div>
-        
+
         {/* Bottom: Divider and details */}
         <div className="border-t border-gray-200 pt-6 mb-6">
           <div className="space-y-3">
@@ -321,7 +321,7 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
-        
+
         {/* CTA: High contrast button */}
         <Button className="w-full bg-blue-600 text-white hover:bg-blue-700 font-medium py-3">
           View All Leads
@@ -385,7 +385,7 @@ export default function DashboardPage() {
       action: "Scale Campaign"
     },
     {
-      type: "warning", 
+      type: "warning",
       title: "Pause Campaign X",
       description: "CPA increased by 23% — underperforming",
       action: "Review Campaign"
@@ -458,8 +458,8 @@ export default function DashboardPage() {
         {/* SECTION C: PLATFORM BREAKDOWN */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           {platformData.map((platform: any) => (
-            <PlatformCard 
-              key={platform.name} 
+            <PlatformCard
+              key={platform.name}
               platform={platform.name}
               data={platform}
             />
@@ -469,7 +469,7 @@ export default function DashboardPage() {
         {/* SECTION D & E: LEADS SNAPSHOT + AI INSIGHTS */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <LeadsSummary />
-          
+
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-6">AI Insights</h3>
             <div className="space-y-4">
