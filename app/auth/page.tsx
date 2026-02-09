@@ -6,9 +6,9 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Layers, Mail, Lock, User } from "lucide-react"
+import { signIn } from "next-auth/react"
+import { ArrowLeft, Layers, Mail, Lock, User, Loader2, AlertCircle } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Loader2, AlertCircle } from "lucide-react"
 
 export default function AuthPage() {
   const router = useRouter()
@@ -27,33 +27,24 @@ export default function AuthPage() {
 
     try {
       if (isLogin) {
-        const response = await fetch("/api/auth/signin", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password }),
+        console.log("[v0] Attempting login with NextAuth...")
+        const result = await signIn("credentials", {
+          email,
+          password,
+          redirect: false,
         })
 
-        let data
-        const contentType = response.headers.get("content-type")
-        if (contentType && contentType.includes("application/json")) {
-          data = await response.json()
-        } else {
-          const text = await response.text()
-          console.error("[v0] Non-JSON response:", text.substring(0, 200))
-          throw new Error("Server returned invalid response. Please check your connection.")
+        if (result?.error) {
+          throw new Error(result.error === "CredentialsSignin" ? "Invalid email or password" : result.error)
         }
 
-        if (!response.ok) {
-          throw new Error(data.error || "Login failed")
-        }
-
-        console.log("[v0] Login successful, redirecting to dashboard...")
+        console.log("[v0] Login successful, redirecting...")
         router.push("/dashboard")
-        // Fallback redirect
+
+        // Fallback hard redirect
         setTimeout(() => {
           window.location.href = "/dashboard"
-        }, 1000)
-        setIsLoading(false)
+        }, 500)
       } else {
         const response = await fetch("/api/auth/register", {
           method: "POST",
@@ -61,23 +52,15 @@ export default function AuthPage() {
           body: JSON.stringify({ email, password, name }),
         })
 
-        let data
-        const contentType = response.headers.get("content-type")
-        if (contentType && contentType.includes("application/json")) {
-          data = await response.json()
-        } else {
-          const text = await response.text()
-          console.error("[v0] Non-JSON response:", text.substring(0, 200))
-          throw new Error("Server returned invalid response. Please check your connection.")
-        }
+        const data = await response.json()
 
         if (!response.ok) {
           throw new Error(data.error || "Registration failed")
         }
 
-        setSuccessMessage("Account created! Please check your email to verify your account.")
-        setIsLoading(false)
+        setSuccessMessage("Account created successfully! You can now sign in.")
         setIsLogin(true)
+        setIsLoading(false)
       }
     } catch (err: any) {
       console.error("[v0] Auth error:", err)

@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server"
-import { createServerClient } from "@supabase/ssr"
-import { cookies } from "next/headers"
+import bcrypt from "bcryptjs"
+
+// Use a simple import for Prisma Client
+import { PrismaClient } from "@prisma/client"
+
+const prisma = new PrismaClient()
 
 export async function POST(req: Request) {
   try {
@@ -14,54 +18,32 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Password must be at least 8 characters" }, { status: 400 })
     }
 
-    const cookieStore = await cookies()
-    const supabase = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll()
-        },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
-          } catch {}
-        },
-      },
+    // Check if user already exists
+    const existingUser = await prisma.user.findUnique({
+      where: { email }
     })
 
-    const { data: existingUsers, error: checkError } = await supabase.auth.admin.listUsers()
-    const userExists = existingUsers?.users?.some((u) => u.email === email)
-
-    if (userExists) {
+    if (existingUser) {
       return NextResponse.json({ error: "Email already registered" }, { status: 400 })
     }
 
-    const redirectUrl = process.env.NEXT_PUBLIC_APP_URL
-      ? `${process.env.NEXT_PUBLIC_APP_URL}/auth/verify-email`
-      : `${new URL(req.url).origin}/auth/verify-email`
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 12)
 
-    // Create user with auto-verified email
-    const { data, error } = await supabase.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-      user_metadata: { name },
-    })
-
-    if (error || !data.user) {
-      return NextResponse.json({ error: error?.message || "Registration failed" }, { status: 400 })
-    }
-
-    await supabase.from("users").insert({
-      id: data.user.id,
-      email,
-      full_name: name,
-      created_at: new Date().toISOString(),
+    // Create user in database
+    const user = await prisma.user.create({
+      data: {
+        email,
+        password: hashedPassword,
+        name,
+        emailVerified: true // Set to true by default for now to match current flow
+      }
     })
 
     return NextResponse.json({
       success: true,
       message: "Account created successfully",
-      userId: data.user.id,
+      userId: user.id,
     })
   } catch (error: any) {
     console.error("[v0] Registration error:", error)
