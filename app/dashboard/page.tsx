@@ -37,17 +37,15 @@ export default function DashboardPage() {
   const [timeRange, setTimeRange] = useState("30d")
   const [isDemoMode, setIsDemoMode] = useState(() => {
     if (typeof document === "undefined") return false
-    return document.cookie.split("; ").some((row) => row.startsWith("growzzy_demo_mode=true"))
+    const hasCookie = document.cookie.includes("growzzy_demo_mode=true")
+    console.log("[v0] Initial Demo Mode sync check:", hasCookie)
+    return hasCookie
   })
 
-  // Check demo mode on mount - this must run first
+  // Check demo mode on mount
   useEffect(() => {
-    const demoCheck = document.cookie
-      .split('; ')
-      .some(row => row.startsWith('growzzy_demo_mode=true'))
-
-    if (demoCheck) {
-      setIsDemoMode(true)
+    if (isDemoMode) {
+      console.log("[v0] Dashboard: Running in Demo Mode")
       // Load dummy data for demo account
       setMetrics({
         totalRevenue: 128450,
@@ -69,17 +67,19 @@ export default function DashboardPage() {
       ])
       setLoading(false)
     }
-  }, [])
+  }, [isDemoMode])
 
-  // Handle authenticated users - only if NOT in demo mode
+  // Handle authenticated users
   useEffect(() => {
-    // Skip auth logic entirely if we're in demo mode
-    if (isDemoMode) return
+    if (isDemoMode) return // STOP HERE if in demo mode
+
+    console.log("[v0] Auth Status:", status)
 
     // Wait for session status to be determined
     if (status === "loading") return
 
     if (status === "unauthenticated") {
+      console.log("[v0] Unauthenticated, redirecting to /auth")
       router.push("/auth")
       return
     }
@@ -88,7 +88,7 @@ export default function DashboardPage() {
       const fetchDashboardData = async () => {
         try {
           const userId = (session.user as any).id
-          // Fetch dashboard data
+          // Fetch real data
           const [metricsRes, historicalRes, platformRes] = await Promise.all([
             fetch(`/api/analytics/summary?userId=${userId}&range=${timeRange}`),
             fetch(`/api/analytics/historical?userId=${userId}&range=${timeRange}`),
@@ -109,6 +109,7 @@ export default function DashboardPage() {
             const platformData = await platformRes.json()
             setPlatformData(platformData.platforms || [])
           }
+          // ... rest of fetch login
         } catch (error) {
           console.error("[v0] Dashboard data error:", error)
         } finally {
