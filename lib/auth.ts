@@ -2,21 +2,7 @@ import NextAuth from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
 
-// Lazy load Prisma to avoid import errors during build
-let prisma: any = null;
-
-async function getPrisma() {
-  if (!prisma) {
-    try {
-      const { PrismaClient } = await import('@prisma/client');
-      prisma = new PrismaClient();
-    } catch (error) {
-      console.error('Prisma client not available:', error);
-      throw new Error('Database not configured. Run `npx prisma generate` first.');
-    }
-  }
-  return prisma;
-}
+import { prisma } from './prisma';
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: 'jwt' },
@@ -34,8 +20,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
 
         try {
-          const prismaClient = await getPrisma();
-          const user = await prismaClient.user.findUnique({
+          const user = await prisma.user.findUnique({
             where: { email: credentials.email as string },
           });
 
