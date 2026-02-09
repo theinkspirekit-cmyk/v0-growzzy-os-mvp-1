@@ -35,7 +35,10 @@ export default function DashboardPage() {
   const [platformData, setPlatformData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [timeRange, setTimeRange] = useState("30d")
-  const [isDemoMode, setIsDemoMode] = useState(false)
+  const [isDemoMode, setIsDemoMode] = useState(() => {
+    if (typeof document === "undefined") return false
+    return document.cookie.split("; ").some((row) => row.startsWith("growzzy_demo_mode=true"))
+  })
 
   // Check demo mode on mount - this must run first
   useEffect(() => {
