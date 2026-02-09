@@ -370,7 +370,7 @@ export default function DashboardPage() {
     )
   }
 
-  if (!user) return null
+  if (!session) return null
 
   const totalRevenue = metrics?.totalRevenue || 0
   const totalSpend = metrics?.totalSpend || 0
