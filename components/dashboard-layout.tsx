@@ -2,14 +2,15 @@
 
 import { useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
+import { signOut } from "next-auth/react"
 import Link from "next/link"
-import { 
-  Home, 
-  Users, 
-  Target, 
-  BarChart3, 
-  Palette, 
-  Bot, 
+import {
+  Home,
+  Users,
+  Target,
+  BarChart3,
+  Palette,
+  Bot,
   Settings,
   ChevronDown,
   ChevronRight,
@@ -93,8 +94,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pathname = usePathname()
 
   const toggleExpanded = (title: string) => {
-    setExpandedItems(prev => 
-      prev.includes(title) 
+    setExpandedItems(prev =>
+      prev.includes(title)
         ? prev.filter(item => item !== title)
         : [...prev, title]
     )
@@ -137,7 +138,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             )
           )}
         </Button>
-        
+
         {hasChildren && isExpanded && (
           <div className="mt-1 space-y-1">
             {item.children!.map((child) => renderSidebarItem(child, level + 1))}
@@ -176,7 +177,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <Button
             variant="ghost"
             className="w-full justify-start gap-3"
-            onClick={() => router.push("/auth")}
+            onClick={async () => {
+              document.cookie = "growzzy_demo_mode=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT"
+              await signOut({ redirect: true, callbackUrl: "/auth" })
+            }}
           >
             <LogOut className="w-4 h-4" />
             {sidebarOpen && <span>Sign Out</span>}
@@ -201,7 +205,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 {sidebarItems.find(item => isActive(item.href))?.title || "Dashboard"}
               </h1>
             </div>
-            
+
             <div className="flex items-center gap-4">
               {/* Add notifications, user profile etc here */}
               <div className="w-8 h-8 bg-gray-300 rounded-full"></div>

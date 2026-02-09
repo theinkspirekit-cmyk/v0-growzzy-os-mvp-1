@@ -37,6 +37,32 @@ export default function DashboardPage() {
   const [timeRange, setTimeRange] = useState("30d")
 
   useEffect(() => {
+    const isDemoMode = document.cookie.includes("growzzy_demo_mode=true")
+
+    if (isDemoMode) {
+      // Load dummy data for demo account
+      setMetrics({
+        totalRevenue: 128450,
+        totalSpend: 42300,
+        totalLeads: 1240,
+        roas: 3.03
+      })
+      setHistoricalData([
+        { date: '2024-01-01', revenue: 4000, spend: 2000 },
+        { date: '2024-01-15', revenue: 7500, spend: 3000 },
+        { date: '2024-02-01', revenue: 12000, spend: 5000 },
+        { date: '2024-02-15', revenue: 15000, spend: 6000 },
+        { date: '2024-03-01', revenue: 22000, spend: 8000 },
+      ])
+      setPlatformData([
+        { name: 'Meta', spend: 20000, revenue: 65000, roas: 3.25, change: 12.5 },
+        { name: 'Google', spend: 15000, revenue: 45000, roas: 3.0, change: -2.4 },
+        { name: 'LinkedIn', spend: 7300, revenue: 18450, roas: 2.52, change: 5.1 },
+      ])
+      setLoading(false)
+      return
+    }
+
     if (status === "unauthenticated") {
       router.push("/auth")
       return

@@ -242,7 +242,7 @@ export default function AuthPage() {
 
           <Button
             variant="outline"
-            className="w-full bg-transparent"
+            className="w-full bg-transparent mb-4"
             onClick={() => {
               setIsLogin(!isLogin)
               setError("")
@@ -250,6 +250,18 @@ export default function AuthPage() {
             }}
           >
             {isLogin ? "Create Account" : "Sign In"}
+          </Button>
+
+          <Button
+            variant="ghost"
+            className="w-full text-[#f97316] hover:text-[#ea580c] hover:bg-[#f97316]/5 font-medium"
+            onClick={() => {
+              document.cookie = "growzzy_demo_mode=true; path=/; max-age=3600"
+              router.push("/dashboard")
+            }}
+          >
+            Try Demo Account
+            <ArrowRight className="w-4 h-4 ml-2" />
           </Button>
         </div>
       </div>
