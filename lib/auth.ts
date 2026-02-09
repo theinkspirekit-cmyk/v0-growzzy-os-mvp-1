@@ -17,6 +17,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
+        console.log("[auth] Authorize call received for:", credentials?.email);
         if (!credentials?.email || !credentials?.password) {
           throw new Error('Email and password required');
         }
@@ -27,6 +28,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           });
 
           if (!user) {
+            console.log("[auth] User not found:", credentials.email);
             throw new Error('Invalid credentials');
           }
 
@@ -36,15 +38,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           );
 
           if (!isPasswordValid) {
+            console.log("[auth] Invalid password for:", credentials.email);
             throw new Error('Invalid credentials');
           }
 
+          console.log("[auth] Authorization successful for:", credentials.email);
           return {
             id: user.id,
             email: user.email,
             name: user.name,
           };
         } catch (error: any) {
+          console.error("[auth] Authorize error:", error.message);
           throw new Error(error.message || 'Authentication failed');
         }
       },
