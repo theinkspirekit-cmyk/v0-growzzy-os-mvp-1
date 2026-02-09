@@ -39,6 +39,7 @@ model Session {
   createdAt    DateTime @default(now())
   
   @@index([userId])
+
 }
 
 // ═══════════════════════════════════════════════════
@@ -67,6 +68,7 @@ model PlatformConnection {
   
   @@unique([userId, platform])
   @@index([userId])
+
 }
 
 // ═══════════════════════════════════════════════════
@@ -140,4 +142,5 @@ model Report {
   createdAt       DateTime  @default(now())
   
   @@index([userId])
+
 }
