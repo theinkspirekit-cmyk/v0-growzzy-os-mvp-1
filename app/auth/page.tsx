@@ -4,7 +4,6 @@ import type React from "react"
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { signIn } from "next-auth/react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, Layers, Mail, Lock, User } from "lucide-react"
@@ -19,6 +18,7 @@ export default function AuthPage() {
   const [name, setName] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
+  const [successMessage, setSuccessMessage] = useState("")
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -27,46 +27,57 @@ export default function AuthPage() {
 
     try {
       if (isLogin) {
-        const result = await signIn("credentials", {
-          email,
-          password,
-          redirect: false,
+        const response = await fetch("/api/auth/signin", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
         })
 
-        if (result?.error) {
-          setError(result.error)
-          setIsLoading(false)
-          return
+        let data
+        const contentType = response.headers.get("content-type")
+        if (contentType && contentType.includes("application/json")) {
+          data = await response.json()
+        } else {
+          const text = await response.text()
+          console.error("[v0] Non-JSON response:", text.substring(0, 200))
+          throw new Error("Server returned invalid response. Please check your connection.")
         }
 
+        if (!response.ok) {
+          throw new Error(data.error || "Login failed")
+        }
+
+        console.log("[v0] Login successful, redirecting to dashboard...")
         router.push("/dashboard")
+        // Fallback redirect
+        setTimeout(() => {
+          window.location.href = "/dashboard"
+        }, 1000)
+        setIsLoading(false)
       } else {
-        const response = await fetch("/api/auth/signup", {
+        const response = await fetch("/api/auth/register", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, password, name }),
         })
 
-        const data = await response.json()
+        let data
+        const contentType = response.headers.get("content-type")
+        if (contentType && contentType.includes("application/json")) {
+          data = await response.json()
+        } else {
+          const text = await response.text()
+          console.error("[v0] Non-JSON response:", text.substring(0, 200))
+          throw new Error("Server returned invalid response. Please check your connection.")
+        }
 
         if (!response.ok) {
           throw new Error(data.error || "Registration failed")
         }
 
-        // Sign in after successful signup
-        const result = await signIn("credentials", {
-          email,
-          password,
-          redirect: false,
-        })
-
-        if (result?.error) {
-          setError(result.error)
-          setIsLoading(false)
-          return
-        }
-
-        router.push("/dashboard")
+        setSuccessMessage("Account created! Please check your email to verify your account.")
+        setIsLoading(false)
+        setIsLogin(true)
       }
     } catch (err: any) {
       console.error("[v0] Auth error:", err)
@@ -147,6 +158,14 @@ export default function AuthPage() {
             </p>
           </div>
 
+          {/* Success Alert */}
+          {successMessage && (
+            <Alert className="mb-6 bg-green-50 border-green-200">
+              <AlertCircle className="h-4 w-4 text-green-600" />
+              <AlertDescription className="text-green-700">{successMessage}</AlertDescription>
+            </Alert>
+          )}
+
           {/* Error Alert */}
           {error && (
             <Alert variant="destructive" className="mb-6">
@@ -194,9 +213,9 @@ export default function AuthPage() {
               <div className="flex justify-between">
                 <label className="text-sm text-[#37322f]/70">Password</label>
                 {isLogin && (
-                  <button type="button" className="text-sm text-[#f97316] hover:text-[#ea580c]">
+                  <Link href="/auth/forgot-password" className="text-sm text-[#f97316] hover:text-[#ea580c]">
                     Forgot password?
-                  </button>
+                  </Link>
                 )}
               </div>
               <div className="relative">
@@ -249,6 +268,7 @@ export default function AuthPage() {
             onClick={() => {
               setIsLogin(!isLogin)
               setError("")
+              setSuccessMessage("") // Clear success message on toggle
             }}
           >
             {isLogin ? "Create Account" : "Sign In"}

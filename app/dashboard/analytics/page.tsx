@@ -1,304 +1,239 @@
-'use client';
-import { useState, useEffect } from 'react';
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { SearchInput } from '@/components/ui/search-input';
-import { FilterDropdown } from '@/components/ui/filter-dropdown';
-import { showToast } from '@/components/Toast';
-import { TrendingUp, AlertCircle, BarChart3, PieChart as PieChartIcon } from 'lucide-react';
+"use client"
 
-interface Campaign {
-  id: string;
-  name: string;
-  platform: string;
-  spend: number;
-  revenue: number;
-  roas: number;
-  status: string;
-  conversions?: number;
-}
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
+import DashboardLayout from "@/components/dashboard-layout"
+import { Button } from "@/components/ui/button"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { 
+  Target,
+  DollarSign,
+  TrendingUp,
+  Users,
+  RefreshCw,
+  ArrowUp,
+  ArrowDown,
+  BarChart3
+} from "lucide-react"
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts"
+import { cn } from "@/lib/utils"
 
-interface KPIs {
-  totalSpend: number;
-  totalRevenue: number;
-  avgRoas: string;
-  totalConversions: number;
-}
+export const dynamic = "force-dynamic"
 
-export default function AnalyticsPage() {
-  const [dateRange, setDateRange] = useState('Last 30 days');
-  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  const [kpis, setKpis] = useState<KPIs>({
-    totalSpend: 0,
-    totalRevenue: 0,
-    avgRoas: '0',
-    totalConversions: 0
-  });
-  const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filters, setFilters] = useState<Record<string, any>>({});
+export default function AnalyticsOverviewPage() {
+  const router = useRouter()
+  const [user, setUser] = useState<any>(null)
+  const [analytics, setAnalytics] = useState<any>(null)
+  const [historicalData, setHistoricalData] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [timeRange, setTimeRange] = useState("30d")
 
   useEffect(() => {
-    fetchAnalyticsData();
-  }, [dateRange, searchQuery, filters]);
+    const checkAuth = async () => {
+      try {
+        const response = await fetch("/api/auth/me")
+        if (!response.ok) {
+          router.push("/auth")
+          return
+        }
+        const data = await response.json()
+        setUser(data.user)
 
-  const fetchAnalyticsData = async () => {
-    try {
-      setLoading(true);
-      
-      // Get user settings from localStorage
-      const settings = localStorage.getItem('growzzy-settings');
-      if (!settings) {
-        // No integrations found, show empty state
-        setCampaigns([]);
-        setKpis({
-          totalSpend: 0,
-          totalRevenue: 0,
-          avgRoas: '0',
-          totalConversions: 0
-        });
-        setLoading(false);
-        return;
+        // Fetch analytics data
+        const [analyticsRes, historicalRes] = await Promise.all([
+          fetch(`/api/analytics/summary?userId=${data.user.id}&range=${timeRange}`),
+          fetch(`/api/analytics/historical?userId=${data.user.id}&range=${timeRange}`),
+        ])
+
+        if (analyticsRes.ok) {
+          const analyticsData = await analyticsRes.json()
+          setAnalytics(analyticsData.summary)
+        }
+
+        if (historicalRes.ok) {
+          const histData = await historicalRes.json()
+          setHistoricalData(histData.data || [])
+        }
+      } catch (error) {
+        console.error("[v0] Analytics error:", error)
+        router.push("/auth")
+      } finally {
+        setLoading(false)
       }
-
-      const response = await fetch('/api/platforms/data', {
-        headers: {
-          'x-user-settings': settings
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        const realCampaigns = data.campaigns || [];
-        
-        // Apply filters
-        let filteredCampaigns = realCampaigns;
-        
-        if (searchQuery) {
-          filteredCampaigns = filteredCampaigns.filter((campaign: Campaign) =>
-            campaign.name.toLowerCase().includes(searchQuery.toLowerCase())
-          );
-        }
-        
-        if (filters.platform) {
-          filteredCampaigns = filteredCampaigns.filter((campaign: Campaign) =>
-            campaign.platform === filters.platform
-          );
-        }
-        
-        if (filters.status) {
-          filteredCampaigns = filteredCampaigns.filter((campaign: Campaign) =>
-            campaign.status === filters.status
-          );
-        }
-        
-        setCampaigns(filteredCampaigns);
-        
-        // Calculate KPIs
-        const totalSpend = filteredCampaigns.reduce((sum: number, c: Campaign) => sum + (c.spend || 0), 0);
-        const totalRevenue = filteredCampaigns.reduce((sum: number, c: Campaign) => sum + (c.revenue || 0), 0);
-        const totalConversions = filteredCampaigns.reduce((sum: number, c: Campaign) => sum + (c.conversions || 0), 0);
-        const avgRoas = totalSpend > 0 ? (totalRevenue / totalSpend).toFixed(2) : '0';
-        
-        setKpis({
-          totalSpend,
-          totalRevenue,
-          avgRoas,
-          totalConversions
-        });
-      }
-    } catch (error) {
-      console.error('Failed to fetch analytics data:', error);
-      showToast('Failed to fetch analytics data', 'error');
-    } finally {
-      setLoading(false);
     }
-  };
 
-  const handleDateRangeChange = (newRange: string) => {
-    setDateRange(newRange);
-  };
+    checkAuth()
+  }, [router, timeRange])
 
-  const filterOptions = [
-    {
-      key: 'platform',
-      label: 'Platform',
-      type: 'select' as const,
-      options: [
-        { label: 'All', value: '' },
-        { label: 'Meta', value: 'meta' },
-        { label: 'Google', value: 'google' },
-        { label: 'LinkedIn', value: 'linkedin' },
-        { label: 'Shopify', value: 'shopify' },
-      ]
-    },
-    {
-      key: 'status',
-      label: 'Status',
-      type: 'select' as const,
-      options: [
-        { label: 'All', value: '' },
-        { label: 'Active', value: 'active' },
-        { label: 'Paused', value: 'paused' },
-        { label: 'Completed', value: 'completed' },
-      ]
-    }
-  ];
+  // Reuse exact same MetricCard component from Dashboard
+  const MetricCard = ({ 
+    title, 
+    value, 
+    change, 
+    changeType,
+    icon: Icon
+  }: {
+    title: string
+    value: string
+    change: string
+    changeType: 'increase' | 'decrease'
+    icon: React.ComponentType<{ className?: string }>
+  }) => {
+    const isPositive = changeType === 'increase'
+    
+    return (
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="p-2 bg-gray-50 rounded-lg">
+                <Icon className="w-5 h-5 text-gray-600" />
+              </div>
+              <p className="text-sm font-medium text-gray-900">{title}</p>
+            </div>
+            <p className="text-3xl font-bold text-gray-900 mb-2">{value}</p>
+            <div className="flex items-center gap-2">
+              {isPositive ? (
+                <ArrowUp className="w-4 h-4 text-green-600" />
+              ) : (
+                <ArrowDown className="w-4 h-4 text-red-600" />
+              )}
+              <span className={cn(
+                "text-sm font-medium",
+                isPositive ? "text-green-600" : "text-red-600"
+              )}>
+                {change}
+              </span>
+              <span className="text-sm text-gray-600">vs last period</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   if (loading) {
     return (
-      <DashboardLayout activeTab="analytics">
-        <div className="space-y-6">
-          <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 rounded w-1/3 mb-2"></div>
-            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[1,2,3,4].map(i => (
-              <div key={i} className="p-6 bg-white rounded-lg shadow animate-pulse">
-                <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
-                <div className="h-8 bg-gray-200 rounded w-3/4"></div>
-              </div>
-            ))}
-          </div>
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </div>
       </DashboardLayout>
-    );
+    )
   }
 
+  if (!user) return null
+
+  const sessions = analytics?.sessions || 0
+  const conversions = analytics?.conversions || 0
+  const revenue = analytics?.revenue || 0
+  const conversionRate = analytics?.conversionRate || 0
+
   return (
-    <DashboardLayout activeTab="analytics">
-      <div className="space-y-6">
+    <DashboardLayout>
+      <div className="space-y-6 bg-gray-50/50 p-6 rounded-lg">
         {/* Header */}
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-start">
           <div>
-            <h1 className="text-3xl font-bold">Analytics & Performance</h1>
-            <p className="text-gray-600 mt-1">Unified view of all marketing channels</p>
+            <h2 className="text-2xl font-bold text-gray-900">Analytics Overview</h2>
+            <p className="text-gray-700 mt-1">Deep dive into your performance metrics</p>
           </div>
-          <div className="flex gap-2">
-            <select
-              value={dateRange}
-              onChange={(e) => handleDateRangeChange(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg text-sm"
-            >
-              <option>Today</option>
-              <option>Last 7 days</option>
-              <option>Last 30 days</option>
-              <option>Custom</option>
-            </select>
+          <div className="flex gap-3">
+            <Select value={timeRange} onValueChange={setTimeRange}>
+              <SelectTrigger className="w-20 h-8 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="7d">7d</SelectItem>
+                <SelectItem value="30d">30d</SelectItem>
+                <SelectItem value="90d">90d</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button className="flex items-center gap-2">
+              <RefreshCw className="w-4 h-4" />
+              Refresh
+            </Button>
           </div>
         </div>
 
-        {/* Search and Filters */}
-        <div className="flex gap-4">
-          <SearchInput
-            placeholder="Search campaigns..."
-            onSearch={setSearchQuery}
-            className="flex-1 max-w-sm"
+        {/* Top KPI Cards - Same style as Dashboard */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <MetricCard
+            title="Sessions"
+            value={sessions.toLocaleString()}
+            change="+18.2%"
+            changeType="increase"
+            icon={Users}
           />
-          <FilterDropdown
-            filters={filterOptions}
-            onFilterChange={setFilters}
+          <MetricCard
+            title="Conversions"
+            value={conversions.toLocaleString()}
+            change="+12.5%"
+            changeType="increase"
+            icon={Target}
+          />
+          <MetricCard
+            title="Revenue"
+            value={`$${revenue.toLocaleString()}`}
+            change="+15.3%"
+            changeType="increase"
+            icon={DollarSign}
+          />
+          <MetricCard
+            title="Conversion Rate"
+            value={`${conversionRate.toFixed(1)}%`}
+            change="+0.8%"
+            changeType="increase"
+            icon={TrendingUp}
           />
         </div>
 
-        {/* KPI Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="p-6">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-gray-600 text-sm">Total Spend</p>
-                <p className="text-3xl font-bold mt-2">₹{(kpis.totalSpend / 100000).toFixed(1)}L</p>
-              </div>
-              <BarChart3 className="h-8 w-8 text-blue-500" />
-            </div>
-            <p className="text-green-600 text-sm mt-4">+12% vs last period</p>
-          </Card>
-
-          <Card className="p-6">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-gray-600 text-sm">Revenue Generated</p>
-                <p className="text-3xl font-bold mt-2">₹{(kpis.totalRevenue / 100000).toFixed(1)}L</p>
-              </div>
-              <TrendingUp className="h-8 w-8 text-green-500" />
-            </div>
-            <p className="text-green-600 text-sm mt-4">+24% vs last period</p>
-          </Card>
-
-          <Card className="p-6">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-gray-600 text-sm">Blended ROAS</p>
-                <p className="text-3xl font-bold mt-2">{kpis.avgRoas}x</p>
-              </div>
-              <PieChartIcon className="h-8 w-8 text-purple-500" />
-            </div>
-            <p className="text-green-600 text-sm mt-4">+18% vs last period</p>
-          </Card>
-
-          <Card className="p-6">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-gray-600 text-sm">Conversions</p>
-                <p className="text-3xl font-bold mt-2">{kpis.totalConversions.toLocaleString()}</p>
-              </div>
-              <AlertCircle className="h-8 w-8 text-orange-500" />
-            </div>
-            <p className="text-green-600 text-sm mt-4">+8% vs last period</p>
-          </Card>
-        </div>
-
-        {/* Campaigns Table */}
-        <Card className="p-6">
-          <h2 className="text-xl font-bold mb-4">Campaign Performance</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-3 px-4">Campaign Name</th>
-                  <th className="text-left py-3 px-4">Platform</th>
-                  <th className="text-left py-3 px-4">Status</th>
-                  <th className="text-left py-3 px-4">Spend</th>
-                  <th className="text-left py-3 px-4">Revenue</th>
-                  <th className="text-left py-3 px-4">ROAS</th>
-                  <th className="text-left py-3 px-4">Conversions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {campaigns.map((campaign) => (
-                  <tr key={campaign.id} className="border-b hover:bg-gray-50">
-                    <td className="px-4 py-3 font-semibold">{campaign.name}</td>
-                    <td className="px-4 py-3 capitalize">{campaign.platform}</td>
-                    <td className="px-4 py-3">
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                        campaign.status === 'active'
-                          ? 'bg-green-100 text-green-800'
-                          : campaign.status === 'paused'
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : 'bg-gray-100 text-gray-800'
-                      }`}>
-                        {campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">₹{(campaign.spend / 1000).toFixed(0)}K</td>
-                    <td className="px-4 py-3">₹{(campaign.revenue / 1000).toFixed(0)}K</td>
-                    <td className="px-4 py-3 font-bold text-green-600">{campaign.roas}x</td>
-                    <td className="px-4 py-3">{campaign.conversions || 0}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            
-            {campaigns.length === 0 && (
-              <div className="text-center py-8 text-gray-500">
-                No campaigns found matching your criteria
-              </div>
-            )}
+        {/* Main Analytics Chart - Same style as Dashboard */}
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-lg font-semibold text-gray-900">Analytics Overview</h3>
+            <Select value={timeRange} onValueChange={setTimeRange}>
+              <SelectTrigger className="w-20 h-8 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="7d">7d</SelectItem>
+                <SelectItem value="30d">30d</SelectItem>
+                <SelectItem value="90d">90d</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-        </Card>
+          
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={historicalData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <XAxis 
+                dataKey="date" 
+                stroke="#6b7280" 
+                style={{ fontSize: '12px' }}
+                tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              />
+              <YAxis 
+                stroke="#6b7280" 
+                style={{ fontSize: '12px' }}
+                tickFormatter={(value) => value.toLocaleString()}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: 'white',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                }}
+                formatter={(value: any) => [value.toLocaleString(), '']}
+              />
+              <Legend />
+              <Line type="monotone" dataKey="sessions" stroke="#3b82f6" strokeWidth={2} name="Sessions" />
+              <Line type="monotone" dataKey="conversions" stroke="#10b981" strokeWidth={2} name="Conversions" />
+              <Line type="monotone" dataKey="revenue" stroke="#f59e0b" strokeWidth={2} name="Revenue" />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
       </div>
     </DashboardLayout>
-  );
+  )
 }

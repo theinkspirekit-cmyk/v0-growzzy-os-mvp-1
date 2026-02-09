@@ -1,32 +1,48 @@
-"use client"
+'use client'
 
-import type React from "react"
-
-import { useAuth } from "@/lib/auth-context"
-import { useRouter } from "next/navigation"
-import { useEffect } from "react"
-import { Loader2 } from "lucide-react"
+import type React from 'react'
+import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import { Loader2 } from 'lucide-react'
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth()
   const router = useRouter()
+  const [isAuthed, setIsAuthed] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    if (!loading && !user) {
-      // For now, allow demo mode - in production, redirect to /auth
-      console.log("[v0] No user, but allowing demo mode access")
+    const checkAuth = async () => {
+      try {
+        const response = await fetch('/api/auth/me')
+        if (response.ok) {
+          setIsAuthed(true)
+        } else {
+          router.push('/auth')
+        }
+      } catch (error) {
+        console.log('[v0] Auth check error:', error)
+        router.push('/auth')
+      } finally {
+        setIsLoading(false)
+      }
     }
-  }, [user, loading, router])
 
-  if (loading) {
+    checkAuth()
+  }, [router])
+
+  if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#f7f5f3]">
+      <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-8 h-8 text-[#f97316] animate-spin" />
-          <p className="text-[#37322f]/60">Loading...</p>
+          <Loader2 className="w-8 h-8 text-primary animate-spin" />
+          <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>
     )
+  }
+
+  if (!isAuthed) {
+    return null
   }
 
   return <>{children}</>

@@ -1,500 +1,392 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { DashboardLayout } from "@/components/dashboard/DashboardLayout"
-import { Card } from "@/components/ui/card"
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
+import DashboardLayout from "@/components/dashboard-layout"
 import { Button } from "@/components/ui/button"
-import { Plus, Edit2, Pause, Play, Trash2, Eye } from "lucide-react"
-import { showToast } from "@/components/Toast"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Badge } from "@/components/ui/badge"
+import { 
+  Target,
+  DollarSign,
+  TrendingUp,
+  Users,
+  RefreshCw,
+  ArrowUp,
+  ArrowDown,
+  MoreHorizontal,
+  Eye,
+  Edit,
+  Play,
+  Pause,
+  Facebook,
+  Search,
+  Linkedin
+} from "lucide-react"
+import { cn } from "@/lib/utils"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
-type Campaign = {
-  id: string
-  name: string
-  platform: string
-  spend: number
-  revenue: number
-  roas: number
-  conversions: number
-  status: "active" | "paused" | "completed"
-  created_at: string
-  ctr?: number
-  cpc?: number
-}
+export const dynamic = "force-dynamic"
 
 export default function CampaignsPage() {
-  const [campaigns, setCampaigns] = useState<Campaign[]>([])
+  const router = useRouter()
+  const [user, setUser] = useState<any>(null)
+  const [campaigns, setCampaigns] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [showCreateModal, setShowCreateModal] = useState(false)
-  const [showDetailsModal, setShowDetailsModal] = useState(false)
-  const [showEditModal, setShowEditModal] = useState(false)
-  const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null)
-  const [editFormData, setEditFormData] = useState({ name: "", budget: 0, bidding: "cpc" })
-  const [editLoading, setEditLoading] = useState(false)
-  const [createLoading, setCreateLoading] = useState(false)
-  const [createForm, setCreateForm] = useState({
-    name: "",
-    platform: "meta",
-    objective: "conversions",
-    budget: "",
-    startDate: "",
-    endDate: "",
-  })
+  const [selectedCampaign, setSelectedCampaign] = useState<any>(null)
+  const [timeRange, setTimeRange] = useState("30d")
 
   useEffect(() => {
-    fetchCampaigns()
-  }, [])
-
-  const fetchCampaigns = async () => {
-    try {
-      const response = await fetch("/api/campaigns")
-
-      if (response.ok) {
+    const checkAuth = async () => {
+      try {
+        const response = await fetch("/api/auth/me")
+        if (!response.ok) {
+          router.push("/auth")
+          return
+        }
         const data = await response.json()
-        const campaignsList = data.campaigns || []
-        setCampaigns(campaignsList)
-        console.log("[v0] Campaigns fetched:", campaignsList.length)
-      } else {
-        console.error("Failed to fetch campaigns:", response.status)
-        setCampaigns([])
+        setUser(data.user)
+
+        // Fetch campaigns data
+        const campaignsRes = await fetch(`/api/campaigns?userId=${data.user.id}&range=${timeRange}`)
+        if (campaignsRes.ok) {
+          const campaignsData = await campaignsRes.json()
+          setCampaigns(campaignsData.campaigns || [])
+        }
+      } catch (error) {
+        console.error("[v0] Campaigns error:", error)
+        router.push("/auth")
+      } finally {
+        setLoading(false)
       }
-    } catch (error) {
-      console.error("Failed to fetch campaigns:", error)
-      showToast("Failed to load campaigns", "error")
-      setCampaigns([])
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const toggleCampaignStatus = (id: string) => {
-    setCampaigns(
-      campaigns.map((c) => (c.id === id ? { ...c, status: c.status === "active" ? "paused" : "active" } : c)),
-    )
-    const campaign = campaigns.find((c) => c.id === id)
-    const newStatus = campaign?.status === "active" ? "paused" : "active"
-    showToast(`Campaign ${newStatus === "active" ? "resumed" : "paused"} successfully`, "success")
-  }
-
-  const deleteCampaign = (id: string) => {
-    setCampaigns(campaigns.filter((c) => c.id !== id))
-    showToast("Campaign deleted successfully", "success")
-  }
-
-  const handleEditClick = () => {
-    if (selectedCampaign) {
-      setEditFormData({
-        name: selectedCampaign.name,
-        budget: selectedCampaign.spend,
-        bidding: "cpc",
-      })
-      setShowEditModal(true)
-    }
-  }
-
-  const handleCreateCampaign = async () => {
-    if (!createForm.name || !createForm.budget) {
-      showToast("Please fill all required fields", "error")
-      return
     }
 
-    setCreateLoading(true)
-    try {
-      const response = await fetch("/api/campaigns/create-platform", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          platform: createForm.platform,
-          name: createForm.name,
-          budget: Number.parseFloat(createForm.budget),
-          objective: createForm.objective,
-          targeting: { channels: ["DISPLAY", "SEARCH"] },
-        }),
-      })
+    checkAuth()
+  }, [router, timeRange])
 
-      if (response.ok) {
-        const data = await response.json()
-        showToast(`Campaign "${createForm.name}" created on ${createForm.platform}!`, "success")
-        console.log("[v0] Campaign created:", data)
-        setShowCreateModal(false)
-        setCreateForm({
-          name: "",
-          platform: "meta",
-          objective: "conversions",
-          budget: "",
-          startDate: "",
-          endDate: "",
-        })
-        fetchCampaigns()
-      } else {
-        showToast("Failed to create campaign", "error")
-      }
-    } catch (error) {
-      console.error("[v0] Error creating campaign:", error)
-      showToast("Error creating campaign", "error")
-    } finally {
-      setCreateLoading(false)
-    }
-  }
-
-  const handleSaveEdit = async () => {
-    if (!selectedCampaign) return
-    setEditLoading(true)
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 800))
-      setCampaigns(
-        campaigns.map((c) =>
-          c.id === selectedCampaign.id ? { ...c, name: editFormData.name, spend: editFormData.budget } : c,
-        ),
-      )
-      setSelectedCampaign({
-        ...selectedCampaign,
-        name: editFormData.name,
-        spend: editFormData.budget,
-      })
-      showToast("Campaign updated successfully", "success")
-      setShowEditModal(false)
-    } catch (error) {
-      showToast("Failed to update campaign", "error")
-    } finally {
-      setEditLoading(false)
-    }
-  }
-
-  const activeCampaigns = campaigns.filter((c) => c.status === "active").length
-  const totalSpend = campaigns.reduce((sum, c) => sum + c.spend, 0)
-  const totalRevenue = campaigns.reduce((sum, c) => sum + c.revenue, 0)
-
-  return (
-    <DashboardLayout activeTab="campaigns">
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold">Campaigns</h1>
-            <p className="text-gray-600 mt-1">Manage and optimize your marketing campaigns</p>
+  // Reuse exact same MetricCard component from Dashboard
+  const MetricCard = ({ 
+    title, 
+    value, 
+    change, 
+    changeType,
+    icon: Icon
+  }: {
+    title: string
+    value: string
+    change: string
+    changeType: 'increase' | 'decrease'
+    icon: React.ComponentType<{ className?: string }>
+  }) => {
+    const isPositive = changeType === 'increase'
+    
+    return (
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="p-2 bg-gray-50 rounded-lg">
+                <Icon className="w-5 h-5 text-gray-600" />
+              </div>
+              <p className="text-sm font-medium text-gray-900">{title}</p>
+            </div>
+            <p className="text-3xl font-bold text-gray-900 mb-2">{value}</p>
+            <div className="flex items-center gap-2">
+              {isPositive ? (
+                <ArrowUp className="w-4 h-4 text-green-600" />
+              ) : (
+                <ArrowDown className="w-4 h-4 text-red-600" />
+              )}
+              <span className={cn(
+                "text-sm font-medium",
+                isPositive ? "text-green-600" : "text-red-600"
+              )}>
+                {change}
+              </span>
+              <span className="text-sm text-gray-600">vs last period</span>
+            </div>
           </div>
-          <Button
-            className="bg-black hover:bg-gray-800 text-white flex items-center gap-2"
-            onClick={() => setShowCreateModal(true)}
+        </div>
+      </div>
+    )
+  }
+
+  // Campaign Detail Card - same style as dashboard cards
+  const CampaignDetailCard = ({ campaign }: { campaign: any }) => {
+    const getPlatformIcon = (platform: string) => {
+      switch (platform.toLowerCase()) {
+        case 'meta': return <Facebook className="w-5 h-5" />
+        case 'google': return <Search className="w-5 h-5" />
+        case 'linkedin': return <Linkedin className="w-5 h-5" />
+        default: return <Target className="w-5 h-5" />
+      }
+    }
+
+    return (
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div className="flex justify-between items-start mb-6">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">{campaign.name}</h3>
+            <p className="text-sm text-gray-600">Campaign Details</p>
+          </div>
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={() => setSelectedCampaign(null)}
           >
-            <Plus className="h-4 w-4" />
-            New Campaign
+            ×
           </Button>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="p-6">
-            <p className="text-gray-600 text-sm">Active Campaigns</p>
-            <p className="text-3xl font-bold mt-2">{activeCampaigns}</p>
-          </Card>
-          <Card className="p-6">
-            <p className="text-gray-600 text-sm">Total Spend</p>
-            <p className="text-3xl font-bold mt-2">₹{(totalSpend / 100000).toFixed(1)}L</p>
-          </Card>
-          <Card className="p-6">
-            <p className="text-gray-600 text-sm">Total Revenue</p>
-            <p className="text-3xl font-bold mt-2">₹{(totalRevenue / 100000).toFixed(1)}L</p>
-          </Card>
-        </div>
-
-        {/* Campaigns List */}
-        <Card className="p-6">
-          <h2 className="text-xl font-bold mb-4">All Campaigns</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-left">Campaign Name</th>
-                  <th className="px-4 py-3 text-left">Platform</th>
-                  <th className="px-4 py-3 text-right">Spend</th>
-                  <th className="px-4 py-3 text-right">Revenue</th>
-                  <th className="px-4 py-3 text-right">ROAS</th>
-                  <th className="px-4 py-3 text-right">Conversions</th>
-                  <th className="px-4 py-3 text-left">Status</th>
-                  <th className="px-4 py-3 text-left">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {campaigns.map((campaign) => (
-                  <tr key={campaign.id} className="border-b hover:bg-gray-50">
-                    <td className="px-4 py-3 font-semibold">{campaign.name}</td>
-                    <td className="px-4 py-3 capitalize">{campaign.platform}</td>
-                    <td className="px-4 py-3 text-right">₹{(campaign.spend / 1000).toFixed(0)}K</td>
-                    <td className="px-4 py-3 text-right">₹{(campaign.revenue / 1000).toFixed(0)}K</td>
-                    <td className="px-4 py-3 text-right font-bold text-green-600">{campaign.roas}x</td>
-                    <td className="px-4 py-3 text-right">{campaign.conversions}</td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                          campaign.status === "active"
-                            ? "bg-green-100 text-green-800"
-                            : campaign.status === "paused"
-                              ? "bg-yellow-100 text-yellow-800"
-                              : "bg-gray-100 text-gray-800"
-                        }`}
-                      >
-                        {campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => {
-                            setSelectedCampaign(campaign)
-                            setShowDetailsModal(true)
-                          }}
-                          className="p-1 hover:bg-gray-200 rounded"
-                          title="View"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => toggleCampaignStatus(campaign.id)}
-                          className="p-1 hover:bg-gray-200 rounded"
-                          title={campaign.status === "active" ? "Pause" : "Resume"}
-                        >
-                          {campaign.status === "active" ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                        </button>
-                        <button
-                          onClick={() => deleteCampaign(campaign.id)}
-                          className="p-1 hover:bg-red-200 rounded text-red-600"
-                          title="Delete"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-
-        {/* Campaign Details Modal */}
-        {showDetailsModal && selectedCampaign && (
-          <div
-            className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50"
-            onClick={() => setShowDetailsModal(false)}
-          >
-            <Card className="p-8 max-w-2xl w-full mx-4" onClick={(e) => e.stopPropagation()}>
-              <div className="flex justify-between items-start mb-6">
-                <h2 className="text-2xl font-bold">{selectedCampaign.name}</h2>
-                <button
-                  onClick={() => setShowDetailsModal(false)}
-                  className="text-gray-500 hover:text-gray-700 text-2xl"
-                >
-                  ×
-                </button>
-              </div>
-
-              <div className="grid grid-cols-2 gap-6 mb-6">
-                <div>
-                  <p className="text-gray-600 text-sm">Platform</p>
-                  <p className="text-lg font-semibold capitalize">{selectedCampaign.platform}</p>
-                </div>
-                <div>
-                  <p className="text-gray-600 text-sm">Status</p>
-                  <p className="text-lg font-semibold capitalize">{selectedCampaign.status}</p>
-                </div>
-                <div>
-                  <p className="text-gray-600 text-sm">Total Spend</p>
-                  <p className="text-lg font-semibold">₹{(selectedCampaign.spend / 1000).toFixed(0)}K</p>
-                </div>
-                <div>
-                  <p className="text-gray-600 text-sm">Revenue</p>
-                  <p className="text-lg font-semibold">₹{(selectedCampaign.revenue / 1000).toFixed(0)}K</p>
-                </div>
-                <div>
-                  <p className="text-gray-600 text-sm">ROAS</p>
-                  <p className="text-lg font-semibold text-green-600">{selectedCampaign.roas}x</p>
-                </div>
-                <div>
-                  <p className="text-gray-600 text-sm">CTR</p>
-                  <p className="text-lg font-semibold">{selectedCampaign.ctr}%</p>
-                </div>
-                <div>
-                  <p className="text-gray-600 text-sm">CPC</p>
-                  <p className="text-lg font-semibold">₹{selectedCampaign.cpc}</p>
-                </div>
-                <div>
-                  <p className="text-gray-600 text-sm">Conversions</p>
-                  <p className="text-lg font-semibold">{selectedCampaign.conversions}</p>
-                </div>
-              </div>
-
-              <div className="flex gap-3">
-                <Button
-                  onClick={handleEditClick}
-                  className="flex-1 bg-black hover:bg-gray-800 text-white flex items-center justify-center gap-2"
-                >
-                  <Edit2 className="h-4 w-4" />
-                  Edit Campaign
-                </Button>
-                <Button
-                  onClick={() => setShowDetailsModal(false)}
-                  className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-900"
-                >
-                  Close
-                </Button>
-              </div>
-            </Card>
-          </div>
-        )}
-
-        {/* Edit Campaign Modal */}
-        {showEditModal && selectedCampaign && (
-          <div
-            className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50"
-            onClick={() => setShowEditModal(false)}
-          >
-            <Card className="p-8 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
-              <h2 className="text-2xl font-bold mb-6">Edit Campaign</h2>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-semibold mb-2">Campaign Name</label>
-                  <input
-                    type="text"
-                    value={editFormData.name}
-                    onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold mb-2">Daily Budget (₹)</label>
-                  <input
-                    type="number"
-                    value={editFormData.budget}
-                    onChange={(e) => setEditFormData({ ...editFormData, budget: Number(e.target.value) })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold mb-2">Bidding Strategy</label>
-                  <select
-                    value={editFormData.bidding}
-                    onChange={(e) => setEditFormData({ ...editFormData, bidding: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
-                  >
-                    <option value="cpc">Cost Per Click (CPC)</option>
-                    <option value="cpa">Cost Per Acquisition (CPA)</option>
-                    <option value="roas">ROAS Target</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex gap-3 mt-6">
-                <Button
-                  onClick={handleSaveEdit}
-                  disabled={editLoading}
-                  className="flex-1 bg-black hover:bg-gray-800 text-white"
-                >
-                  {editLoading ? "Saving..." : "Save & Apply"}
-                </Button>
-                <Button
-                  onClick={() => setShowEditModal(false)}
-                  className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-900"
-                >
-                  Cancel
-                </Button>
-              </div>
-            </Card>
-          </div>
-        )}
-
-        {/* Create Campaign Modal */}
-        {showCreateModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-30 backdrop-blur-sm flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-              <h2 className="text-2xl font-bold mb-4">Create New Campaign</h2>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Campaign Name</label>
-                  <input
-                    type="text"
-                    className="w-full border rounded px-3 py-2"
-                    placeholder="My Campaign"
-                    value={createForm.name}
-                    onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Platform</label>
-                  <select
-                    className="w-full border rounded px-3 py-2"
-                    value={createForm.platform}
-                    onChange={(e) => setCreateForm({ ...createForm, platform: e.target.value })}
-                  >
-                    <option value="meta">Meta Ads</option>
-                    <option value="google">Google Ads</option>
-                    <option value="linkedin">LinkedIn</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Objective</label>
-                  <select
-                    className="w-full border rounded px-3 py-2"
-                    value={createForm.objective}
-                    onChange={(e) => setCreateForm({ ...createForm, objective: e.target.value })}
-                  >
-                    <option value="awareness">Brand Awareness</option>
-                    <option value="traffic">Traffic</option>
-                    <option value="engagement">Engagement</option>
-                    <option value="leads">Leads</option>
-                    <option value="conversions">Conversions</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Budget (₹)</label>
-                  <input
-                    type="number"
-                    className="w-full border rounded px-3 py-2"
-                    placeholder="5000"
-                    value={createForm.budget}
-                    onChange={(e) => setCreateForm({ ...createForm, budget: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Start Date</label>
-                  <input
-                    type="date"
-                    className="w-full border rounded px-3 py-2"
-                    value={createForm.startDate}
-                    onChange={(e) => setCreateForm({ ...createForm, startDate: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">End Date (optional)</label>
-                  <input
-                    type="date"
-                    className="w-full border rounded px-3 py-2"
-                    value={createForm.endDate}
-                    onChange={(e) => setCreateForm({ ...createForm, endDate: e.target.value })}
-                  />
-                </div>
-              </div>
-              <div className="flex gap-3 mt-6">
-                <Button
-                  onClick={handleCreateCampaign}
-                  disabled={createLoading}
-                  className="flex-1 bg-black hover:bg-gray-800 text-white"
-                >
-                  {createLoading ? "Creating..." : "Create Campaign"}
-                </Button>
-                <Button
-                  onClick={() => setShowCreateModal(false)}
-                  className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-900"
-                >
-                  Cancel
-                </Button>
+        <div className="space-y-6">
+          {/* Campaign Overview */}
+          <div>
+            <h4 className="text-sm font-medium text-gray-900 mb-3">Campaign Overview</h4>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                {getPlatformIcon(campaign.platform)}
+                <span className="text-sm font-medium text-gray-900">{campaign.platform}</span>
+                <Badge className={campaign.status === 'active' ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}>
+                  {campaign.status}
+                </Badge>
               </div>
             </div>
           </div>
-        )}
+
+          {/* Performance Metrics */}
+          <div>
+            <h4 className="text-sm font-medium text-gray-900 mb-3">Performance Metrics</h4>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">Spend</span>
+                <span className="text-sm font-medium text-gray-900">
+                  ${(campaign.spend || 0).toLocaleString()}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">Revenue</span>
+                <span className="text-sm font-medium text-green-600">
+                  ${(campaign.revenue || 0).toLocaleString()}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">Leads</span>
+                <span className="text-sm font-medium text-gray-900">
+                  {campaign.leads || 0}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">ROAS</span>
+                <span className="text-sm font-bold text-gray-900">
+                  {(campaign.roas || 0).toFixed(2)}x
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="space-y-2">
+            <Button className="w-full">Edit Campaign</Button>
+            <Button variant="outline" className="w-full">View Analytics</Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        </div>
+      </DashboardLayout>
+    )
+  }
+
+  if (!user) return null
+
+  const activeCampaigns = campaigns.filter(c => c.status === 'active').length
+  const totalSpend = campaigns.reduce((sum, c) => sum + (c.spend || 0), 0)
+  const avgROAS = campaigns.length > 0 ? campaigns.reduce((sum, c) => sum + (c.roas || 0), 0) / campaigns.length : 0
+  const avgCPA = campaigns.length > 0 ? totalSpend / campaigns.reduce((sum, c) => sum + (c.leads || 0), 0) : 0
+
+  const getPlatformIcon = (platform: string) => {
+    switch (platform.toLowerCase()) {
+      case 'meta': return <Facebook className="w-4 h-4" />
+      case 'google': return <Search className="w-4 h-4" />
+      case 'linkedin': return <Linkedin className="w-4 h-4" />
+      default: return <Target className="w-4 h-4" />
+    }
+  }
+
+  return (
+    <DashboardLayout>
+      <div className="space-y-6 bg-gray-50/50 p-6 rounded-lg">
+        {/* Header */}
+        <div className="flex justify-between items-start">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Campaign Management</h2>
+            <p className="text-gray-700 mt-1">Monitor and optimize your ad campaigns</p>
+          </div>
+          <div className="flex gap-3">
+            <Select value={timeRange} onValueChange={setTimeRange}>
+              <SelectTrigger className="w-20 h-8 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="7d">7d</SelectItem>
+                <SelectItem value="30d">30d</SelectItem>
+                <SelectItem value="90d">90d</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button className="flex items-center gap-2">
+              <RefreshCw className="w-4 h-4" />
+              Refresh
+            </Button>
+          </div>
+        </div>
+
+        {/* Top KPI Cards - Same style as Dashboard */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <MetricCard
+            title="Active Campaigns"
+            value={activeCampaigns.toLocaleString()}
+            change="+2"
+            changeType="increase"
+            icon={Target}
+          />
+          <MetricCard
+            title="Total Spend"
+            value={`$${totalSpend.toLocaleString()}`}
+            change="+12.5%"
+            changeType="increase"
+            icon={DollarSign}
+          />
+          <MetricCard
+            title="Average ROAS"
+            value={`${avgROAS.toFixed(2)}x`}
+            change="-0.3"
+            changeType="decrease"
+            icon={TrendingUp}
+          />
+          <MetricCard
+            title="Average CPA"
+            value={`$${avgCPA.toFixed(2)}`}
+            change="-8.2%"
+            changeType="decrease"
+            icon={Users}
+          />
+        </div>
+
+        {/* Main Content - Campaigns Table */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Table */}
+          <div className="lg:col-span-2">
+            <div className="bg-white rounded-lg border border-gray-200 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">All Campaigns</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-200">
+                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Campaign Name</th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Platform</th>
+                      <th className="text-right py-3 px-4 text-sm font-medium text-gray-700">Spend</th>
+                      <th className="text-right py-3 px-4 text-sm font-medium text-gray-700">Leads</th>
+                      <th className="text-right py-3 px-4 text-sm font-medium text-gray-700">Revenue</th>
+                      <th className="text-right py-3 px-4 text-sm font-medium text-gray-700">ROAS</th>
+                      <th className="text-center py-3 px-4 text-sm font-medium text-gray-700">Status</th>
+                      <th className="text-right py-3 px-4 text-sm font-medium text-gray-700">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {campaigns.map((campaign) => (
+                      <tr 
+                        key={campaign.id} 
+                        className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer"
+                        onClick={() => setSelectedCampaign(campaign)}
+                      >
+                        <td className="py-3 px-4">
+                          <div className="text-sm font-medium text-gray-900">{campaign.name}</div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-2">
+                            {getPlatformIcon(campaign.platform)}
+                            <span className="text-sm text-gray-900">{campaign.platform}</span>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <div className="text-sm text-gray-900">
+                            ${(campaign.spend || 0).toLocaleString()}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <div className="text-sm text-gray-900">{campaign.leads || 0}</div>
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <div className="text-sm text-green-600">
+                            ${(campaign.revenue || 0).toLocaleString()}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <div className="text-sm font-medium text-gray-900">
+                            {(campaign.roas || 0).toFixed(2)}x
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <Badge className={campaign.status === 'active' ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}>
+                            {campaign.status}
+                          </Badge>
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <MoreHorizontal className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent>
+                              <DropdownMenuItem>
+                                <Eye className="w-4 h-4 mr-2" />
+                                View Details
+                              </DropdownMenuItem>
+                              <DropdownMenuItem>
+                                <Edit className="w-4 h-4 mr-2" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem>
+                                {campaign.status === 'active' ? (
+                                  <Pause className="w-4 h-4 mr-2" />
+                                ) : (
+                                  <Play className="w-4 h-4 mr-2" />
+                                )}
+                                {campaign.status === 'active' ? 'Pause' : 'Activate'}
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          {/* Campaign Details */}
+          <div>
+            {selectedCampaign ? (
+              <CampaignDetailCard campaign={selectedCampaign} />
+            ) : (
+              <div className="bg-white rounded-lg border border-gray-200 p-6">
+                <div className="text-center text-gray-500">
+                  <Target className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                  <p>Select a campaign to view details</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </DashboardLayout>
   )
