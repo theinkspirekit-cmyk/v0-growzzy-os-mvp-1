@@ -35,14 +35,16 @@ export default function DashboardPage() {
   const [platformData, setPlatformData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [timeRange, setTimeRange] = useState("30d")
+  const [isDemoMode, setIsDemoMode] = useState(false)
 
+  // Check demo mode on mount - this must run first
   useEffect(() => {
-    // Robust cookie check
-    const isDemoMode = document.cookie
+    const demoCheck = document.cookie
       .split('; ')
       .some(row => row.startsWith('growzzy_demo_mode=true'))
 
-    if (isDemoMode) {
+    if (demoCheck) {
+      setIsDemoMode(true)
       // Load dummy data for demo account
       setMetrics({
         totalRevenue: 128450,
@@ -63,8 +65,16 @@ export default function DashboardPage() {
         { name: 'LinkedIn', spend: 7300, revenue: 18450, roas: 2.52, change: 5.1 },
       ])
       setLoading(false)
-      return
     }
+  }, [])
+
+  // Handle authenticated users - only if NOT in demo mode
+  useEffect(() => {
+    // Skip auth logic entirely if we're in demo mode
+    if (isDemoMode) return
+
+    // Wait for session status to be determined
+    if (status === "loading") return
 
     if (status === "unauthenticated") {
       router.push("/auth")
@@ -105,7 +115,7 @@ export default function DashboardPage() {
 
       fetchDashboardData()
     }
-  }, [session, status, router, timeRange])
+  }, [isDemoMode, session, status, router, timeRange])
 
   // Metric Card with strong hierarchy
   const MetricCard = ({
@@ -399,7 +409,7 @@ export default function DashboardPage() {
     )
   }
 
-  if (!session) return null
+  if (!session && !isDemoMode) return null
 
   const totalRevenue = metrics?.totalRevenue || 0
   const totalSpend = metrics?.totalSpend || 0
