@@ -257,7 +257,7 @@ export default function AuthPage() {
             className="w-full text-[#f97316] hover:text-[#ea580c] hover:bg-[#f97316]/5 font-medium"
             onClick={() => {
               document.cookie = "growzzy_demo_mode=true; path=/; max-age=3600"
-              router.push("/dashboard")
+              window.location.assign("/dashboard")
             }}
           >
             Try Demo Account

@@ -37,7 +37,10 @@ export default function DashboardPage() {
   const [timeRange, setTimeRange] = useState("30d")
 
   useEffect(() => {
-    const isDemoMode = document.cookie.includes("growzzy_demo_mode=true")
+    // Robust cookie check
+    const isDemoMode = document.cookie
+      .split('; ')
+      .some(row => row.startsWith('growzzy_demo_mode=true'))
 
     if (isDemoMode) {
       // Load dummy data for demo account
