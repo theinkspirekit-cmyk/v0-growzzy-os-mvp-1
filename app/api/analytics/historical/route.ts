@@ -1,9 +1,6 @@
-export const dynamic = 'force-dynamic'
-import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabaseAdmin';
-
 import { auth } from "@/lib/auth"
 import { NextRequest, NextResponse } from 'next/server';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 export async function GET(request: NextRequest) {
   try {
@@ -258,7 +255,7 @@ function calculateModelAccuracy(actualData: any[]) {
 
 function calculateAttribution(data: any[]) {
   // Simplified attribution analysis
-  const platformAttribution = {};
+  const platformAttribution: Record<string, any> = {};
   const totalRevenue = data.reduce((sum, d) => sum + d.revenue, 0);
 
   // In real implementation, this would use more sophisticated attribution models
@@ -320,7 +317,7 @@ function analyzeFunnels(data: any[]) {
 
 function analyzeCohort(data: any[]) {
   // Simplified cohort analysis
-  const cohorts = {};
+  const cohorts: Record<string, any> = {};
 
   // Group by week
   data.forEach(d => {
@@ -335,7 +332,7 @@ function analyzeCohort(data: any[]) {
       };
     }
 
-    cohorts[week].sppend += d.spend;
+    cohorts[week].spend += d.spend;
     cohorts[week].revenue += d.revenue;
     cohorts[week].conversions += d.conversions;
   });
