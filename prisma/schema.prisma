@@ -1,6 +1,4 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
+// This is your Prisma schema file
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,243 +8,300 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ═══════════════════════════════════════════════════
-// AUTHENTICATION & USERS
-// ═══════════════════════════════════════════════════
+// ============================================
+// USERS & AUTHENTICATION
+// ============================================
 
 model User {
-  id                    String                 @id @default(cuid())
-  email                 String                 @unique
-  name                  String?
-  password              String
-  emailVerified         Boolean                @default(true)
-  createdAt             DateTime               @default(now())
-  updatedAt             DateTime               @updatedAt
-  
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Relations
-  platformConnections   PlatformConnection[]
-  campaigns             Campaign[]
-  reports               Report[]
-  sessions              Session[]
-  leads                 Lead[]
-  creatives             Creative[]
-  automations           Automation[]
-  insights              Insight[]
+  platforms     Platform[]
+  leads         Lead[]
+  campaigns     Campaign[]
+  automations   Automation[]
+  reports       Report[]
+  creatives     Creative[]
+  conversations Conversation[]
 }
 
-model Session {
+// ============================================
+// PLATFORM INTEGRATIONS (OAuth)
+// ============================================
+
+model Platform {
   id           String   @id @default(cuid())
   userId       String
-  sessionToken String   @unique
-  expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  name         String   // "Google Ads", "Meta Ads", "LinkedIn Ads"
+  accountId    String   // Platform-specific account ID
+  accountName  String?
+  
+  accessToken  String   @db.Text
+  refreshToken String?  @db.Text
+  expiresAt    DateTime?
+  
+  isActive     Boolean  @default(true)
+  lastSynced   DateTime?
+  
   createdAt    DateTime @default(now())
-  
-  @@index([userId])
+  updatedAt    DateTime @updatedAt
 
+  // Relations
+  analytics    Analytics[]
+  campaigns    Campaign[]
+
+  @@unique([userId, name, accountId])
+  @@index([userId])
 }
 
-// ═══════════════════════════════════════════════════
-// PLATFORM CONNECTIONS
-// ═══════════════════════════════════════════════════
+// ============================================
+// ANALYTICS DATA
+// ============================================
 
-model PlatformConnection {
-  id              String    @id @default(cuid())
-  userId          String
-  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+model Analytics {
+  id         String   @id @default(cuid())
+  platformId String
+  platform   Platform @relation(fields: [platformId], references: [id], onDelete: Cascade)
   
-  platform        String    // meta, google, shopify, linkedin
-  accessToken     String    @db.Text
-  refreshToken    String?   @db.Text
-  expiresAt       DateTime?
+  metricDate DateTime
   
-  accountId       String?
-  accountName     String?
-  accountInfo     Json?
+  impressions  Int      @default(0)
+  clicks       Int      @default(0)
+  conversions  Int      @default(0)
+  leads        Int      @default(0)
   
-  active          Boolean   @default(true)
-  connectedAt     DateTime  @default(now())
-  lastSyncedAt    DateTime?
+  spend        Float    @default(0)
+  revenue      Float    @default(0)
   
-  campaigns       Campaign[]
+  ctr          Float?
+  cpc          Float?
+  roas         Float?
   
-  @@unique([userId, platform])
-  @@index([userId])
+  // Additional metrics
+  costPerLead  Float?
+  conversionRate Float?
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
+  @@unique([platformId, metricDate])
+  @@index([platformId, metricDate])
 }
 
-// ═══════════════════════════════════════════════════
-// CAMPAIGNS & ANALYTICS
-// ═══════════════════════════════════════════════════
-
-model Campaign {
-  id                  String              @id @default(cuid())
-  userId              String
-  user                User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  connectionId        String
-  connection          PlatformConnection  @relation(fields: [connectionId], references: [id], onDelete: Cascade)
-  
-  platform            String
-  platformCampaignId  String
-  
-  name                String
-  status              String  // ACTIVE, PAUSED, ARCHIVED
-  objective           String?
-  
-  // Metrics
-  spend               Decimal             @default(0) @db.Decimal(10, 2)
-  revenue             Decimal             @default(0) @db.Decimal(10, 2)
-  impressions         Int                 @default(0)
-  clicks              Int                 @default(0)
-  conversions         Int                 @default(0)
-  ctr                 Decimal?            @db.Decimal(5, 2)
-  cpc                 Decimal?            @db.Decimal(10, 2)
-  cpm                 Decimal?            @db.Decimal(10, 2)
-  roas                Decimal?            @db.Decimal(10, 2)
-  bounceRate          Decimal?            @db.Decimal(5, 2)
-  
-  // Demographics
-  ageGenderData       Json?               // Store age/gender breakdown
-  sourceData          Json?               // Store traffic sources
-  
-  startDate           DateTime?
-  endDate             DateTime?
-  lastUpdated         DateTime            @default(now())
-  createdAt           DateTime            @default(now())
-  
-  leads               Lead[]
-
-  @@unique([platformCampaignId, platform])
-  @@index([userId])
-  @@index([platform])
-}
-
-// ═══════════════════════════════════════════════════
+// ============================================
 // LEADS & CRM
-// ═══════════════════════════════════════════════════
+// ============================================
 
 model Lead {
-  id          String    @id @default(cuid())
-  userId      String
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   
-  campaignId  String?
-  campaign    Campaign? @relation(fields: [campaignId], references: [id])
+  // Basic Info
+  name      String
+  email     String
+  phone     String?
+  company   String?
+  position  String?
   
-  firstName   String?
-  lastName    String?
-  email       String?
-  phone       String?
-  company     String?
+  // Lead Details
+  source    String?  // "Google Ads", "Meta Ads", "LinkedIn", "Manual", "Import"
+  status    String   @default("new") // "new", "contacted", "qualified", "proposal", "won", "lost"
   
-  status      String    @default("NEW") // NEW, CONTACTED, QUALIFIED, WON, LOST
-  source      String?   // Facebook, Google, Manual
-  score       Int       @default(0)     // AI Score 0-100
-  value       Decimal?  @db.Decimal(10, 2)
+  // AI Scoring
+  aiScore   Int?     // 0-100
+  aiInsights String? @db.Text
   
-  aiInsights  Json?     // Stored AI predictions/recommendations
+  // Value
+  estimatedValue Float?
+  actualValue    Float?
   
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  // Tracking
+  lastActivity   DateTime?
+  nextFollowUp   DateTime?
   
-  @@index([userId])
-  @@index([status])
+  // Custom Fields (JSON)
+  customFields   Json?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, status])
+  @@index([email])
 }
 
-// ═══════════════════════════════════════════════════
-// AI CREATIVES
-// ═══════════════════════════════════════════════════
+// ============================================
+// CAMPAIGNS
+// ============================================
+
+model Campaign {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  platformId String?
+  platform   Platform? @relation(fields: [platformId], references: [id], onDelete: SetNull)
+  
+  // Campaign Details
+  name       String
+  objective  String?  // "awareness", "traffic", "conversions", "leads"
+  status     String   @default("draft") // "draft", "active", "paused", "ended"
+  
+  // Targeting
+  targeting  Json?    // Audience, keywords, etc.
+  
+  // Budget
+  dailyBudget Float?
+  totalBudget Float?
+  
+  // Dates
+  startDate  DateTime?
+  endDate    DateTime?
+  
+  // External IDs (from ad platforms)
+  externalId String?  // Campaign ID from Google/Meta/LinkedIn
+  
+  // Performance (cached from Analytics)
+  totalSpend    Float @default(0)
+  totalRevenue  Float @default(0)
+  totalLeads    Int   @default(0)
+  roas          Float?
+  
+  // AI Insights
+  aiHealth      String?  // "excellent", "good", "fair", "poor"
+  aiRecommendations Json?
+  
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  creatives  Creative[]
+
+  @@index([userId, status])
+  @@index([platformId])
+}
+
+// ============================================
+// AD CREATIVES
+// ============================================
 
 model Creative {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   
-  type        String   // IMAGE, TEXT, VIDEO
-  platform    String   // Facebook, LinkedIn, etc.
+  campaignId String?
+  campaign   Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
   
-  content     Json     // The actual content (text, image URL, etc.)
+  // Creative Details
+  name       String
+  type       String   // "image", "video", "carousel", "text"
+  format     String   // "feed", "story", "search", "display"
   
-  aiScore     Int?
-  status      String   @default("DRAFT") // DRAFT, SAVED, PUBLISHED
+  // Content
+  headline   String?
+  bodyText   String?  @db.Text
+  ctaText    String?
+  
+  // Media
+  imageUrl   String?
+  videoUrl   String?
+  
+  // AI Generation
+  aiGenerated Boolean @default(false)
+  aiScore     Int?    // Predicted conversion score
+  aiPrompt    String? @db.Text
+  
+  // Performance
+  status      String  @default("draft") // "draft", "active", "paused"
   
   createdAt   DateTime @default(now())
-  
+  updatedAt   DateTime @updatedAt
+
   @@index([userId])
+  @@index([campaignId])
 }
 
-// ═══════════════════════════════════════════════════
+// ============================================
 // AUTOMATIONS
-// ═══════════════════════════════════════════════════
+// ============================================
 
 model Automation {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   
-  name        String
-  trigger     String   // e.g., "ROAS_DROP"
-  condition   Json     // e.g., { "details": "ROAS < 1.0" }
-  action      String   // e.g., "PAUSE_CAMPAIGN"
+  // Automation Details
+  name      String
+  trigger   Json     // Conditions to fire
+  action    Json     // Actions to execute
   
-  active      Boolean  @default(true)
-  lastRun     DateTime?
+  isActive  Boolean  @default(false)
   
-  createdAt   DateTime @default(now())
+  // Execution tracking
+  lastRun   DateTime?
+  runCount  Int      @default(0)
   
-  @@index([userId])
+createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, isActive])
 }
 
-// ═══════════════════════════════════════════════════
-// AI INSIGHTS
-// ═══════════════════════════════════════════════════
-
-model Insight {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  title       String
-  description String
-  type        String   // WARNING, OPPORTUNITY, INFO
-  severity    String   // HIGH, MEDIUM, LOW
-  
-  metric      String?
-  value       String?
-  change      String?
-  
-  isRead      Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  
-  @@index([userId])
-}
-
-// ═══════════════════════════════════════════════════
+// ============================================
 // REPORTS
-// ═══════════════════════════════════════════════════
+// ============================================
 
 model Report {
-  id              String    @id @default(cuid())
-  userId          String
-  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   
-  title           String
-  type            String    @default("analytics")
+  // Report Details
+  name       String
+  type       String   // "weekly", "monthly", "quarterly", "custom"
+  format     String   @default("pdf") // "pdf", "excel", "json"
   
-  dateFrom        DateTime
-  dateTo          DateTime
+  // Date Range
+  startDate  DateTime
+  endDate    DateTime
   
-  // Report data (matches the image structure)
-  data            Json      // Contains all metrics, charts data
+  // Content
+  data       Json?    // Report data snapshot
+  aiSummary  String?  @db.Text
   
   // File
-  fileUrl         String?
-  fileName        String?
-  pdfBase64       String?   @db.Text
+  fileUrl    String?
   
-  createdAt       DateTime  @default(now())
+  status     String   @default("pending") // "pending", "generating", "ready", "failed"
   
-  @@index([userId])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
+  @@index([userId])
+}
+
+// ============================================
+// AI COPILOT CONVERSATIONS
+// ============================================
+
+model Conversation {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  title     String?
+  messages  Json     // Array of {role: "user"|"assistant", content: string}
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
 }

@@ -1,62 +1,219 @@
-import { auth } from "@/lib/auth"
-import { prisma } from "@/lib/prisma"
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from 'next/server'
+import { auth } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
+import { scoreLeads } from '@/lib/openai'
+import { parse } from 'papaparse'
 
-export async function GET(req: Request) {
-  const session = await auth()
-  // Mock Admin Bypass
-  const userId = session?.user?.id || (session?.user?.email === "admin@growzzy.com" ? "mock-user-id" : null)
+export const dynamic = 'force-dynamic'
 
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+// ============================================
+// GET - Fetch all leads for user
+// ============================================
 
-  try {
-    const leads = await prisma.lead.findMany({
-      where: { userId },
-      orderBy: { createdAt: "desc" }
-    })
+export async function GET(request: NextRequest) {
+    try {
+        const session = await auth()
+        if (!session?.user?.id) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        }
 
-    // Seed mock leads if empty for admin demo
-    if (leads.length === 0 && userId === "mock-user-id") {
-      return NextResponse.json({
-        leads: [
-          { id: "1", firstName: "Sarah", lastName: "Connor", company: "Cyberdyne", status: "New", value: 5000, score: 85 },
-          { id: "2", firstName: "John", lastName: "Smith", company: "Matrix Inc", status: "Qualified", value: 12000, score: 92 },
-        ]
-      })
+        const { searchParams } = new URL(request.url)
+        const status = searchParams.get('status')
+        const source = searchParams.get('source')
+
+        const where: any = { userId: session.user.id }
+        if (status) where.status = status
+        if (source) where.source = source
+
+        const leads = await prisma.lead.findMany({
+            where,
+            orderBy: { createdAt: 'desc' },
+        })
+
+        return NextResponse.json({ success: true, leads })
+    } catch (error: any) {
+        console.error('[API] Get leads error:', error)
+        return NextResponse.json({ error: error.message }, { status: 500 })
     }
-
-    return NextResponse.json({ leads })
-  } catch (error) {
-    return NextResponse.json({ error: "Failed to fetch leads" }, { status: 500 })
-  }
 }
 
-export async function POST(req: Request) {
-  const session = await auth()
-  const userId = session?.user?.id || (session?.user?.email === "admin@growzzy.com" ? "mock-user-id" : null)
+// ============================================
+// POST - Add single lead or import CSV
+// ============================================
 
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+export async function POST(request: NextRequest) {
+    try {
+        const session = await auth()
+        if (!session?.user?.id) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        }
 
-  try {
-    const body = await req.json()
+        const body = await request.json()
+        const { action, data } = body
 
-    // Create Real Lead
-    const newLead = await prisma.lead.create({
-      data: {
-        userId,
-        firstName: body.firstName,
-        lastName: body.lastName,
-        email: body.email,
-        company: body.company,
-        status: "NEW",
-        source: "Manual",
-        score: Math.floor(Math.random() * 40) + 60, // Mock AI Score for now
-        value: Number(body.value) || 0
-      }
-    })
+        // Single Lead Add
+        if (action === 'add') {
+            const { name, email, phone, company, position, source, estimatedValue } = data
 
-    return NextResponse.json(newLead)
-  } catch (error) {
-    return NextResponse.json({ error: "Failed to create lead" }, { status: 500 })
-  }
+            if (!name || !email) {
+                return NextResponse.json({ error: 'Name and email are required' }, { status: 400 })
+            }
+
+            const lead = await prisma.lead.create({
+                data: {
+                    userId: session.user.id,
+                    name,
+                    email,
+                    phone,
+                    company,
+                    position,
+                    source: source || 'Manual',
+                    estimatedValue: estimatedValue ? parseFloat(estimatedValue) : null,
+                    status: 'new',
+                },
+            })
+
+            // AI Score the lead
+            const scoreResult = await scoreLeads([lead])
+            if (scoreResult.success && scoreResult.data.scores[0]) {
+                const aiData = scoreResult.data.scores[0]
+                await prisma.lead.update({
+                    where: { id: lead.id },
+                    data: {
+                        aiScore: aiData.score,
+                        aiInsights: aiData.reasoning,
+                    },
+                })
+            }
+
+            return NextResponse.json({ success: true, lead })
+        }
+
+        // CSV Import
+        if (action === 'import') {
+            const { csvData } = data
+
+            if (!csvData) {
+                return NextResponse.json({ error: 'CSV data required' }, { status: 400 })
+            }
+
+            // Parse CSV
+            const parseResult = parse(csvData, {
+                header: true,
+                skipEmptyLines: true,
+            })
+
+            if (parseResult.errors.length > 0) {
+                return NextResponse.json({ error: 'Invalid CSV format' }, { status: 400 })
+            }
+
+            const rows = parseResult.data as any[]
+            const imported: any[] = []
+
+            for (const row of rows) {
+                if (!row.name || !row.email) continue
+
+                try {
+                    const lead = await prisma.lead.create({
+                        data: {
+                            userId: session.user.id,
+                            name: row.name,
+                            email: row.email,
+                            phone: row.phone || null,
+                            company: row.company || null,
+                            position: row.position || null,
+                            source: row.source || 'Import',
+                            estimatedValue: row.estimatedValue ? parseFloat(row.estimatedValue) : null,
+                            status: 'new',
+                        },
+                    })
+                    imported.push(lead)
+                } catch (err) {
+                    console.error('[Import] Lead creation failed:', err)
+                }
+            }
+
+            // Batch AI scoring
+            if (imported.length > 0) {
+                const scoreResult = await scoreLeads(imported)
+                if (scoreResult.success && scoreResult.data.scores) {
+                    for (const score of scoreResult.data.scores) {
+                        await prisma.lead.update({
+                            where: { id: score.id },
+                            data: {
+                                aiScore: score.score,
+                                aiInsights: score.reasoning,
+                            },
+                        }).catch(() => { })
+                    }
+                }
+            }
+
+            return NextResponse.json({ success: true, imported: imported.length })
+        }
+
+        return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
+    } catch (error: any) {
+        console.error('[API] Add/Import leads error:', error)
+        return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+}
+
+// ============================================
+// PATCH - Update lead
+// ============================================
+
+export async function PATCH(request: NextRequest) {
+    try {
+        const session = await auth()
+        if (!session?.user?.id) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        }
+
+        const body = await request.json()
+        const { id, ...updates } = body
+
+        if (!id) {
+            return NextResponse.json({ error: 'Lead ID required' }, { status: 400 })
+        }
+
+        const lead = await prisma.lead.update({
+            where: { id, userId: session.user.id },
+            data: updates,
+        })
+
+        return NextResponse.json({ success: true, lead })
+    } catch (error: any) {
+        console.error('[API] Update lead error:', error)
+        return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+}
+
+// ============================================
+// DELETE - Delete lead
+// ============================================
+
+export async function DELETE(request: NextRequest) {
+    try {
+        const session = await auth()
+        if (!session?.user?.id) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        }
+
+        const { searchParams } = new URL(request.url)
+        const id = searchParams.get('id')
+
+        if (!id) {
+            return NextResponse.json({ error: 'Lead ID required' }, { status: 400 })
+        }
+
+        await prisma.lead.delete({
+            where: { id, userId: session.user.id },
+        })
+
+        return NextResponse.json({ success: true })
+    } catch (error: any) {
+        console.error('[API] Delete lead error:', error)
+        return NextResponse.json({ error: error.message }, { status: 500 })
+    }
 }
