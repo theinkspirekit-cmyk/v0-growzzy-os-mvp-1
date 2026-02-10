@@ -97,21 +97,24 @@ export default function DashboardPage() {
 
           if (metricsRes.ok) {
             const metricsData = await metricsRes.json()
-            setMetrics(metricsData.summary)
+            setMetrics(metricsData?.summary || null)
           }
 
           if (historicalRes.ok) {
             const histData = await historicalRes.json()
-            setHistoricalData(histData.data || [])
+            setHistoricalData(Array.isArray(histData?.data) ? histData.data : [])
           }
 
           if (platformRes.ok) {
             const platformData = await platformRes.json()
-            setPlatformData(platformData.platforms || [])
+            setPlatformData(Array.isArray(platformData?.platforms) ? platformData.platforms : [])
           }
-          // ... rest of fetch login
         } catch (error) {
           console.error("[v0] Dashboard data error:", error)
+          // Set safe defaults on error to prevent UI crash
+          setMetrics(null)
+          setHistoricalData([])
+          setPlatformData([])
         } finally {
           setLoading(false)
         }
