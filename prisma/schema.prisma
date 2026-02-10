@@ -28,6 +28,10 @@ model User {
   campaigns             Campaign[]
   reports               Report[]
   sessions              Session[]
+  leads                 Lead[]
+  creatives             Creative[]
+  automations           Automation[]
+  insights              Insight[]
 }
 
 model Session {
@@ -87,7 +91,7 @@ model Campaign {
   platformCampaignId  String
   
   name                String
-  status              String
+  status              String  // ACTIVE, PAUSED, ARCHIVED
   objective           String?
   
   // Metrics
@@ -111,9 +115,111 @@ model Campaign {
   lastUpdated         DateTime            @default(now())
   createdAt           DateTime            @default(now())
   
+  leads               Lead[]
+
   @@unique([platformCampaignId, platform])
   @@index([userId])
   @@index([platform])
+}
+
+// ═══════════════════════════════════════════════════
+// LEADS & CRM
+// ═══════════════════════════════════════════════════
+
+model Lead {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  campaignId  String?
+  campaign    Campaign? @relation(fields: [campaignId], references: [id])
+  
+  firstName   String?
+  lastName    String?
+  email       String?
+  phone       String?
+  company     String?
+  
+  status      String    @default("NEW") // NEW, CONTACTED, QUALIFIED, WON, LOST
+  source      String?   // Facebook, Google, Manual
+  score       Int       @default(0)     // AI Score 0-100
+  value       Decimal?  @db.Decimal(10, 2)
+  
+  aiInsights  Json?     // Stored AI predictions/recommendations
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  @@index([userId])
+  @@index([status])
+}
+
+// ═══════════════════════════════════════════════════
+// AI CREATIVES
+// ═══════════════════════════════════════════════════
+
+model Creative {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  type        String   // IMAGE, TEXT, VIDEO
+  platform    String   // Facebook, LinkedIn, etc.
+  
+  content     Json     // The actual content (text, image URL, etc.)
+  
+  aiScore     Int?
+  status      String   @default("DRAFT") // DRAFT, SAVED, PUBLISHED
+  
+  createdAt   DateTime @default(now())
+  
+  @@index([userId])
+}
+
+// ═══════════════════════════════════════════════════
+// AUTOMATIONS
+// ═══════════════════════════════════════════════════
+
+model Automation {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  name        String
+  trigger     String   // e.g., "ROAS_DROP"
+  condition   Json     // e.g., { "details": "ROAS < 1.0" }
+  action      String   // e.g., "PAUSE_CAMPAIGN"
+  
+  active      Boolean  @default(true)
+  lastRun     DateTime?
+  
+  createdAt   DateTime @default(now())
+  
+  @@index([userId])
+}
+
+// ═══════════════════════════════════════════════════
+// AI INSIGHTS
+// ═══════════════════════════════════════════════════
+
+model Insight {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  title       String
+  description String
+  type        String   // WARNING, OPPORTUNITY, INFO
+  severity    String   // HIGH, MEDIUM, LOW
+  
+  metric      String?
+  value       String?
+  change      String?
+  
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  
+  @@index([userId])
 }
 
 // ═══════════════════════════════════════════════════
