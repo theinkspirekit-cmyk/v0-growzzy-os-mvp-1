@@ -1,3 +1,4 @@
+import { auth } from "@/lib/auth"
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
@@ -6,6 +7,32 @@ export const dynamic = "force-dynamic"
 
 export async function GET(request: Request) {
   try {
+    const session = await auth()
+
+    // 1. Check for valid session (Real or Mock)
+    if (!session || !session.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const userId = session.user.id
+
+    // 2. MOCK DATA BYPASS (If user is our mock admin)
+    if (userId === "mock-admin-id" || session.user.email === "admin@growzzy.com") {
+      return NextResponse.json({
+        summary: {
+          totalImpressions: 15420,
+          totalClicks: 842,
+          totalConversions: 45,
+          totalSpend: "1250.00",
+          totalRevenue: "4500.00",
+          ctr: 5.46,
+          cpc: 1.48,
+          roas: 3.6,
+        },
+      })
+    }
+
+    // 3. Real Data Fetch (Only if not mock user)
     const cookieStore = await cookies()
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -14,21 +41,19 @@ export async function GET(request: Request) {
         cookies: {
           getAll: () => cookieStore.getAll(),
           setAll: (cookiesToSet) => {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              cookieStore.set(name, value, options)
-            })
+            try {
+              cookiesToSet.forEach(({ name, value, options }) => {
+                cookieStore.set(name, value, options)
+              })
+            } catch {
+              // The `setAll` method was called from a Server Component.
+              // This can be ignored if you have middleware refreshing
+              // user sessions.
+            }
           },
         },
       },
     )
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
 
     const { searchParams } = new URL(request.url)
     const startDate =
@@ -39,12 +64,13 @@ export async function GET(request: Request) {
     const { data: analytics, error } = await supabase
       .from("analytics")
       .select("impressions, clicks, conversions, spend, revenue")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .gte("metric_date", startDate)
       .lte("metric_date", endDate)
 
     if (error) {
       console.error("[v0] Failed to fetch analytics:", error)
+      // Return zeros instead of error to prevent frontend crash
       return NextResponse.json({
         summary: {
           totalImpressions: 0,
