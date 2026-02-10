@@ -38,62 +38,63 @@ export default function CreativesPage() {
     }, 6000)
   }
 
-  // Generation Progress UI Component (Platelink Style)
-  const renderGenerationProgress = () => (
-    <div className="flex flex-col items-center justify-center p-12 lg:p-24 bg-white rounded-xl border border-neutral-100 shadow-sm min-h-[500px]">
-      {/* Animated AI Brain Icon */}
-      <div className="relative mb-8">
-        <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center animate-pulse shadow-lg shadow-purple-200">
-          <Sparkles className="w-10 h-10 text-white animate-spin-slow" />
+  // Generation Progress UI Component (Premium AI Sphere)
+  const renderGenerationProgress = () => {
+    const texts = [
+      "Analyzing your inputs...",
+      "Fetching best practices...",
+      "Generating ad components...",
+      "Rendering 150+ variations..."
+    ]
+    const currentText = texts[generationStep - 1] || "Initializing AI..."
+
+    return (
+      <div className="w-full h-[500px] bg-black rounded-xl overflow-hidden relative flex flex-col items-center justify-center">
+        {/* Background Gradients */}
+        <div className="absolute inset-0 bg-gradient-to-tr from-blue-900/20 to-purple-900/20 blur-3xl opacity-50" />
+
+        {/* The Sphere Loader */}
+        <div className="relative z-10 scale-125">
+          <div className="relative w-48 h-48 perspective-1000">
+            {/* Ring 1 */}
+            <div className="absolute inset-0 border-[4px] border-cyan-400/80 rounded-full shadow-[0_0_20px_rgba(34,211,238,0.6)] animate-[spin_3s_linear_infinite]"
+              style={{ transform: "rotateX(70deg) rotateY(10deg)" }}></div>
+
+            {/* Ring 2 */}
+            <div className="absolute inset-0 border-[4px] border-blue-500/80 rounded-full shadow-[0_0_20px_rgba(59,130,246,0.6)] animate-[spin_4s_linear_infinite_reverse]"
+              style={{ transform: "rotateX(70deg) rotateY(60deg)" }}></div>
+
+            {/* Ring 3 */}
+            <div className="absolute inset-0 border-[4px] border-indigo-500/80 rounded-full shadow-[0_0_20px_rgba(99,102,241,0.6)] animate-[spin_5s_linear_infinite]"
+              style={{ transform: "rotateX(70deg) rotateY(-60deg)" }}></div>
+
+            {/* Core */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 bg-gradient-to-br from-cyan-400 to-blue-600 rounded-full blur-[20px] animate-pulse shadow-[0_0_40px_rgba(59,130,246,0.9)]" />
+          </div>
         </div>
-        <div className="absolute -inset-2 bg-purple-500/20 rounded-full animate-ping opacity-75" />
-      </div>
 
-      <h3 className="text-xl font-bold text-neutral-900 mb-8">Your Ad Creative is Being Generated</h3>
+        {/* Text Animation */}
+        <div className="mt-16 text-center z-10 space-y-4 max-w-md mx-auto px-6">
+          <h3 className="text-2xl font-bold text-white tracking-widest animate-[pulse_2s_infinite]">
+            Creating Magic
+          </h3>
+          <div className="h-6">
+            <p className="text-cyan-200/80 text-sm font-light tracking-wide animate-fade-in-up transition-all duration-300">
+              {currentText}
+            </p>
+          </div>
 
-      <div className="w-full max-w-md space-y-3">
-        {[
-          "Our AI is analyzing your texts and background image.",
-          "We're fetching the best practices from your brand category.",
-          "We're generating components & arranging them for high ROI.",
-          "We're rendering over 150 variations using Artificial Intelligence.",
-        ].map((text, index) => {
-          const stepIndex = index + 1
-          const isCompleted = generationStep > stepIndex
-          const isCurrent = generationStep === stepIndex
-
-          return (
+          {/* Progress Bar */}
+          <div className="w-64 h-1 bg-neutral-800 rounded-full mx-auto mt-6 overflow-hidden">
             <div
-              key={index}
-              className={`flex items-center justify-between p-4 rounded-xl border transition-all duration-300 ${isCurrent
-                  ? "bg-white border-purple-200 shadow-sm scale-[1.02]"
-                  : isCompleted
-                    ? "bg-neutral-50/50 border-neutral-100 opacity-60"
-                    : "bg-white border-neutral-100 opacity-40 blur-[1px]"
-                }`}
-            >
-              <span className={`text-sm font-medium ${isCurrent ? "text-neutral-900" : "text-neutral-500"}`}>
-                {text}
-              </span>
-              {isCompleted ? (
-                <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                </div>
-              ) : isCurrent ? (
-                <Loader2 className="w-5 h-5 text-purple-600 animate-spin" />
-              ) : (
-                <div className="w-6 h-6 rounded-full border border-neutral-200" />
-              )}
-            </div>
-          )
-        })}
+              className="h-full bg-gradient-to-r from-cyan-400 to-blue-600 transition-all duration-1000 ease-linear shadow-[0_0_10px_#22d3ee]"
+              style={{ width: `${(generationStep / 4) * 100}%` }}
+            />
+          </div>
+        </div>
       </div>
-
-      <p className="text-xs text-neutral-400 mt-8 animate-pulse text-center">
-        Note: The process may take up to a minute, please wait...
-      </p>
-    </div>
-  )
+    )
+  }
 
   return (
     <DashboardLayout>
