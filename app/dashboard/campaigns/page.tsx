@@ -1,390 +1,142 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
 import DashboardLayout from "@/components/dashboard-layout"
-import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Badge } from "@/components/ui/badge"
-import { 
-  Target,
-  DollarSign,
-  TrendingUp,
-  Users,
-  RefreshCw,
-  ArrowUp,
-  ArrowDown,
-  MoreHorizontal,
-  Eye,
-  Edit,
+import {
+  Megaphone,
   Play,
   Pause,
-  Facebook,
-  Search,
-  Linkedin
+  TrendingUp,
+  TrendingDown,
+  Plus,
+  MoreHorizontal,
+  Sparkles,
+  DollarSign,
+  Target,
+  Eye,
+  MousePointerClick,
+  AlertTriangle,
 } from "lucide-react"
-import { cn } from "@/lib/utils"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
-export const dynamic = "force-dynamic"
+const CAMPAIGNS = [
+  { id: 1, name: "Summer Sale — Retargeting", platform: "Meta Ads", status: "Active", budget: "$1,200/day", spend: "$8,400", revenue: "$32,600", roas: "3.88x", leads: 142, health: "Excellent" },
+  { id: 2, name: "Brand Awareness Q1", platform: "Google Ads", status: "Active", budget: "$800/day", spend: "$5,600", revenue: "$14,200", roas: "2.54x", leads: 89, health: "Good" },
+  { id: 3, name: "B2B Decision Makers", platform: "LinkedIn", status: "Active", budget: "$500/day", spend: "$3,500", revenue: "$9,800", roas: "2.80x", leads: 56, health: "Good" },
+  { id: 4, name: "Product Launch Video", platform: "Meta Ads", status: "Paused", budget: "$600/day", spend: "$2,400", revenue: "$3,100", roas: "1.29x", leads: 18, health: "Poor" },
+  { id: 5, name: "Search — High Intent KWs", platform: "Google Ads", status: "Active", budget: "$1,500/day", spend: "$10,500", revenue: "$42,000", roas: "4.00x", leads: 210, health: "Excellent" },
+  { id: 6, name: "Lookalike Audience Test", platform: "Meta Ads", status: "Active", budget: "$400/day", spend: "$2,800", revenue: "$5,600", roas: "2.00x", leads: 34, health: "Fair" },
+]
+
+const AI_ALERTS = [
+  { type: "warning", message: "\"Product Launch Video\" campaign has ROAS below 1.5x — consider pausing" },
+  { type: "success", message: "\"Search — High Intent KWs\" is your best performer — 15% budget increase recommended" },
+  { type: "info", message: "\"Lookalike Audience Test\" needs 3 more days of data before AI can optimize" },
+]
 
 export default function CampaignsPage() {
-  const router = useRouter()
-  const [user, setUser] = useState<any>(null)
-  const [campaigns, setCampaigns] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const [selectedCampaign, setSelectedCampaign] = useState<any>(null)
-  const [timeRange, setTimeRange] = useState("30d")
-
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const response = await fetch("/api/auth/me")
-        if (!response.ok) {
-          router.push("/auth")
-          return
-        }
-        const data = await response.json()
-        setUser(data.user)
-
-        // Fetch campaigns data
-        const campaignsRes = await fetch(`/api/campaigns?userId=${data.user.id}&range=${timeRange}`)
-        if (campaignsRes.ok) {
-          const campaignsData = await campaignsRes.json()
-          setCampaigns(campaignsData.campaigns || [])
-        }
-      } catch (error) {
-        console.error("[v0] Campaigns error:", error)
-        router.push("/auth")
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    checkAuth()
-  }, [router, timeRange])
-
-  // Reuse exact same MetricCard component from Dashboard
-  const MetricCard = ({ 
-    title, 
-    value, 
-    change, 
-    changeType,
-    icon: Icon
-  }: {
-    title: string
-    value: string
-    change: string
-    changeType: 'increase' | 'decrease'
-    icon: React.ComponentType<{ className?: string }>
-  }) => {
-    const isPositive = changeType === 'increase'
-    
-    return (
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="p-2 bg-gray-50 rounded-lg">
-                <Icon className="w-5 h-5 text-gray-600" />
-              </div>
-              <p className="text-sm font-medium text-gray-900">{title}</p>
-            </div>
-            <p className="text-3xl font-bold text-gray-900 mb-2">{value}</p>
-            <div className="flex items-center gap-2">
-              {isPositive ? (
-                <ArrowUp className="w-4 h-4 text-green-600" />
-              ) : (
-                <ArrowDown className="w-4 h-4 text-red-600" />
-              )}
-              <span className={cn(
-                "text-sm font-medium",
-                isPositive ? "text-green-600" : "text-red-600"
-              )}>
-                {change}
-              </span>
-              <span className="text-sm text-gray-600">vs last period</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // Campaign Detail Card - same style as dashboard cards
-  const CampaignDetailCard = ({ campaign }: { campaign: any }) => {
-    const getPlatformIcon = (platform: string) => {
-      switch (platform.toLowerCase()) {
-        case 'meta': return <Facebook className="w-5 h-5" />
-        case 'google': return <Search className="w-5 h-5" />
-        case 'linkedin': return <Linkedin className="w-5 h-5" />
-        default: return <Target className="w-5 h-5" />
-      }
-    }
-
-    return (
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <div className="flex justify-between items-start mb-6">
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900">{campaign.name}</h3>
-            <p className="text-sm text-gray-600">Campaign Details</p>
-          </div>
-          <Button 
-            variant="ghost" 
-            size="sm"
-            onClick={() => setSelectedCampaign(null)}
-          >
-            ×
-          </Button>
-        </div>
-
-        <div className="space-y-6">
-          {/* Campaign Overview */}
-          <div>
-            <h4 className="text-sm font-medium text-gray-900 mb-3">Campaign Overview</h4>
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                {getPlatformIcon(campaign.platform)}
-                <span className="text-sm font-medium text-gray-900">{campaign.platform}</span>
-                <Badge className={campaign.status === 'active' ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}>
-                  {campaign.status}
-                </Badge>
-              </div>
-            </div>
-          </div>
-
-          {/* Performance Metrics */}
-          <div>
-            <h4 className="text-sm font-medium text-gray-900 mb-3">Performance Metrics</h4>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Spend</span>
-                <span className="text-sm font-medium text-gray-900">
-                  ${(campaign.spend || 0).toLocaleString()}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Revenue</span>
-                <span className="text-sm font-medium text-green-600">
-                  ${(campaign.revenue || 0).toLocaleString()}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Leads</span>
-                <span className="text-sm font-medium text-gray-900">
-                  {campaign.leads || 0}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">ROAS</span>
-                <span className="text-sm font-bold text-gray-900">
-                  {(campaign.roas || 0).toFixed(2)}x
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Actions */}
-          <div className="space-y-2">
-            <Button className="w-full">Edit Campaign</Button>
-            <Button variant="outline" className="w-full">View Analytics</Button>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  if (loading) {
-    return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        </div>
-      </DashboardLayout>
-    )
-  }
-
-  if (!user) return null
-
-  const activeCampaigns = campaigns.filter(c => c.status === 'active').length
-  const totalSpend = campaigns.reduce((sum, c) => sum + (c.spend || 0), 0)
-  const avgROAS = campaigns.length > 0 ? campaigns.reduce((sum, c) => sum + (c.roas || 0), 0) / campaigns.length : 0
-  const avgCPA = campaigns.length > 0 ? totalSpend / campaigns.reduce((sum, c) => sum + (c.leads || 0), 0) : 0
-
-  const getPlatformIcon = (platform: string) => {
-    switch (platform.toLowerCase()) {
-      case 'meta': return <Facebook className="w-4 h-4" />
-      case 'google': return <Search className="w-4 h-4" />
-      case 'linkedin': return <Linkedin className="w-4 h-4" />
-      default: return <Target className="w-4 h-4" />
-    }
+  const healthColor = (h: string) => {
+    if (h === "Excellent") return "bg-emerald-100 text-emerald-700"
+    if (h === "Good") return "bg-blue-100 text-blue-700"
+    if (h === "Fair") return "bg-amber-100 text-amber-700"
+    return "bg-red-100 text-red-700"
   }
 
   return (
     <DashboardLayout>
-      <div className="space-y-6 bg-gray-50/50 p-6 rounded-lg">
+      <div className="p-6 lg:p-8 space-y-6">
         {/* Header */}
-        <div className="flex justify-between items-start">
+        <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Campaign Management</h2>
-            <p className="text-gray-700 mt-1">Monitor and optimize your ad campaigns</p>
+            <h2 className="text-xl font-bold text-neutral-900 tracking-tight">Campaigns</h2>
+            <p className="text-sm text-neutral-500 mt-0.5">Create, manage, and optimize your ad campaigns</p>
           </div>
-          <div className="flex gap-3">
-            <Select value={timeRange} onValueChange={setTimeRange}>
-              <SelectTrigger className="w-20 h-8 text-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="7d">7d</SelectItem>
-                <SelectItem value="30d">30d</SelectItem>
-                <SelectItem value="90d">90d</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button className="flex items-center gap-2">
-              <RefreshCw className="w-4 h-4" />
-              Refresh
-            </Button>
-          </div>
+          <button className="flex items-center gap-2 text-sm text-white bg-neutral-900 px-4 py-2 rounded-lg hover:bg-neutral-800">
+            <Plus className="w-4 h-4" />
+            Create Campaign
+          </button>
         </div>
 
-        {/* Top KPI Cards - Same style as Dashboard */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <MetricCard
-            title="Active Campaigns"
-            value={activeCampaigns.toLocaleString()}
-            change="+2"
-            changeType="increase"
-            icon={Target}
-          />
-          <MetricCard
-            title="Total Spend"
-            value={`$${totalSpend.toLocaleString()}`}
-            change="+12.5%"
-            changeType="increase"
-            icon={DollarSign}
-          />
-          <MetricCard
-            title="Average ROAS"
-            value={`${avgROAS.toFixed(2)}x`}
-            change="-0.3"
-            changeType="decrease"
-            icon={TrendingUp}
-          />
-          <MetricCard
-            title="Average CPA"
-            value={`$${avgCPA.toFixed(2)}`}
-            change="-8.2%"
-            changeType="decrease"
-            icon={Users}
-          />
-        </div>
-
-        {/* Main Content - Campaigns Table */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Table */}
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">All Campaigns</h3>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Campaign Name</th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Platform</th>
-                      <th className="text-right py-3 px-4 text-sm font-medium text-gray-700">Spend</th>
-                      <th className="text-right py-3 px-4 text-sm font-medium text-gray-700">Leads</th>
-                      <th className="text-right py-3 px-4 text-sm font-medium text-gray-700">Revenue</th>
-                      <th className="text-right py-3 px-4 text-sm font-medium text-gray-700">ROAS</th>
-                      <th className="text-center py-3 px-4 text-sm font-medium text-gray-700">Status</th>
-                      <th className="text-right py-3 px-4 text-sm font-medium text-gray-700">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {campaigns.map((campaign) => (
-                      <tr 
-                        key={campaign.id} 
-                        className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer"
-                        onClick={() => setSelectedCampaign(campaign)}
-                      >
-                        <td className="py-3 px-4">
-                          <div className="text-sm font-medium text-gray-900">{campaign.name}</div>
-                        </td>
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-2">
-                            {getPlatformIcon(campaign.platform)}
-                            <span className="text-sm text-gray-900">{campaign.platform}</span>
-                          </div>
-                        </td>
-                        <td className="py-3 px-4 text-right">
-                          <div className="text-sm text-gray-900">
-                            ${(campaign.spend || 0).toLocaleString()}
-                          </div>
-                        </td>
-                        <td className="py-3 px-4 text-right">
-                          <div className="text-sm text-gray-900">{campaign.leads || 0}</div>
-                        </td>
-                        <td className="py-3 px-4 text-right">
-                          <div className="text-sm text-green-600">
-                            ${(campaign.revenue || 0).toLocaleString()}
-                          </div>
-                        </td>
-                        <td className="py-3 px-4 text-right">
-                          <div className="text-sm font-medium text-gray-900">
-                            {(campaign.roas || 0).toFixed(2)}x
-                          </div>
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          <Badge className={campaign.status === 'active' ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}>
-                            {campaign.status}
-                          </Badge>
-                        </td>
-                        <td className="py-3 px-4 text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm">
-                                <MoreHorizontal className="w-4 h-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent>
-                              <DropdownMenuItem>
-                                <Eye className="w-4 h-4 mr-2" />
-                                View Details
-                              </DropdownMenuItem>
-                              <DropdownMenuItem>
-                                <Edit className="w-4 h-4 mr-2" />
-                                Edit
-                              </DropdownMenuItem>
-                              <DropdownMenuItem>
-                                {campaign.status === 'active' ? (
-                                  <Pause className="w-4 h-4 mr-2" />
-                                ) : (
-                                  <Play className="w-4 h-4 mr-2" />
-                                )}
-                                {campaign.status === 'active' ? 'Pause' : 'Activate'}
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+        {/* Summary Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[
+            { label: "Active Campaigns", value: "5", icon: Play },
+            { label: "Total Spend", value: "$33,200", icon: DollarSign },
+            { label: "Total Revenue", value: "$107,300", icon: TrendingUp },
+            { label: "Avg ROAS", value: "3.23x", icon: Target },
+          ].map((s) => (
+            <div key={s.label} className="bg-white rounded-xl border border-neutral-200 p-5">
+              <div className="flex items-center gap-2 mb-2">
+                <s.icon className="w-4 h-4 text-neutral-400" />
+                <span className="text-xs text-neutral-500">{s.label}</span>
               </div>
+              <div className="text-2xl font-bold text-neutral-900">{s.value}</div>
             </div>
-          </div>
+          ))}
+        </div>
 
-          {/* Campaign Details */}
-          <div>
-            {selectedCampaign ? (
-              <CampaignDetailCard campaign={selectedCampaign} />
-            ) : (
-              <div className="bg-white rounded-lg border border-gray-200 p-6">
-                <div className="text-center text-gray-500">
-                  <Target className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-                  <p>Select a campaign to view details</p>
-                </div>
-              </div>
-            )}
+        {/* AI Alerts */}
+        <div className="space-y-2">
+          {AI_ALERTS.map((alert, i) => (
+            <div key={i} className={`flex items-start gap-3 p-3.5 rounded-lg border ${alert.type === "warning" ? "bg-amber-50/50 border-amber-200"
+                : alert.type === "success" ? "bg-emerald-50/50 border-emerald-200"
+                  : "bg-blue-50/50 border-blue-200"
+              }`}>
+              <Sparkles className={`w-4 h-4 mt-0.5 flex-shrink-0 ${alert.type === "warning" ? "text-amber-600" : alert.type === "success" ? "text-emerald-600" : "text-blue-600"
+                }`} />
+              <p className="text-sm text-neutral-800">{alert.message}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Campaign Table */}
+        <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-neutral-100 bg-neutral-50/50">
+                  <th className="text-left py-3 px-4 text-neutral-500 font-medium text-xs uppercase tracking-wider">Campaign</th>
+                  <th className="text-left py-3 px-4 text-neutral-500 font-medium text-xs uppercase tracking-wider">Platform</th>
+                  <th className="text-left py-3 px-4 text-neutral-500 font-medium text-xs uppercase tracking-wider">Status</th>
+                  <th className="text-right py-3 px-4 text-neutral-500 font-medium text-xs uppercase tracking-wider">Budget</th>
+                  <th className="text-right py-3 px-4 text-neutral-500 font-medium text-xs uppercase tracking-wider">Spend</th>
+                  <th className="text-right py-3 px-4 text-neutral-500 font-medium text-xs uppercase tracking-wider">Revenue</th>
+                  <th className="text-right py-3 px-4 text-neutral-500 font-medium text-xs uppercase tracking-wider">ROAS</th>
+                  <th className="text-left py-3 px-4 text-neutral-500 font-medium text-xs uppercase tracking-wider">Health</th>
+                  <th className="text-right py-3 px-4"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {CAMPAIGNS.map((c) => (
+                  <tr key={c.id} className="border-b border-neutral-50 hover:bg-neutral-50/50 transition-colors">
+                    <td className="py-3.5 px-4">
+                      <span className="font-medium text-neutral-900">{c.name}</span>
+                    </td>
+                    <td className="py-3.5 px-4 text-neutral-600">{c.platform}</td>
+                    <td className="py-3.5 px-4">
+                      <div className="flex items-center gap-1.5">
+                        {c.status === "Active" ? (
+                          <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                        ) : (
+                          <div className="w-2 h-2 rounded-full bg-neutral-300" />
+                        )}
+                        <span className="text-sm text-neutral-700">{c.status}</span>
+                      </div>
+                    </td>
+                    <td className="text-right py-3.5 px-4 text-neutral-600">{c.budget}</td>
+                    <td className="text-right py-3.5 px-4 text-neutral-700">{c.spend}</td>
+                    <td className="text-right py-3.5 px-4 text-neutral-900 font-medium">{c.revenue}</td>
+                    <td className="text-right py-3.5 px-4 font-semibold text-neutral-900">{c.roas}</td>
+                    <td className="py-3.5 px-4">
+                      <span className={`text-xs font-medium px-2 py-1 rounded-full ${healthColor(c.health)}`}>{c.health}</span>
+                    </td>
+                    <td className="text-right py-3.5 px-4">
+                      <button className="text-neutral-400 hover:text-neutral-900">
+                        <MoreHorizontal className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
