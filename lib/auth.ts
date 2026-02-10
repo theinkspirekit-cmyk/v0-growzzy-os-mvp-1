@@ -22,6 +22,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           throw new Error('Email and password required');
         }
 
+        // DEBUG: Check what DB URL is actually being used
+        const dbUrl = process.env.DATABASE_URL || "NOT_SET";
+        const maskedUrl = dbUrl.replace(/:[^:@]+@/, ":****@");
+        console.log("[auth] Using DATABASE_URL:", maskedUrl);
+
         try {
           const user = await prisma.user.findUnique({
             where: { email: credentials.email as string },
