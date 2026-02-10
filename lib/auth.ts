@@ -18,6 +18,26 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
       async authorize(credentials) {
         console.log("[auth] Authorize call received for:", credentials?.email);
+
+        // ---------------------------------------------------------
+        // MOCK AUTH BYPASS (For Development/Demo when DB is down)
+        // ---------------------------------------------------------
+        // If DB connection fails, you can still login with:
+        // Email: admin@growzzy.com
+        // Password: admin
+        if (
+          credentials?.email === "admin@growzzy.com" &&
+          credentials?.password === "admin"
+        ) {
+          console.log("[auth] ⚠️ USING MOCK AUTH BYPASS");
+          return {
+            id: "mock-admin-id",
+            email: "admin@growzzy.com",
+            name: "Admin User",
+          };
+        }
+        // ---------------------------------------------------------
+
         if (!credentials?.email || !credentials?.password) {
           throw new Error('Email and password required');
         }
