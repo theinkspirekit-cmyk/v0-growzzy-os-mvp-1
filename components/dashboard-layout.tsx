@@ -11,6 +11,7 @@ import {
   Bot,
   Sparkles,
   Zap,
+  Wand2,
   FileText,
   Settings,
   LogOut,
@@ -38,11 +39,11 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { title: "Products", href: "/dashboard/products", icon: Box },
-  { title: "Invoices", href: "/dashboard/invoices", icon: FileText },
-  { title: "Customers", href: "/dashboard/leads", icon: Users },
+  { title: "AI Ad Creatives", href: "/dashboard/creatives", icon: Sparkles },
+  { title: "Content Studio", href: "/dashboard/content", icon: Wand2 },
+  { title: "Campaign Manager", href: "/dashboard/campaigns", icon: Megaphone },
+  { title: "Leads & CRM", href: "/dashboard/leads", icon: Users },
   { title: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
-  { title: "Marketing", href: "/dashboard/campaigns", icon: Megaphone },
   { title: "AI Copilot", href: "/dashboard/copilot", icon: Bot },
   { title: "Settings", href: "/dashboard/settings", icon: Settings },
 ]
