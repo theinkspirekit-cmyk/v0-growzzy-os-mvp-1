@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { useSession } from "next-auth/react"
 import DashboardLayout from "@/components/dashboard-layout"
 import {
   DollarSign,
@@ -10,338 +9,77 @@ import {
   TrendingDown,
   Users,
   Target,
-  MousePointerClick,
-  Lightbulb,
-  AlertTriangle,
-  ArrowUpRight,
   Sparkles,
   RefreshCw,
-  ChevronRight,
+  Plus,
+  ArrowRight,
+  TrendingUp as TrendingIcon,
   Zap,
-  BarChart3,
-  Play,
-  Pause,
-  PlusCircle,
+  Layout,
+  Activity,
+  ChevronRight,
 } from "lucide-react"
-
-// ─────────────────────────────────────────────
-// MOCK DATA (used for demo / mock auth)
-// ─────────────────────────────────────────────
+import { toast } from "sonner"
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer
+} from "recharts"
 
 const MOCK_KPIS = [
-  { label: "Total Revenue", value: "$128,450", change: 12.5, prefix: "$", icon: DollarSign, tooltip: "Revenue up due to Meta retargeting performance" },
-  { label: "Ad Spend", value: "$42,300", change: 8.2, prefix: "$", icon: TrendingUp, tooltip: "Spend increased with new Google campaigns" },
-  { label: "Leads Generated", value: "1,240", change: 15.3, prefix: "", icon: Users, tooltip: "LinkedIn generating 40% of total leads" },
-  { label: "ROAS", value: "3.03x", change: -2.1, prefix: "", icon: Target, tooltip: "ROAS dipped slightly due to Meta CPM increase" },
-  { label: "Conversion Rate", value: "3.2%", change: 0.3, prefix: "", icon: MousePointerClick, tooltip: "Stable conversions across all channels" },
-  { label: "CPC", value: "$2.45", change: -5.1, prefix: "$", icon: BarChart3, tooltip: "CPC decreased — ad relevance improving" },
+  { label: "Total Yield", value: "$412,850", change: 12.5, icon: Target, status: "increase" },
+  { label: "Effective Spend", value: "$82,300", change: 8.2, icon: DollarSign, status: "increase" },
+  { label: "Acquired Leads", value: "8,240", change: 15.3, icon: Users, status: "increase" },
+  { label: "Channel ROAS", value: "5.02x", change: -2.1, icon: TrendingUp, status: "decrease" },
 ]
 
 const MOCK_CHART_DATA = [
-  { date: "Jan 1", revenue: 3200, spend: 1400, leads: 28 },
-  { date: "Jan 8", revenue: 4100, spend: 1600, leads: 35 },
-  { date: "Jan 15", revenue: 3800, spend: 1500, leads: 32 },
-  { date: "Jan 22", revenue: 5200, spend: 1800, leads: 45 },
-  { date: "Jan 29", revenue: 6100, spend: 2100, leads: 52 },
-  { date: "Feb 5", revenue: 5800, spend: 2000, leads: 48 },
-  { date: "Feb 12", revenue: 7200, spend: 2400, leads: 61 },
-  { date: "Feb 19", revenue: 8500, spend: 2600, leads: 72 },
-  { date: "Feb 26", revenue: 9100, spend: 2800, leads: 78 },
-  { date: "Mar 5", revenue: 11200, spend: 3200, leads: 95 },
+  { name: "Day 0", revenue: 4000, spend: 2400 },
+  { name: "Day 5", revenue: 5200, spend: 3100 },
+  { name: "Day 10", revenue: 4800, spend: 2900 },
+  { name: "Day 15", revenue: 7800, spend: 3400 },
+  { name: "Day 20", revenue: 6500, spend: 4000 },
+  { name: "Day 25", revenue: 9200, spend: 3800 },
+  { name: "Day 30", revenue: 11500, spend: 4200 },
 ]
 
-const MOCK_INSIGHTS = [
-  { type: "warning", title: "Google Ads conversions dropped 12%", desc: "Keyword fatigue detected on 3 top campaigns. Consider refreshing ad copy and expanding keyword sets.", priority: "High" },
-  { type: "success", title: "Meta video creatives outperforming by 23%", desc: "Video ads have a 23% higher CTR than static images. Shift budget allocation toward video formats.", priority: "Medium" },
-  { type: "info", title: "LinkedIn CPC decreased 8% this week", desc: "Audience targeting refinements are paying off. Continue narrowing by job title and seniority.", priority: "Low" },
-  { type: "warning", title: "Landing page bounce rate increased to 62%", desc: "Mobile bounce rate spiked. Review page load speed and above-fold content for mobile users.", priority: "High" },
+const AI_RECOMMENDATIONS = [
+  { id: 1, title: "Shift $4.2k to Meta Retargeting", desc: "Meta ads are yielding 3.2x higher conversion than Google Search for 'Summer' segments.", type: 'strategy', route: '/dashboard/campaigns' },
+  { id: 2, title: "Synthesize Fresh Ad Creatives", desc: "Ad fatigue detected on 4 major sets. AI recommends generating 3 video variations immediately.", type: 'creative', route: '/dashboard/creatives' },
 ]
-
-const MOCK_RECOMMENDATIONS = [
-  { title: "Pause 3 low-performing campaigns", desc: "Campaigns with ROAS below 1.0x are draining budget. Pausing them would save $2,400/month.", action: "Review & Pause", icon: Pause },
-  { title: "Increase budget on high ROAS campaigns", desc: "2 campaigns have ROAS above 5x. Increasing budget by 30% could yield $8,000 more revenue.", action: "Optimize Budget", icon: PlusCircle },
-  { title: "Generate new creatives for declining ads", desc: "Ad fatigue detected on 5 ad sets. Fresh creatives could restore CTR by an estimated 15%.", action: "Generate Creatives", icon: Sparkles },
-  { title: "Launch retargeting campaign", desc: "1,200 website visitors haven't converted. A retargeting campaign could capture 3-5% of them.", action: "Create Campaign", icon: Play },
-]
-
-// ─────────────────────────────────────────────
-// COMPONENTS
-// ─────────────────────────────────────────────
-
-function KPICard({ kpi }: { kpi: typeof MOCK_KPIS[0] }) {
-  const isPositive = kpi.change >= 0
-  return (
-    <div className="bg-white rounded-xl border border-neutral-200 p-5 hover:shadow-md transition-shadow duration-200 group relative">
-      <div className="flex items-start justify-between mb-3">
-        <div className="w-9 h-9 bg-neutral-100 rounded-lg flex items-center justify-center">
-          <kpi.icon className="w-[18px] h-[18px] text-neutral-600" />
-        </div>
-        <div className={`flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full ${isPositive ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"
-          }`}>
-          {isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-          {isPositive ? "+" : ""}{kpi.change}%
-        </div>
-      </div>
-      <div className="text-2xl font-bold text-neutral-900 tracking-tight">{kpi.value}</div>
-      <div className="text-[13px] text-neutral-500 mt-1">{kpi.label}</div>
-
-      {/* AI Tooltip on hover */}
-      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 bg-neutral-900 text-white text-xs rounded-lg px-3 py-2.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none shadow-lg z-10">
-        <div className="flex items-center gap-1.5 mb-1">
-          <Sparkles className="w-3 h-3 text-yellow-400" />
-          <span className="font-medium">AI Insight</span>
-        </div>
-        {kpi.tooltip}
-        <div className="absolute top-full left-1/2 -translate-x-1/2 w-2 h-2 bg-neutral-900 rotate-45 -mt-1" />
-      </div>
-    </div>
-  )
-}
-
-function PerformanceChart({ data, timeRange, onTimeRangeChange }: {
-  data: typeof MOCK_CHART_DATA
-  timeRange: string
-  onTimeRangeChange: (range: string) => void
-}) {
-  const maxRevenue = Math.max(...data.map((d) => d.revenue))
-  const maxSpend = Math.max(...data.map((d) => d.spend))
-  const maxVal = Math.max(maxRevenue, maxSpend)
-
-  return (
-    <div className="bg-white rounded-xl border border-neutral-200 p-6">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h3 className="text-base font-semibold text-neutral-900">Performance Overview</h3>
-          <p className="text-[13px] text-neutral-500 mt-0.5">Revenue, spend & leads across all platforms</p>
-        </div>
-        <div className="flex items-center bg-neutral-100 rounded-lg p-0.5">
-          {["7d", "30d", "90d"].map((range) => (
-            <button
-              key={range}
-              onClick={() => onTimeRangeChange(range)}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${timeRange === range
-                ? "bg-white text-neutral-900 shadow-sm"
-                : "text-neutral-500 hover:text-neutral-700"
-                }`}
-            >
-              {range}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Chart Legend */}
-      <div className="flex items-center gap-5 mb-4">
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-neutral-900" />
-          <span className="text-xs text-neutral-600">Revenue</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-neutral-400" />
-          <span className="text-xs text-neutral-600">Spend</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-neutral-200" />
-          <span className="text-xs text-neutral-600">Leads</span>
-        </div>
-      </div>
-
-      {/* SVG Chart */}
-      <div className="relative h-[260px] w-full">
-        <svg viewBox={`0 0 ${data.length * 80} 260`} className="w-full h-full" preserveAspectRatio="none">
-          {/* Grid lines */}
-          {[0, 1, 2, 3, 4].map((i) => (
-            <line
-              key={i}
-              x1="0"
-              y1={i * 65}
-              x2={data.length * 80}
-              y2={i * 65}
-              stroke="#f5f5f5"
-              strokeWidth="1"
-            />
-          ))}
-
-          {/* Revenue area */}
-          <path
-            d={`M ${data.map((d, i) => `${i * 80 + 40},${260 - (d.revenue / maxVal) * 240}`).join(" L ")} L ${(data.length - 1) * 80 + 40},260 L 40,260 Z`}
-            fill="rgba(23,23,23,0.06)"
-          />
-          {/* Revenue line */}
-          <path
-            d={`M ${data.map((d, i) => `${i * 80 + 40},${260 - (d.revenue / maxVal) * 240}`).join(" L ")}`}
-            fill="none"
-            stroke="#171717"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-
-          {/* Spend line */}
-          <path
-            d={`M ${data.map((d, i) => `${i * 80 + 40},${260 - (d.spend / maxVal) * 240}`).join(" L ")}`}
-            fill="none"
-            stroke="#a3a3a3"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeDasharray="6,4"
-          />
-
-          {/* Revenue dots */}
-          {data.map((d, i) => (
-            <circle
-              key={`rev-${i}`}
-              cx={i * 80 + 40}
-              cy={260 - (d.revenue / maxVal) * 240}
-              r="3.5"
-              fill="#171717"
-              stroke="white"
-              strokeWidth="2"
-            />
-          ))}
-        </svg>
-
-        {/* X axis labels */}
-        <div className="absolute bottom-0 left-0 right-0 flex justify-between px-4 -mb-5">
-          {data.map((d) => (
-            <span key={d.date} className="text-[10px] text-neutral-400">{d.date}</span>
-          ))}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function InsightCard({ insight }: { insight: typeof MOCK_INSIGHTS[0] }) {
-  const iconMap = {
-    warning: AlertTriangle,
-    success: TrendingUp,
-    info: Lightbulb,
-  }
-  const colorMap = {
-    warning: "text-amber-600 bg-amber-50",
-    success: "text-emerald-600 bg-emerald-50",
-    info: "text-blue-600 bg-blue-50",
-  }
-  const Icon = iconMap[insight.type as keyof typeof iconMap] || Lightbulb
-  const color = colorMap[insight.type as keyof typeof colorMap] || colorMap.info
-
-  return (
-    <div className="flex gap-3 p-4 rounded-lg border border-neutral-100 hover:border-neutral-200 hover:bg-neutral-50/50 transition-all duration-150">
-      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${color}`}>
-        <Icon className="w-4 h-4" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-start justify-between gap-2">
-          <h4 className="text-sm font-medium text-neutral-900 leading-snug">{insight.title}</h4>
-          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${insight.priority === "High" ? "bg-red-100 text-red-700"
-            : insight.priority === "Medium" ? "bg-amber-100 text-amber-700"
-              : "bg-neutral-100 text-neutral-600"
-            }`}>{insight.priority}</span>
-        </div>
-        <p className="text-[13px] text-neutral-500 mt-1 leading-relaxed">{insight.desc}</p>
-      </div>
-    </div>
-  )
-}
-
-function RecommendationCard({ rec }: { rec: typeof MOCK_RECOMMENDATIONS[0] }) {
-  const router = useRouter()
-
-  const handleAction = () => {
-    if (rec.action.includes("Pause") || rec.action.includes("Budget")) {
-      router.push("/dashboard/campaigns");
-    } else if (rec.action.includes("Creative")) {
-      router.push("/dashboard/creatives");
-    } else if (rec.action.includes("Campaign")) {
-      router.push("/dashboard/campaign-launcher");
-    }
-  }
-
-  return (
-    <div
-      onClick={handleAction}
-      className="flex items-start gap-3 p-4 rounded-lg border border-neutral-100 hover:border-neutral-900 hover:bg-neutral-50 hover:shadow-lg transition-all duration-300 group cursor-pointer"
-    >
-      <div className="w-9 h-9 bg-neutral-900 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-        <rec.icon className="w-4 h-4 text-white" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <h4 className="text-sm font-bold text-neutral-900 group-hover:text-black">{rec.title}</h4>
-        <p className="text-[13px] text-neutral-500 mt-1 leading-relaxed">{rec.desc}</p>
-      </div>
-      <button
-        className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-neutral-900 bg-neutral-100 group-hover:bg-neutral-900 group-hover:text-white px-3 py-2 rounded-lg transition-all flex-shrink-0"
-      >
-        {rec.action}
-        <ChevronRight className="w-3 h-3" />
-      </button>
-    </div>
-  )
-}
-
-// ─────────────────────────────────────────────
-// MAIN DASHBOARD PAGE
-// ─────────────────────────────────────────────
 
 export default function DashboardPage() {
   const router = useRouter()
-  const sessionResult = useSession()
-  const session = sessionResult?.data
-  const status = sessionResult?.status || "loading"
-
   const [loading, setLoading] = useState(true)
-  const [timeRange, setTimeRange] = useState("30d")
   const [refreshing, setRefreshing] = useState(false)
 
-  const [isDemoMode] = useState(() => {
-    if (typeof document === "undefined") return false
-    return document.cookie.includes("growzzy_demo_mode=true")
-  })
-
-  // Load data on mount
   useEffect(() => {
-    // For demo / mock auth, use mock data immediately
-    const timer = setTimeout(() => setLoading(false), 600)
+    const timer = setTimeout(() => setLoading(false), 800)
     return () => clearTimeout(timer)
   }, [])
 
-  // Auth check
-  useEffect(() => {
-    if (isDemoMode) return
-    if (status === "loading") return
-    if (status === "unauthenticated") {
-      router.push("/auth")
-    }
-  }, [isDemoMode, status, router])
-
   const handleRefresh = () => {
     setRefreshing(true)
-    setTimeout(() => setRefreshing(false), 1500)
+    setTimeout(() => {
+      setRefreshing(false)
+      toast.success("Intelligence data synchronized")
+    }, 1200)
   }
 
-  // Loading State
   if (loading) {
     return (
       <DashboardLayout>
-        <div className="p-6 lg:p-8 space-y-6">
-          {/* Skeleton KPIs */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="bg-white rounded-xl border border-neutral-200 p-5 animate-pulse">
-                <div className="w-9 h-9 bg-neutral-100 rounded-lg mb-3" />
-                <div className="h-7 bg-neutral-100 rounded w-20 mb-2" />
-                <div className="h-4 bg-neutral-50 rounded w-16" />
-              </div>
+        <div className="p-8 lg:p-12 space-y-12 bg-white min-h-[calc(100vh-64px)] overflow-y-auto">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="h-40 bg-neutral-50 rounded-md animate-pulse border border-neutral-100" />
             ))}
           </div>
-          {/* Skeleton Chart */}
-          <div className="bg-white rounded-xl border border-neutral-200 p-6 animate-pulse">
-            <div className="h-5 bg-neutral-100 rounded w-40 mb-2" />
-            <div className="h-4 bg-neutral-50 rounded w-60 mb-6" />
-            <div className="h-[260px] bg-neutral-50 rounded-lg" />
-          </div>
+          <div className="h-96 bg-neutral-50 rounded-md animate-pulse border border-neutral-100" />
         </div>
       </DashboardLayout>
     )
@@ -349,77 +87,192 @@ export default function DashboardPage() {
 
   return (
     <DashboardLayout>
-      <div className="p-6 lg:p-8 space-y-6">
-        {/* Page Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-bold text-neutral-900 tracking-tight">
-              Dashboard Overview
-            </h2>
-            <p className="text-sm text-neutral-500 mt-0.5">
-              Your marketing command center
-              {isDemoMode && <span className="ml-2 text-xs bg-neutral-100 text-neutral-600 px-2 py-0.5 rounded-full">Demo Mode</span>}
-            </p>
+      <div className="p-8 lg:p-12 space-y-12 bg-white min-h-[calc(100vh-64px)] overflow-y-auto pb-24">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-neutral-100 pb-10 gap-6">
+          <div className="space-y-1 text-left">
+            <h1 className="text-3xl font-bold text-neutral-900 tracking-tight">Executive Command</h1>
+            <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">unified intelligence overview</p>
           </div>
-          <button
-            onClick={handleRefresh}
-            disabled={refreshing}
-            className="flex items-center gap-2 text-sm font-medium text-neutral-600 bg-white border border-neutral-200 hover:border-neutral-300 px-4 py-2 rounded-lg transition-all hover:shadow-sm disabled:opacity-50"
-          >
-            <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
-            Refresh
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleRefresh}
+              className="px-4 py-2 border border-neutral-200 rounded-md text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-neutral-50 transition-all"
+            >
+              <RefreshCw className={`w-3 h-3 ${refreshing ? 'animate-spin' : ''}`} />
+              Sync Latency: 12ms
+            </button>
+            <button
+              onClick={() => router.push('/dashboard/campaign-launcher')}
+              className="enterprise-button h-10 px-6 flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              Execute Mission
+            </button>
+          </div>
         </div>
 
-        {/* KPI Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          {MOCK_KPIS.map((kpi) => (
-            <KPICard key={kpi.label} kpi={kpi} />
+        {/* Global KPIs */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+          {MOCK_KPIS.map((kpi, i) => (
+            <div key={i} className="enterprise-card group p-6 hover:shadow-lg transition-all border-l-4 border-l-transparent hover:border-l-black">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-10 h-10 bg-neutral-50 rounded-md flex items-center justify-center text-neutral-400 group-hover:bg-black group-hover:text-white transition-all">
+                  <kpi.icon className="w-5 h-5" />
+                </div>
+                <div className={`text-[10px] font-black uppercase tracking-tighter ${kpi.status === 'increase' ? 'text-black' : 'text-neutral-400'}`}>
+                  {kpi.status === 'increase' ? '+' : ''}{kpi.change}%
+                </div>
+              </div>
+              <div className="space-y-1">
+                <p className="text-2xl font-bold text-neutral-900">{kpi.value}</p>
+                <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">{kpi.label}</p>
+              </div>
+            </div>
           ))}
         </div>
 
-        {/* Performance Chart */}
-        <PerformanceChart
-          data={MOCK_CHART_DATA}
-          timeRange={timeRange}
-          onTimeRangeChange={setTimeRange}
-        />
-
-        {/* AI Insights + AI Recommendations */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* AI Insights */}
-          <div className="bg-white rounded-xl border border-neutral-200 p-6">
-            <div className="flex items-center gap-2 mb-5">
-              <div className="w-7 h-7 bg-neutral-900 rounded-lg flex items-center justify-center">
-                <Lightbulb className="w-3.5 h-3.5 text-white" />
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+          {/* Visual Intelligence */}
+          <div className="lg:col-span-8 space-y-6">
+            <div className="flex items-center justify-between px-2">
+              <div className="flex items-center gap-2">
+                <Activity className="w-4 h-4 text-neutral-400" />
+                <h3 className="text-sm font-bold uppercase tracking-tight">Performance Velocity</h3>
               </div>
-              <div>
-                <h3 className="text-base font-semibold text-neutral-900">AI Insights</h3>
-                <p className="text-[12px] text-neutral-500">Anomalies, opportunities & risks</p>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-1.5 text-[9px] font-black uppercase text-neutral-400">
+                  <div className="w-1.5 h-1.5 rounded-full bg-black" />
+                  Revenue
+                </div>
+                <div className="flex items-center gap-1.5 text-[9px] font-black uppercase text-neutral-400">
+                  <div className="w-1.5 h-1.5 rounded-full bg-neutral-200" />
+                  Spend
+                </div>
               </div>
             </div>
-            <div className="space-y-3">
-              {MOCK_INSIGHTS.map((insight, i) => (
-                <InsightCard key={i} insight={insight} />
-              ))}
+
+            <div className="enterprise-card p-8 h-[400px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={MOCK_CHART_DATA}>
+                  <defs>
+                    <linearGradient id="colRevenue" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#000000" stopOpacity={0.05} />
+                      <stop offset="95%" stopColor="#000000" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F0F0F0" />
+                  <XAxis
+                    dataKey="name"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 9, fontWeight: 800, fill: '#A3A3A3' }}
+                    dy={10}
+                  />
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 9, fontWeight: 800, fill: '#A3A3A3' }}
+                  />
+                  <Tooltip
+                    contentStyle={{ borderRadius: '4px', border: '1px solid #E5E5E5', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
+                    labelStyle={{ fontSize: '10px', fontWeight: 800, marginBottom: '4px' }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="revenue"
+                    stroke="#000000"
+                    strokeWidth={3}
+                    fillOpacity={1}
+                    fill="url(#colRevenue)"
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="spend"
+                    stroke="#E5E5E5"
+                    strokeWidth={2}
+                    fill="transparent"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
           </div>
 
-          {/* AI Recommendations */}
-          <div className="bg-white rounded-xl border border-neutral-200 p-6">
-            <div className="flex items-center gap-2 mb-5">
-              <div className="w-7 h-7 bg-neutral-900 rounded-lg flex items-center justify-center">
-                <Zap className="w-3.5 h-3.5 text-white" />
-              </div>
-              <div>
-                <h3 className="text-base font-semibold text-neutral-900">AI Recommendations</h3>
-                <p className="text-[12px] text-neutral-500">Actionable suggestions from your AI</p>
+          {/* AI Orchestration Recommendations */}
+          <div className="lg:col-span-4 space-y-6">
+            <div className="flex items-center gap-2 px-2">
+              <Zap className="w-4 h-4 text-amber-500 fill-amber-500" />
+              <h3 className="text-sm font-bold uppercase tracking-tight">AI Orchestration</h3>
+            </div>
+
+            <div className="space-y-4">
+              {AI_RECOMMENDATIONS.map((rec) => (
+                <div
+                  key={rec.id}
+                  onClick={() => router.push(rec.route)}
+                  className="enterprise-card group p-6 cursor-pointer hover:shadow-xl transition-all border-l-4 border-l-black relative overflow-hidden"
+                >
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-neutral-50 rounded-bl-full -mr-12 -mt-12 group-hover:bg-neutral-100 transition-colors" />
+                  <div className="relative z-10 space-y-4 text-left">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[9px] font-black text-neutral-400 uppercase tracking-widest">{rec.type}</span>
+                      <ChevronRight className="w-3.5 h-3.5 text-neutral-300 group-hover:text-black transition-colors" />
+                    </div>
+                    <div className="space-y-1">
+                      <h4 className="text-sm font-bold text-neutral-900 group-hover:underline">{rec.title}</h4>
+                      <p className="text-[11px] text-neutral-500 leading-relaxed">{rec.desc}</p>
+                    </div>
+                    <div className="flex items-center gap-2 pt-2">
+                      <div className="flex -space-x-1.5">
+                        <div className="w-5 h-5 rounded-full border-2 border-white bg-black" />
+                        <div className="w-5 h-5 rounded-full border-2 border-white bg-neutral-200" />
+                        <div className="w-5 h-5 rounded-full border-2 border-white bg-neutral-100" />
+                      </div>
+                      <span className="text-[9px] font-bold text-neutral-400 uppercase">Analysis Impact: +14% ROI</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              <div className="enterprise-card p-6 bg-black text-white space-y-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 bg-white/10 rounded flex items-center justify-center">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                  </div>
+                  <span className="text-[9px] font-black uppercase tracking-widest text-neutral-400">Copilot Status</span>
+                </div>
+                <p className="text-xs font-bold leading-relaxed">System ready for cross-channel budget balancing.</p>
+                <button
+                  onClick={() => router.push('/dashboard/copilot')}
+                  className="w-full py-2 bg-white text-black rounded text-[10px] font-black uppercase tracking-widest hover:bg-neutral-100 transition-all"
+                >
+                  Enter Copilot Hub
+                </button>
               </div>
             </div>
-            <div className="space-y-3">
-              {MOCK_RECOMMENDATIONS.map((rec, i) => (
-                <RecommendationCard key={i} rec={rec} />
-              ))}
+          </div>
+        </div>
+
+        {/* Global Intelligence Bar */}
+        <div className="enterprise-card p-4 bg-neutral-50 border-neutral-200 flex flex-wrap items-center justify-between gap-6">
+          <div className="flex items-center gap-8">
+            {[
+              { label: 'Latency', value: '12ms' },
+              { label: 'Identity', value: 'Michael R.' },
+              { label: 'Role', value: 'Administrator' },
+              { label: 'Uptime', value: '99.9%' },
+            ].map(i => (
+              <div key={i.label} className="space-y-0.5 text-left">
+                <p className="text-[8px] font-black text-neutral-400 uppercase tracking-tighter">{i.label}</p>
+                <p className="text-[10px] font-bold text-neutral-900">{i.value}</p>
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="text-[9px] font-bold text-neutral-400">LAST SYNC INDEX: #98421</span>
+            <div className="flex items-center gap-1">
+              <div className="w-1.5 h-1.5 rounded-full bg-black animate-pulse" />
+              <span className="text-[9px] font-black uppercase tracking-widest">System Operational</span>
             </div>
           </div>
         </div>

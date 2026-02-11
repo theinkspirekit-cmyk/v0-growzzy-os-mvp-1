@@ -10,49 +10,7 @@ import { AudienceStep } from "./_components/AudienceStep";
 import { CreativeStep } from "./_components/CreativeStep";
 import { ReviewStep } from "./_components/ReviewStep";
 
-/* -------------------------------------------------------------------------- */
-/*                             State Management                               */
-/* -------------------------------------------------------------------------- */
-
-type Goal = "Sales" | "Leads" | "Traffic" | "App Installs";
-type Strategy = "Full-Funnel" | "Conversion Booster" | "Audience Expansion";
-
-interface CampaignSetup {
-  goal?: Goal;
-  strategy?: Strategy;
-  dailyBudget?: number;
-  audiences: string[];
-  creatives: string[];
-}
-
-interface CampaignLauncherContextValue {
-  data: CampaignSetup;
-  update: (partial: Partial<CampaignSetup>) => void;
-}
-
-const CampaignLauncherContext = createContext<CampaignLauncherContextValue | null>(null);
-
-function useCampaignLauncher() {
-  const ctx = useContext(CampaignLauncherContext);
-  if (!ctx) throw new Error("useCampaignLauncher must be used within provider");
-  return ctx;
-}
-
-function CampaignLauncherProvider({ children }: { children: ReactNode }) {
-  const [data, setData] = useState<CampaignSetup>({
-    audiences: [],
-    creatives: [],
-  });
-
-  const update = (partial: Partial<CampaignSetup>) =>
-    setData((p) => ({ ...p, ...partial }));
-
-  return (
-    <CampaignLauncherContext.Provider value={{ data, update }}>
-      {children}
-    </CampaignLauncherContext.Provider>
-  );
-}
+import { useCampaignLauncher, CampaignLauncherProvider, type Goal, type Strategy, type CampaignSetup } from "./_context/CampaignLauncherContext";
 
 const steps = [
   "Goal Selection",
@@ -282,75 +240,74 @@ function CampaignLauncherContent() {
   const isLast = currentStep === steps.length - 1;
   const { data } = useCampaignLauncher();
 
+  // Robust check for next step availability
   const nextDisabled = (() => {
+    if (!data) return true;
     switch (currentStep) {
       case 0: return !data.goal;
       case 1: return !data.strategy;
       case 2: return !data.dailyBudget || data.dailyBudget <= 0;
-      case 3: return data.audiences.length === 0;
-      case 4: return data.creatives.length === 0;
+      case 3: return !(data.audiences?.length > 0);
+      case 4: return !(data.creatives?.length > 0);
       default: return false;
     }
   })();
 
   const handleLaunch = () => {
-    toast.success("Initiating multi-channel deployment...");
+    toast.success("Deployment initiated");
     setTimeout(() => {
-      toast.success("Campaign groups synchronized on Meta & Google!");
+      toast.success("Campaign groups synchronized");
       router.push("/dashboard/campaigns");
-    }, 2500);
+    }, 1500);
   };
 
   return (
     <DashboardLayout>
-      <div className="flex h-[calc(100vh-64px)] overflow-hidden bg-[#fafafa]">
+      <div className="flex h-[calc(100vh-64px)] overflow-hidden bg-white">
         <Sidebar currentStep={currentStep} />
 
         <div className="flex-1 flex flex-col relative min-w-0">
-          <main className="flex-1 p-8 lg:p-16 overflow-y-auto pb-40">
-            <div className="max-w-4xl mx-auto space-y-12">
-              <div className="space-y-2">
-                <div className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.3em]">Step 0{currentStep + 1}</div>
-                <h1 className="text-4xl font-black text-neutral-900 tracking-tight">{steps[currentStep]}</h1>
-                <div className="h-1.5 w-12 bg-neutral-900 rounded-full" />
+          <main className="flex-1 p-8 lg:p-12 overflow-y-auto pb-44">
+            <div className="max-w-4xl mx-auto space-y-8">
+              <div className="space-y-1">
+                <div className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">Step {currentStep + 1} of {steps.length}</div>
+                <h1 className="text-3xl font-bold text-neutral-900 leading-tight">{steps[currentStep]}</h1>
               </div>
 
-              <StepContent step={currentStep} />
+              <div className="border-t border-neutral-100 pt-8">
+                <StepContent step={currentStep} />
+              </div>
             </div>
           </main>
 
-          <div className="absolute bottom-0 inset-x-0 p-8 lg:p-10 pointer-events-none">
-            <div className="max-w-4xl mx-auto flex justify-between items-center bg-white/80 backdrop-blur-xl border border-white/20 p-6 rounded-[2.5rem] shadow-2xl pointer-events-auto">
+          {/* Navigation Bar - Clean SaaS style */}
+          <div className="absolute bottom-0 inset-x-0 p-6 bg-white border-t border-neutral-100 shadow-[0_-4px_12px_rgba(0,0,0,0.03)]">
+            <div className="max-w-4xl mx-auto flex justify-between items-center">
               <button
-                className="flex items-center gap-2 px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest text-neutral-500 hover:text-neutral-900 transition-all"
+                className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-neutral-500 hover:text-neutral-900 hover:bg-neutral-50 rounded-md transition-all"
                 onClick={() => isFirst ? router.back() : setCurrentStep((s) => Math.max(s - 1, 0))}
               >
                 <ArrowLeft className="w-4 h-4" />
-                {isFirst ? "Cancel" : "Previous"}
+                {isFirst ? "Cancel" : "Back"}
               </button>
 
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3">
                 {currentStep < steps.length - 1 ? (
                   <button
                     onClick={() => !nextDisabled && setCurrentStep((s) => Math.min(s + 1, steps.length - 1))}
                     disabled={nextDisabled}
-                    className={cn(
-                      "flex items-center gap-3 px-10 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all",
-                      nextDisabled
-                        ? "bg-neutral-100 text-neutral-300"
-                        : "bg-neutral-900 text-white shadow-xl shadow-neutral-200 hover:scale-[1.02] active:scale-[0.98]"
-                    )}
+                    className="enterprise-button group"
                   >
-                    CONTINUE
-                    <ChevronRight className="w-4 h-4" />
+                    Continue
+                    <ChevronRight className="w-4 h-4 ml-2 group-hover:translate-x-0.5 transition-transform" />
                   </button>
                 ) : (
                   <button
                     onClick={handleLaunch}
-                    className="flex items-center gap-3 px-12 py-4 rounded-2xl bg-neutral-900 text-white font-black text-xs uppercase tracking-widest shadow-xl shadow-neutral-200 hover:scale-[1.05] active:scale-[0.95] transition-all"
+                    className="px-6 py-2.5 bg-black text-white font-semibold text-sm rounded-md hover:bg-neutral-800 transition-all flex items-center gap-2 shadow-sm"
                   >
-                    DEPLOY CAMPAIGN
-                    <Rocket className="w-4 h-4 text-emerald-400" />
+                    Deploy Campaign
+                    <Rocket className="w-4 h-4" />
                   </button>
                 )}
               </div>

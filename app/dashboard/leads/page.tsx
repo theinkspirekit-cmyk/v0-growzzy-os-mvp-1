@@ -15,6 +15,7 @@ import {
   Sparkles,
   ArrowUpDown,
   ChevronRight,
+  X,
 } from "lucide-react"
 
 const LEADS = [
@@ -108,61 +109,69 @@ export default function LeadsPage() {
 
         {/* Add Lead Modal Overlay */}
         {isAddModalOpen && (
-          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
-            <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-neutral-200 overflow-hidden animate-in fade-in zoom-in duration-200">
-              <div className="p-6 border-b border-neutral-100 flex items-center justify-between">
-                <h3 className="text-lg font-bold text-neutral-900">Add New Lead</h3>
-                <button onClick={() => setIsAddModalOpen(false)} className="text-neutral-400 hover:text-neutral-900 transition-colors">✕</button>
+          <div className="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center p-4 antialiased">
+            <div className="bg-white w-full max-w-md rounded-md border border-neutral-200 shadow-xl overflow-hidden animate-in fade-in zoom-in duration-150">
+              <div className="px-6 py-4 border-b border-neutral-100 flex items-center justify-between bg-neutral-50/50">
+                <h3 className="text-sm font-bold text-neutral-900 uppercase tracking-tight">Add New Lead</h3>
+                <button
+                  onClick={() => setIsAddModalOpen(false)}
+                  className="text-neutral-400 hover:text-neutral-900 transition-colors p-1"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
               <div className="p-6 space-y-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Full Name</label>
+                  <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">Full Name</label>
                   <input
                     type="text"
+                    autoFocus
                     value={newLead.name}
                     onChange={(e) => setNewLead({ ...newLead, name: e.target.value })}
                     placeholder="e.g. John Doe"
-                    className="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-neutral-200 outline-none text-sm font-medium"
+                    className="enterprise-input text-sm"
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Email Address</label>
+                  <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">Email Address</label>
                   <input
                     type="email"
                     value={newLead.email}
                     onChange={(e) => setNewLead({ ...newLead, email: e.target.value })}
                     placeholder="john@company.com"
-                    className="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-neutral-200 outline-none text-sm font-medium"
+                    className="enterprise-input text-sm"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Company</label>
+                    <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">Company</label>
                     <input
                       type="text"
                       value={newLead.company}
                       onChange={(e) => setNewLead({ ...newLead, company: e.target.value })}
                       placeholder="Company Inc"
-                      className="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-neutral-200 outline-none text-sm font-medium"
+                      className="enterprise-input text-sm"
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Lead Value</label>
+                    <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">Lead Value</label>
                     <input
                       type="text"
                       value={newLead.value}
                       onChange={(e) => setNewLead({ ...newLead, value: e.target.value })}
                       placeholder="$5,000"
-                      className="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-neutral-200 outline-none text-sm font-medium"
+                      className="enterprise-input text-sm"
                     />
                   </div>
                 </div>
-                <button
-                  onClick={addLead}
-                  className="w-full py-3.5 bg-neutral-900 text-white rounded-xl font-bold hover:bg-neutral-800 transition-all mt-4 shadow-lg shadow-neutral-200"
-                >
-                  Create Lead
-                </button>
+                <div className="pt-4">
+                  <button
+                    onClick={addLead}
+                    className="w-full enterprise-button shadow-sm"
+                  >
+                    Create Lead
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -170,27 +179,57 @@ export default function LeadsPage() {
 
         {/* Import Leads Modal Overlay */}
         {isImportModalOpen && (
-          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
-            <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-neutral-200 overflow-hidden animate-in fade-in zoom-in duration-200">
-              <div className="p-6 border-b border-neutral-100 flex items-center justify-between">
-                <h3 className="text-lg font-bold text-neutral-900">Import Leads</h3>
-                <button onClick={() => setIsImportModalOpen(false)} className="text-neutral-400 hover:text-neutral-900 transition-colors">✕</button>
-              </div>
-              <div className="p-10 flex flex-col items-center text-center space-y-4">
-                <div className="w-16 h-16 bg-neutral-50 rounded-full flex items-center justify-center border-2 border-dashed border-neutral-200">
-                  <Upload className="w-8 h-8 text-neutral-300" />
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-neutral-900">Drag and drop your file</p>
-                  <p className="text-xs text-neutral-500 mt-1">Supports CSV, XLS, or XLSX formats</p>
-                </div>
-                <button className="px-6 py-2.5 bg-neutral-100 text-neutral-900 rounded-lg text-sm font-bold hover:bg-neutral-200 transition-colors border border-neutral-200">
-                  Browse Files
+          <div className="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center p-4 antialiased">
+            <div className="bg-white w-full max-w-md rounded-md border border-neutral-200 shadow-xl overflow-hidden animate-in fade-in zoom-in duration-150">
+              <div className="px-6 py-4 border-b border-neutral-100 flex items-center justify-between bg-neutral-50/50">
+                <h3 className="text-sm font-bold text-neutral-900 uppercase tracking-tight">Import Leads</h3>
+                <button
+                  onClick={() => setIsImportModalOpen(false)}
+                  className="text-neutral-400 hover:text-neutral-900 transition-colors p-1"
+                >
+                  <X className="w-4 h-4" />
                 </button>
               </div>
-              <div className="p-4 bg-neutral-50 border-t border-neutral-100 flex justify-end gap-3">
-                <button onClick={() => setIsImportModalOpen(false)} className="px-4 py-2 text-sm font-bold text-neutral-500 hover:text-neutral-900">Cancel</button>
-                <button onClick={importLeads} className="px-6 py-2 bg-neutral-900 text-white rounded-lg text-sm font-bold shadow-sm">Continue</button>
+              <div className="p-8 flex flex-col items-center text-center space-y-4">
+                <div className="w-12 h-12 bg-neutral-50 rounded-md flex items-center justify-center border border-neutral-200">
+                  <Upload className="w-5 h-5 text-neutral-400" />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm font-bold text-neutral-900 tracking-tight">Upload documentation</p>
+                  <p className="text-xs text-neutral-500">Supports CSV, XLS, or XLSX formats up to 10MB</p>
+                </div>
+
+                <input
+                  type="file"
+                  id="file-upload"
+                  className="hidden"
+                  accept=".csv, .xlsx, .xls"
+                  onChange={(e) => {
+                    if (e.target.files?.[0]) {
+                      toast.success(`Selected: ${e.target.files[0].name}`);
+                    }
+                  }}
+                />
+                <button
+                  onClick={() => document.getElementById('file-upload')?.click()}
+                  className="px-5 py-2 bg-white text-neutral-900 border border-neutral-200 rounded-md text-sm font-medium hover:bg-neutral-50 transition-colors shadow-sm"
+                >
+                  Select file
+                </button>
+              </div>
+              <div className="px-6 py-4 bg-neutral-50/50 border-t border-neutral-100 flex justify-end gap-3">
+                <button
+                  onClick={() => setIsImportModalOpen(false)}
+                  className="px-4 py-2 text-sm font-medium text-neutral-500 hover:text-neutral-900"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={importLeads}
+                  className="px-5 py-2 bg-black text-white rounded-md text-sm font-semibold hover:bg-neutral-800 transition-colors shadow-sm"
+                >
+                  Continue
+                </button>
               </div>
             </div>
           </div>
