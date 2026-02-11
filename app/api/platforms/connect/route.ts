@@ -7,22 +7,22 @@ const OAUTH_CONFIGS = {
   meta: {
     clientId: process.env.NEXT_PUBLIC_META_APP_ID,
     scope: "ads_management,ads_read",
-    redirectUri: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/auth/meta/callback`,
+    redirectUri: `${process.env.NEXT_PUBLIC_APP_URL || "https://v0-growzzyos.vercel.app/"}/auth/meta/callback`,
   },
   google: {
     clientId: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
     scope: "https://www.googleapis.com/auth/adwords",
-    redirectUri: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/auth/google/callback`,
+    redirectUri: `${process.env.NEXT_PUBLIC_APP_URL || "https://v0-growzzyos.vercel.app/"}/auth/google/callback`,
   },
   linkedin: {
     clientId: process.env.NEXT_PUBLIC_LINKEDIN_CLIENT_ID,
     scope: "r_liteprofile r_emailaddress",
-    redirectUri: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/auth/linkedin/callback`,
+    redirectUri: `${process.env.NEXT_PUBLIC_APP_URL || "https://v0-growzzyos.vercel.app/"}/auth/linkedin/callback`,
   },
   shopify: {
     clientId: process.env.SHOPIFY_API_KEY,
     scope: "read_products,read_orders",
-    redirectUri: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/auth/shopify/callback`,
+    redirectUri: `${process.env.NEXT_PUBLIC_APP_URL || "https://v0-growzzyos.vercel.app/"}/auth/shopify/callback`,
   },
 }
 

@@ -37,7 +37,7 @@ export async function POST(req: Request) {
   // Generate session ID for tracking OAuth flow
   const sessionId = Math.random().toString(36).substring(7)
 
-  const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/oauth/callback`
+  const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL || "https://v0-growzzyos.vercel.app/"}/api/oauth/callback`
 
   let authUrl: string
 

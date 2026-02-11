@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
   }
 
   const state = crypto.randomUUID()
-  const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/auth/meta/callback`
+  const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL || "https://v0-growzzyos.vercel.app/"}/auth/meta/callback`
 
   const metaAuthUrl = new URL("https://www.facebook.com/v18.0/dialog/oauth")
   metaAuthUrl.searchParams.append("client_id", process.env.META_APP_ID || "")

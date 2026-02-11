@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
   }
 
   const state = crypto.randomUUID()
-  const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/auth/google/callback`
+  const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL || "https://v0-growzzyos.vercel.app/"}/auth/google/callback`
 
   const googleAuthUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth")
   googleAuthUrl.searchParams.append("client_id", process.env.GOOGLE_CLIENT_ID || "")

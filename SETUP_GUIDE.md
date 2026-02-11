@@ -67,7 +67,7 @@ Update with your credentials:
 npm run dev
 ```
 
-Visit http://localhost:3000
+Visit https://v0-growzzyos.vercel.app/
 
 ## 6. Deployment
 
@@ -83,7 +83,7 @@ The cron jobs are automatically configured via `vercel.json`:
 
 ## 7. First Time Setup
 
-1. Go to http://localhost:3000/auth
+1. Go to https://v0-growzzyos.vercel.app//auth
 2. Sign up with email
 3. Verify email
 4. Go to Settings

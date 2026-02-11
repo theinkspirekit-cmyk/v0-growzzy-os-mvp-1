@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
         code,
         client_id: process.env.GOOGLE_CLIENT_ID || "",
         client_secret: process.env.GOOGLE_CLIENT_SECRET || "",
-        redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/auth/google/callback`,
+        redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL || "https://v0-growzzyos.vercel.app/"}/auth/google/callback`,
         grant_type: "authorization_code",
       }).toString(),
     })
@@ -82,12 +82,12 @@ export async function GET(request: NextRequest) {
     cookieStore.delete("google_oauth_state")
 
     return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/dashboard/settings?tab=integrations&success=google_connected`,
+      `${process.env.NEXT_PUBLIC_APP_URL || "https://v0-growzzyos.vercel.app/"}/dashboard/settings?tab=integrations&success=google_connected`,
     )
   } catch (error: any) {
     console.error("[v0] Google OAuth error:", error)
     return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/dashboard/settings?tab=integrations&error=${error.message}`,
+      `${process.env.NEXT_PUBLIC_APP_URL || "https://v0-growzzyos.vercel.app/"}/dashboard/settings?tab=integrations&error=${error.message}`,
     )
   }
 }

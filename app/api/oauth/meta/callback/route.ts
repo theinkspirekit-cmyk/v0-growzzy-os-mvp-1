@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
     tokenUrl.searchParams.append("client_secret", process.env.META_APP_SECRET || "")
     tokenUrl.searchParams.append(
       "redirect_uri",
-      `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/auth/meta/callback`,
+      `${process.env.NEXT_PUBLIC_APP_URL || "https://v0-growzzyos.vercel.app/"}/auth/meta/callback`,
     )
     tokenUrl.searchParams.append("code", code)
 
@@ -85,12 +85,12 @@ export async function GET(request: NextRequest) {
     cookieStore.delete("meta_oauth_state")
 
     return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/dashboard/settings?tab=integrations&success=meta_connected`,
+      `${process.env.NEXT_PUBLIC_APP_URL || "https://v0-growzzyos.vercel.app/"}/dashboard/settings?tab=integrations&success=meta_connected`,
     )
   } catch (error: any) {
     console.error("[v0] Meta OAuth error:", error)
     return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/dashboard/settings?tab=integrations&error=${error.message}`,
+      `${process.env.NEXT_PUBLIC_APP_URL || "https://v0-growzzyos.vercel.app/"}/dashboard/settings?tab=integrations&error=${error.message}`,
     )
   }
 }
