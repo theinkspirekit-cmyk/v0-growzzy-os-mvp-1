@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
+import DashboardLayout from '@/components/dashboard-layout';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Plus, Pause, Play, Edit2, Eye } from 'lucide-react';
@@ -59,7 +59,7 @@ export default function MetaCampaignsPage() {
 
   if (loading) {
     return (
-      <DashboardLayout activeTab="analytics">
+      <DashboardLayout>
         <div className="space-y-6">
           <div className="animate-pulse">
             <div className="h-8 bg-gray-200 rounded w-1/3 mb-2"></div>
@@ -79,7 +79,7 @@ export default function MetaCampaignsPage() {
   }
 
   return (
-    <DashboardLayout activeTab="analytics">
+    <DashboardLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>

@@ -1,19 +1,19 @@
 'use client';
 import { useState } from 'react';
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
+import DashboardLayout from '@/components/dashboard-layout';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { showToast } from '@/components/Toast';
 import { Plus, Wand2, Copy, Trash2, Eye } from 'lucide-react';
 
 export default function ContentStudioPage() {
-  const [assets, setAssets] = useState([]);
+  const [assets, setAssets] = useState<any[]>([]);
   const [showGenerator, setShowGenerator] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<any>(null);
 
-  const [variants, setVariants] = useState<Array<{id: string; text: string; imageUrl: string}>>([]);
+  const [variants, setVariants] = useState<Array<{ id: string; text: string; imageUrl: string }>>([]);
   const [currentIdx, setCurrentIdx] = useState(0);
-  const [imageLoading, setImageLoading] = useState<{[key: string]: boolean}>({});
+  const [imageLoading, setImageLoading] = useState<{ [key: string]: boolean }>({});
   const [genLoading, setGenLoading] = useState(false);
   const [form, setForm] = useState({ product: '', benefit: '', audience: '', tone: 'Professional' });
 
@@ -46,9 +46,9 @@ export default function ContentStudioPage() {
 
   const regenerateImage = async (variantId: string) => {
     if (!form.product || !variants[currentIdx]?.text) return;
-    
+
     setImageLoading(prev => ({ ...prev, [variantId]: true }));
-    
+
     try {
       const res = await fetch('/api/content/generate-image', {
         method: 'POST',
@@ -58,19 +58,19 @@ export default function ContentStudioPage() {
           adCopy: variants[currentIdx].text
         }),
       });
-      
+
       if (!res.ok) throw new Error('Failed to regenerate image');
-      
+
       const { imageUrl } = await res.json();
-      
-      setVariants(prev => 
-        prev.map(v => 
-          v.id === variantId 
-            ? { ...v, imageUrl } 
+
+      setVariants(prev =>
+        prev.map(v =>
+          v.id === variantId
+            ? { ...v, imageUrl }
             : v
         )
       );
-      
+
       showToast('Image regenerated!', 'success');
     } catch (err) {
       console.error('Error regenerating image:', err);
@@ -79,7 +79,7 @@ export default function ContentStudioPage() {
       setImageLoading(prev => ({ ...prev, [variantId]: false }));
     }
   };
-  
+
   const downloadImage = (imageUrl: string, variantId: string) => {
     const link = document.createElement('a');
     link.href = imageUrl;
@@ -95,7 +95,7 @@ export default function ContentStudioPage() {
   };
 
   return (
-    <DashboardLayout activeTab="content">
+    <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex justify-between items-center">
@@ -138,13 +138,12 @@ export default function ContentStudioPage() {
                   <h3 className="font-bold text-sm mt-1">{asset.title}</h3>
                 </div>
                 <span
-                  className={`px-2 py-1 rounded text-xs font-semibold ${
-                    asset.status === 'published'
-                      ? 'bg-green-100 text-green-800'
-                      : asset.status === 'draft'
+                  className={`px-2 py-1 rounded text-xs font-semibold ${asset.status === 'published'
+                    ? 'bg-green-100 text-green-800'
+                    : asset.status === 'draft'
                       ? 'bg-yellow-100 text-yellow-800'
                       : 'bg-gray-100 text-gray-800'
-                  }`}
+                    }`}
                 >
                   {asset.status}
                 </span>
@@ -256,32 +255,32 @@ export default function ContentStudioPage() {
                     <p className="text-sm font-semibold leading-relaxed min-h-[60px] mb-4">{variants[currentIdx]?.text}</p>
                     {variants[currentIdx]?.imageUrl && (
                       <div className="relative group">
-                        <img 
-                          src={variants[currentIdx].imageUrl} 
-                          alt="Generated ad" 
+                        <img
+                          src={variants[currentIdx].imageUrl}
+                          alt="Generated ad"
                           className="w-full h-48 object-cover rounded-lg mb-2"
                         />
                         <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
                           <div className="flex gap-2">
-                            <Button 
+                            <Button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 regenerateImage(variants[currentIdx].id);
                               }}
-                              size="sm" 
-                              variant="outline" 
+                              size="sm"
+                              variant="outline"
                               className="bg-white/90 hover:bg-white"
                               disabled={imageLoading[variants[currentIdx].id]}
                             >
                               {imageLoading[variants[currentIdx].id] ? 'Regenerating...' : 'Regenerate'}
                             </Button>
-                            <Button 
+                            <Button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 downloadImage(variants[currentIdx].imageUrl, variants[currentIdx].id);
                               }}
-                              size="sm" 
-                              variant="outline" 
+                              size="sm"
+                              variant="outline"
                               className="bg-white/90 hover:bg-white"
                             >
                               Download

@@ -1,8 +1,8 @@
-import { DashboardLayout } from "@/components/dashboard/DashboardLayout"
+import DashboardLayout from '@/components/dashboard-layout';
 
 export default function Loading() {
   return (
-    <DashboardLayout activeTab="analytics">
+    <DashboardLayout>
       <div className="space-y-6">
         {/* Header skeleton */}
         <div className="animate-pulse">

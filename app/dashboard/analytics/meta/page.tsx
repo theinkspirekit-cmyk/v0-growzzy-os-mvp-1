@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
+import DashboardLayout from '@/components/dashboard-layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -65,7 +65,7 @@ export default function MetaAnalyticsPage() {
 
   if (loading) {
     return (
-      <DashboardLayout activeTab="analytics">
+      <DashboardLayout>
         <div className="flex items-center justify-center h-64">
           <p>Loading analytics data...</p>
         </div>
@@ -75,7 +75,7 @@ export default function MetaAnalyticsPage() {
 
   if (!analyticsData) {
     return (
-      <DashboardLayout activeTab="analytics">
+      <DashboardLayout>
         <div className="flex items-center justify-center h-64">
           <p>No analytics data available</p>
         </div>
@@ -84,7 +84,7 @@ export default function MetaAnalyticsPage() {
   }
 
   return (
-    <DashboardLayout activeTab="analytics">
+    <DashboardLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">

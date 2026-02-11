@@ -1,9 +1,9 @@
 'use client';
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
+import DashboardLayout from '@/components/dashboard-layout';
 
 export default function GoogleAnalyticsPage() {
   return (
-    <DashboardLayout activeTab='analytics'>
+    <DashboardLayout>
       <div className='space-y-6'>
         <div className='flex justify-between items-center'>
           <div>
