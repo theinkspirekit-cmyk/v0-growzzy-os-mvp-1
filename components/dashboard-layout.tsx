@@ -77,20 +77,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
       </div>
 
-      {/* Search */}
-      <div className="px-4 mb-6">
-        <div className="relative group">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500 group-hover:text-neutral-300 transition-colors" />
-          <input
-            type="text"
-            placeholder="Search"
-            className="w-full bg-[#1C1C1E] text-sm text-white pl-9 pr-8 py-2.5 rounded-xl border border-transparent focus:border-neutral-700 outline-none transition-all placeholder:text-neutral-600"
-          />
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-0.5 text-[10px] text-neutral-600 border border-neutral-700 rounded px-1.5 py-0.5">
-            <span>⌘</span><span>K</span>
-          </div>
-        </div>
-      </div>
 
       {/* Navigation */}
       <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
@@ -117,21 +103,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Bottom Section */}
       <div className="p-4 space-y-4">
-        {/* Upgrade Card */}
-        <div className="bg-[#1C1C1E] rounded-2xl p-4 relative overflow-hidden group border border-white/5">
-          <div className="relative z-10">
-            <h4 className="text-white font-semibold text-sm mb-1">Get Premium Features</h4>
-            <p className="text-[11px] text-neutral-400 mb-3 leading-relaxed">
-              Try new experiences with premium features on Growzzy.
-            </p>
-            <button className="w-full bg-black hover:bg-neutral-900 text-white text-xs font-medium py-2 rounded-lg border border-white/10 transition-colors">
-              Upgrade Plan
-            </button>
-          </div>
-          {/* Decorative gradients */}
-          <div className="absolute -top-10 -right-10 w-24 h-24 bg-purple-500/20 blur-[40px] rounded-full group-hover:bg-purple-500/30 transition-colors" />
-          <div className="absolute -bottom-10 -left-10 w-24 h-24 bg-blue-500/20 blur-[40px] rounded-full group-hover:bg-blue-500/30 transition-colors" />
-        </div>
 
         {/* User Profile */}
         <div className="flex items-center gap-3 px-1 py-1 cursor-pointer hover:bg-[#1C1C1E] rounded-xl transition-colors">
@@ -144,12 +115,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div className="text-white text-sm font-medium truncate">Michael Robinson</div>
             <div className="text-[10px] text-neutral-500 truncate">michael.robin@gmail.com</div>
           </div>
-          <button
-            onClick={() => signOut({ callbackUrl: "/auth" })}
-            className="text-neutral-500 hover:text-white transition-colors"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
         </div>
       </div>
     </div>

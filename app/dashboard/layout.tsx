@@ -1,5 +1,4 @@
 import type React from "react"
-import { FloatingAIChat } from "@/components/floating-ai-chat"
 import { ProtectedRoute } from "@/components/protected-route"
 
 export const metadata = {
@@ -15,7 +14,6 @@ export default function DashboardRootLayout({
     <ProtectedRoute>
       <>
         {children}
-        <FloatingAIChat />
       </>
     </ProtectedRoute>
   )
