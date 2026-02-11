@@ -1,5 +1,8 @@
-import { auth } from "@/lib/auth"
+import NextAuth from 'next-auth'
+import { authConfig } from './auth.config'
 import { NextResponse } from "next/server"
+
+const { auth } = NextAuth(authConfig)
 
 export default auth((req) => {
   const isLoggedIn = !!req.auth
@@ -14,7 +17,6 @@ export default auth((req) => {
 
   // If in demo mode, explicitly allow
   if (isDemoMode) {
-    // console.log(`[middleware] Allowing demo user to ${req.nextUrl.pathname}`)
     return NextResponse.next()
   }
 

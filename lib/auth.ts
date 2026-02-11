@@ -1,14 +1,11 @@
 import NextAuth from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
-
 import { prisma } from './prisma';
+import { authConfig } from '../auth.config';
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  session: { strategy: 'jwt' },
-  secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
-  trustHost: true,
-  debug: process.env.NODE_ENV === 'development',
+  ...authConfig,
   providers: [
     CredentialsProvider({
       name: 'credentials',
@@ -19,12 +16,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       async authorize(credentials) {
         console.log("[auth] Authorize call received for:", credentials?.email);
 
-        // ---------------------------------------------------------
-        // MOCK AUTH BYPASS (For Development/Demo when DB is down)
-        // ---------------------------------------------------------
-        // If DB connection fails, you can still login with:
-        // Email: admin@growzzy.com
-        // Password: admin
         if (
           credentials?.email === "admin@growzzy.com" &&
           credentials?.password === "admin"
@@ -36,16 +27,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             name: "Admin User",
           };
         }
-        // ---------------------------------------------------------
 
         if (!credentials?.email || !credentials?.password) {
           throw new Error('Email and password required');
         }
-
-        // DEBUG: Check what DB URL is actually being used
-        const dbUrl = process.env.DATABASE_URL || "NOT_SET";
-        const maskedUrl = dbUrl.replace(/:[^:@]+@/, ":****@");
-        console.log("[auth] Using DATABASE_URL:", maskedUrl);
 
         try {
           const user = await prisma.user.findUnique({
@@ -67,7 +52,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             throw new Error('Invalid credentials');
           }
 
-          console.log("[auth] Authorization successful for:", credentials.email);
           return {
             id: user.id,
             email: user.email,
@@ -80,23 +64,4 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
     }),
   ],
-  callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id;
-        token.email = user.email;
-      }
-      return token;
-    },
-    async session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.id as string;
-        session.user.email = token.email as string;
-      }
-      return session;
-    },
-  },
-  pages: {
-    signIn: '/auth',
-  },
 });
