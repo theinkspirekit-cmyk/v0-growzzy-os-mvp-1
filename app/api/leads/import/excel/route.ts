@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
                 // Create lead
                 const lead = await prisma.lead.create({
                     data: {
-                        user Id: session.user.id,
+                        userId: session.user.id,
                         name: String(row.name).trim(),
                         email: String(row.email).trim(),
                         phone: row.phone ? String(row.phone).trim() : null,
