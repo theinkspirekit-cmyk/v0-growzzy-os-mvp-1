@@ -2,6 +2,10 @@
 
 import { useState, createContext, useContext, ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { Zap, Target, Users, Sparkles, BarChart3, ChevronRight, ArrowLeft, Wand2, Globe, Rocket, ShieldCheck, DollarSign, Smartphone } from "lucide-react";
+import DashboardLayout from "@/components/dashboard-layout";
 import { AudienceStep } from "./_components/AudienceStep";
 import { CreativeStep } from "./_components/CreativeStep";
 import { ReviewStep } from "./_components/ReviewStep";
@@ -11,15 +15,14 @@ import { ReviewStep } from "./_components/ReviewStep";
 /* -------------------------------------------------------------------------- */
 
 type Goal = "Sales" | "Leads" | "Traffic" | "App Installs";
-
 type Strategy = "Full-Funnel" | "Conversion Booster" | "Audience Expansion";
 
 interface CampaignSetup {
   goal?: Goal;
   strategy?: Strategy;
   dailyBudget?: number;
-  audiences: string[]; // ids or names
-  creatives: string[]; // ids
+  audiences: string[];
+  creatives: string[];
 }
 
 interface CampaignLauncherContextValue {
@@ -27,9 +30,7 @@ interface CampaignLauncherContextValue {
   update: (partial: Partial<CampaignSetup>) => void;
 }
 
-const CampaignLauncherContext = createContext<CampaignLauncherContextValue | null>(
-  null
-);
+const CampaignLauncherContext = createContext<CampaignLauncherContextValue | null>(null);
 
 function useCampaignLauncher() {
   const ctx = useContext(CampaignLauncherContext);
@@ -53,10 +54,6 @@ function CampaignLauncherProvider({ children }: { children: ReactNode }) {
   );
 }
 
-/* -------------------------------------------------------------------------- */
-/*                                   Steps                                    */
-/* -------------------------------------------------------------------------- */
-
 const steps = [
   "Goal Selection",
   "AI Strategy Templates",
@@ -68,8 +65,54 @@ const steps = [
 
 type StepKey = typeof steps[number];
 
-import { Zap, Target, Users, Sparkles, BarChart3, ChevronRight, ArrowLeft, Wand2, Globe, Rocket, ShieldCheck } from "lucide-react";
-import DashboardLayout from "@/components/dashboard-layout";
+function StrategyStep() {
+  const { data, update } = useCampaignLauncher();
+  const strategies: Strategy[] = [
+    "Full-Funnel",
+    "Conversion Booster",
+    "Audience Expansion",
+  ];
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {strategies.map((s) => (
+        <button
+          key={s}
+          className={cn(
+            "group p-8 rounded-[2rem] border-2 text-left transition-all duration-300",
+            data.strategy === s
+              ? "border-neutral-900 bg-neutral-900 text-white shadow-2xl"
+              : "border-neutral-100 bg-white hover:border-neutral-300"
+          )}
+          onClick={() => update({ strategy: s })}
+        >
+          <div className={cn(
+            "w-10 h-10 rounded-xl flex items-center justify-center mb-4 transition-all",
+            data.strategy === s ? "bg-white/10 text-white" : "bg-neutral-50 text-neutral-900"
+          )}>
+            <Sparkles className="w-5 h-5" />
+          </div>
+          <h3 className="text-lg font-black tracking-tight mb-2">{s}</h3>
+          <p className={cn(
+            "text-[10px] font-bold uppercase tracking-widest",
+            data.strategy === s ? "text-neutral-400" : "text-neutral-400"
+          )}>Template Active</p>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function StepContent({ step }: { step: number }) {
+  switch (step) {
+    case 0: return <GoalStep />;
+    case 1: return <StrategyStep />;
+    case 2: return <BudgetStep />;
+    case 3: return <AudienceStep />;
+    case 4: return <CreativeStep />;
+    case 5: return <ReviewStep />;
+    default: return null;
+  }
+}
 
 function Sidebar({ currentStep }: { currentStep: number }) {
   const stepIcons = [Target, Zap, DollarSign, Users, Sparkles, Rocket];
@@ -320,15 +363,6 @@ function CampaignLauncherContent() {
 }
 
 export default function CampaignLauncherPage() {
-  return (
-    <CampaignLauncherProvider>
-      <CampaignLauncherContent />
-    </CampaignLauncherProvider>
-  );
-}
-
-export default function CampaignLauncherPage() {
-
   return (
     <CampaignLauncherProvider>
       <CampaignLauncherContent />
