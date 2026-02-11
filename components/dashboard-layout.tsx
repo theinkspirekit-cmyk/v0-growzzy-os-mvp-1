@@ -38,14 +38,11 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { title: "Campaigns", href: "/dashboard/campaigns", icon: Megaphone },
-  { title: "Launcher", href: "/dashboard/campaign-launcher", icon: Zap },
-  { title: "Creatives", href: "/dashboard/creatives", icon: Sparkles },
-  { title: "Audience", href: "/dashboard/audience-studio", icon: Target },
-  { title: "Leads", href: "/dashboard/leads", icon: Users },
+  { title: "Products", href: "/dashboard/products", icon: Box },
+  { title: "Invoices", href: "/dashboard/invoices", icon: FileText },
+  { title: "Customers", href: "/dashboard/leads", icon: Users },
   { title: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
-  { title: "Automations", href: "/dashboard/automations", icon: Layers },
-  { title: "Reports", href: "/dashboard/reports", icon: FileText },
+  { title: "Marketing", href: "/dashboard/campaigns", icon: Megaphone },
   { title: "AI Copilot", href: "/dashboard/copilot", icon: Bot },
   { title: "Settings", href: "/dashboard/settings", icon: Settings },
 ]
