@@ -36,10 +36,13 @@ export default function CopilotPage() {
 
     try {
       // Call REAL backend logic
-      const res = await fetch("/api/copilot", {
+      const res = await fetch("/api/copilot/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userMsg }),
+        body: JSON.stringify({
+          messages: [...messages, { role: "user", content: userMsg }],
+          context: "marketing_copilot"
+        }),
       })
 
       const data = await res.json()
@@ -52,8 +55,8 @@ export default function CopilotPage() {
         ...prev,
         {
           role: "assistant",
-          content: data.reply,
-          action: data.action
+          content: data.response, // The chat route returns { response: ... }
+          action: data.actionTaken?.function
         },
       ])
 
@@ -148,8 +151,8 @@ export default function CopilotPage() {
                     {msg.role === "user" ? <span className="text-white text-xs font-bold">U</span> : <Bot className="w-4 h-4 text-neutral-900" />}
                   </div>
                   <div className={`max-w-[80%] p-4 rounded-2xl text-sm leading-relaxed shadow-sm transform transition-all duration-300 ${msg.role === "user"
-                      ? "bg-neutral-900 text-white rounded-tr-sm"
-                      : "bg-white text-neutral-800 border border-neutral-100 rounded-tl-sm whitespace-pre-wrap"
+                    ? "bg-neutral-900 text-white rounded-tr-sm"
+                    : "bg-white text-neutral-800 border border-neutral-100 rounded-tl-sm whitespace-pre-wrap"
                     }`}>
                     {msg.content}
                     {msg.action && (
@@ -209,8 +212,8 @@ export default function CopilotPage() {
               onClick={() => handleSend()}
               disabled={!input.trim() || isProcessing}
               className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 ${input.trim()
-                  ? "bg-neutral-900 text-white hover:bg-neutral-800 shadow-lg scale-100"
-                  : "bg-neutral-100 text-neutral-300 scale-90 cursor-not-allowed"
+                ? "bg-neutral-900 text-white hover:bg-neutral-800 shadow-lg scale-100"
+                : "bg-neutral-100 text-neutral-300 scale-90 cursor-not-allowed"
                 }`}
             >
               <ArrowUp className="w-5 h-5" />

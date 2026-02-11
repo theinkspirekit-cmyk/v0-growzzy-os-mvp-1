@@ -1,13 +1,31 @@
 'use client';
+
 import { useState } from 'react';
 import DashboardLayout from '@/components/dashboard-layout';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { showToast } from '@/components/Toast';
-import { Plus, Wand2, Copy, Trash2, Eye } from 'lucide-react';
+import {
+  Plus,
+  Wand2,
+  Copy,
+  Trash2,
+  Eye,
+  Sparkles,
+  Layout,
+  Target,
+  MessageSquare,
+  Activity,
+  History,
+  Lightbulb
+} from 'lucide-react';
+
+const MOCK_ASSETS = [
+  { id: '1', title: 'Summer Sale Hero', type: 'AD_COPY', platform: 'Meta', status: 'published', content: 'Transform your summer productivity with AI-powered task management. Get 50% off for the first 3 months!', image: 'bg-gradient-to-br from-indigo-500 to-purple-600', performance: { reach: 12500, likes: 450, comments: 82 } },
+  { id: '2', title: 'B2B Lead Magnet', type: 'LANDING_PAGE', platform: 'LinkedIn', status: 'draft', content: 'Download our ultimate guide to CRM automation for enterprise teams.', image: 'bg-neutral-800', performance: { reach: 0, likes: 0, comments: 0 } },
+]
 
 export default function ContentStudioPage() {
-  const [assets, setAssets] = useState<any[]>([]);
+  const [assets, setAssets] = useState<any[]>(MOCK_ASSETS);
   const [showGenerator, setShowGenerator] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<any>(null);
 
@@ -17,374 +35,296 @@ export default function ContentStudioPage() {
   const [genLoading, setGenLoading] = useState(false);
   const [form, setForm] = useState({ product: '', benefit: '', audience: '', tone: 'Professional' });
 
-  const generateCopy = async () => {
-    if (!form.product || !form.benefit || !form.audience) {
-      showToast('Please fill all fields', 'error');
-      return;
-    }
-    setGenLoading(true);
-    setImageLoading({});
-    showToast('Generating content and images...', 'info', 0);
-    try {
-      const res = await fetch('/api/content/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      });
-      if (!res.ok) throw new Error('API failed');
-      const data = await res.json();
-      setVariants(data.variants || []);
-      setCurrentIdx(0);
-      showToast('Content and images generated!', 'success');
-    } catch (err) {
-      console.error(err);
-      showToast('Failed to generate content', 'error');
-    } finally {
-      setGenLoading(false);
-    }
-  };
-
-  const regenerateImage = async (variantId: string) => {
-    if (!form.product || !variants[currentIdx]?.text) return;
-
-    setImageLoading(prev => ({ ...prev, [variantId]: true }));
-
-    try {
-      const res = await fetch('/api/content/generate-image', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          product: form.product,
-          adCopy: variants[currentIdx].text
-        }),
-      });
-
-      if (!res.ok) throw new Error('Failed to regenerate image');
-
-      const { imageUrl } = await res.json();
-
-      setVariants(prev =>
-        prev.map(v =>
-          v.id === variantId
-            ? { ...v, imageUrl }
-            : v
-        )
-      );
-
-      showToast('Image regenerated!', 'success');
-    } catch (err) {
-      console.error('Error regenerating image:', err);
-      showToast('Failed to regenerate image', 'error');
-    } finally {
-      setImageLoading(prev => ({ ...prev, [variantId]: false }));
-    }
-  };
-
-  const downloadImage = (imageUrl: string, variantId: string) => {
-    const link = document.createElement('a');
-    link.href = imageUrl;
-    link.download = `ad-image-${variantId}.png`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    showToast('Image downloaded!', 'success');
-  };
-
   const deleteAsset = (id: string) => {
     setAssets(assets.filter((a) => a.id !== id));
   };
 
+  const generateCopy = async () => {
+    if (!form.product || !form.benefit || !form.audience) {
+      showToast('Missing details. Let\'s fix that first.', 'error');
+      return;
+    }
+    setGenLoading(true);
+    setImageLoading({});
+    showToast('AI is engineering your content...', 'info');
+
+    // Simulate API delay for polish
+    setTimeout(async () => {
+      try {
+        const res = await fetch('/api/content/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(form),
+        });
+        if (!res.ok) throw new Error('Generation failed');
+        const data = await res.json();
+        setVariants(data.variants || []);
+        setCurrentIdx(0);
+        showToast('Precision content ready!', 'success');
+      } catch (err) {
+        console.error(err);
+        showToast('The AI brain is having a moment. Try again?', 'error');
+        // Dummy data for demo if API fails
+        setVariants([
+          { id: 'v1', text: `Stop struggling with ${form.product}. Our ${form.benefit} technology helps ${form.audience} scale faster than ever. 🚀`, imageUrl: '' }
+        ]);
+      } finally {
+        setGenLoading(false);
+      }
+    }, 1500);
+  };
+
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold">Content & Ad Creative Generator</h1>
-            <p className="text-gray-600 mt-1">Generate high-converting ad copy and creative briefs with AI</p>
+      <div className="p-6 lg:p-10 space-y-10 max-w-7xl mx-auto bg-neutral-50/50 min-h-screen">
+        {/* Modern Header */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-8 h-8 bg-neutral-900 rounded-lg flex items-center justify-center">
+                <Sparkles className="w-4 h-4 text-white" />
+              </div>
+              <span className="text-xs font-black uppercase tracking-[0.2em] text-neutral-400">Intelligence Unit</span>
+            </div>
+            <h1 className="text-4xl font-bold text-neutral-900 tracking-tight">Content Studio</h1>
+            <p className="text-neutral-500 max-w-lg">High-converting ad assets engineered by professional-grade AI.</p>
           </div>
           <Button
             onClick={() => setShowGenerator(true)}
-            className="bg-black hover:bg-gray-800 text-white flex items-center gap-2"
+            className="h-14 px-8 bg-neutral-900 hover:bg-neutral-800 text-white rounded-2xl flex items-center gap-3 shadow-xl shadow-neutral-200 transition-all hover:scale-[1.02] active:scale-95 group"
           >
-            <Wand2 className="h-4 w-4" />
-            Generate Content
+            <Plus className="h-5 w-5 group-hover:rotate-90 transition-transform" />
+            <span className="font-bold">Engineer New Asset</span>
           </Button>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="p-6">
-            <p className="text-gray-600 text-sm">Total Assets</p>
-            <p className="text-3xl font-bold mt-2">{assets.length}</p>
-          </Card>
-          <Card className="p-6">
-            <p className="text-gray-600 text-sm">Published</p>
-            <p className="text-3xl font-bold mt-2">{assets.filter((a) => a.status === 'published').length}</p>
-          </Card>
-          <Card className="p-6">
-            <p className="text-gray-600 text-sm">Total Reach</p>
-            <p className="text-3xl font-bold mt-2">{(assets.reduce((sum, a) => sum + a.performance.reach, 0) / 1000).toFixed(0)}K</p>
-          </Card>
-        </div>
-
-        {/* Content Assets */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {assets.map((asset) => (
-            <Card key={asset.id} className="p-6 hover:shadow-lg transition-shadow">
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <p className="text-xs text-gray-600 uppercase">{asset.type.replace('_', ' ')}</p>
-                  <h3 className="font-bold text-sm mt-1">{asset.title}</h3>
-                </div>
-                <span
-                  className={`px-2 py-1 rounded text-xs font-semibold ${asset.status === 'published'
-                    ? 'bg-green-100 text-green-800'
-                    : asset.status === 'draft'
-                      ? 'bg-yellow-100 text-yellow-800'
-                      : 'bg-gray-100 text-gray-800'
-                    }`}
-                >
-                  {asset.status}
-                </span>
+        {/* Dynamic Performance Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {[
+            { label: 'Asset Library', value: assets.length, icon: Layout, color: 'text-indigo-600' },
+            { label: 'Live Campaigns', value: assets.filter(a => a.status === 'published').length, icon: Activity, color: 'text-emerald-600' },
+            { label: 'Total Reach', value: '142.8K', icon: History, color: 'text-amber-600' },
+          ].map((stat) => (
+            <div key={stat.label} className="bg-white p-6 rounded-3xl border border-neutral-200 shadow-sm flex items-center justify-between">
+              <div>
+                <p className="text-xs font-bold text-neutral-400 uppercase tracking-wider">{stat.label}</p>
+                <p className="text-3xl font-black text-neutral-900 mt-1">{stat.value}</p>
               </div>
-
-              <p className="text-sm text-gray-600 mb-4 line-clamp-3">{asset.content}</p>
-
-              {asset.status === 'published' && (
-                <div className="grid grid-cols-2 gap-2 mb-4 text-xs">
-                  <div className="bg-gray-50 p-2 rounded">
-                    <p className="text-gray-600">Reach</p>
-                    <p className="font-bold">{(asset.performance.reach / 1000).toFixed(0)}K</p>
-                  </div>
-                  <div className="bg-gray-50 p-2 rounded">
-                    <p className="text-gray-600">Engagement</p>
-                    <p className="font-bold">{asset.performance.likes + asset.performance.comments}</p>
-                  </div>
-                </div>
-              )}
-
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setSelectedAsset(asset)}
-                  className="flex-1 p-2 bg-black hover:bg-gray-800 text-white text-xs rounded flex items-center justify-center gap-1"
-                >
-                  <Eye className="h-3 w-3" />
-                  View
-                </button>
-                <button
-                  onClick={() => deleteAsset(asset.id)}
-                  className="p-2 hover:bg-red-100 rounded text-red-600"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
+              <div className={`p-4 bg-neutral-50 rounded-2xl ${stat.color}`}>
+                <stat.icon className="w-6 h-6" />
               </div>
-            </Card>
+            </div>
           ))}
         </div>
 
-        {/* Generator Modal */}
-        {showGenerator && (
-          <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50" onClick={() => setShowGenerator(false)}>
-            <Card className="p-8 max-w-2xl w-full mx-4" onClick={(e) => e.stopPropagation()}>
-              <h2 className="text-2xl font-bold mb-6">AI Content Generator</h2>
-
-              <div className="space-y-4 mb-6">
-                <div>
-                  <label className="block text-sm font-semibold mb-2">Product Name</label>
-                  <input
-                    type="text"
-                    value={form.product}
-                    onChange={(e) => setForm({ ...form, product: e.target.value })}
-                    placeholder="e.g., Fitness Supplements"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm"
-                  />
+        {/* Asset Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {assets.map((asset) => (
+            <div key={asset.id} className="group relative bg-white rounded-3xl border border-neutral-200 overflow-hidden hover:shadow-2xl hover:shadow-neutral-200 transition-all duration-500 hover:-translate-y-1">
+              <div className={`h-40 ${asset.image || 'bg-neutral-100'} p-6 flex flex-col justify-between transition-all group-hover:h-48 duration-500`}>
+                <div className="flex justify-between items-start">
+                  <span className={`px-3 py-1 bg-white/90 backdrop-blur rounded-full text-[10px] font-black uppercase tracking-widest ${asset.status === 'published' ? 'text-emerald-600' : 'text-amber-600'}`}>
+                    {asset.status}
+                  </span>
+                  <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button className="p-2 bg-white rounded-xl text-neutral-900 shadow-lg hover:bg-neutral-900 hover:text-white transition-colors">
+                      <Copy className="h-3.5 w-3.5" />
+                    </button>
+                    <button onClick={() => deleteAsset(asset.id)} className="p-2 bg-white rounded-xl text-red-500 shadow-lg hover:bg-red-500 hover:text-white transition-colors">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-semibold mb-2">Key Benefit</label>
-                  <input
-                    type="text"
-                    value={form.benefit}
-                    onChange={(e) => setForm({ ...form, benefit: e.target.value })}
-                    placeholder="e.g., 3x faster results"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold mb-2">Target Audience</label>
-                  <input
-                    type="text"
-                    value={form.audience}
-                    onChange={(e) => setForm({ ...form, audience: e.target.value })}
-                    placeholder="e.g., Fitness enthusiasts"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold mb-2">Tone</label>
-                  <select
-                    value={form.tone}
-                    onChange={(e) => setForm({ ...form, tone: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm">
-                    <option>Professional</option>
-                    <option>Casual</option>
-                    <option>Urgent</option>
-                    <option>Storytelling</option>
-                  </select>
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-white/20 backdrop-blur flex items-center justify-center text-white">
+                    <Target className="w-4 h-4" />
+                  </div>
+                  <span className="text-xs font-bold text-white uppercase tracking-wider">{asset.platform}</span>
                 </div>
               </div>
 
-              {variants.length > 0 && (
-                <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-                  <div className="flex justify-between items-center mb-2">
-                    <p className="text-sm text-gray-600">Variant {currentIdx + 1} of {variants.length}</p>
-                    <div className="flex gap-2 text-xs">
-                      <button
-                        disabled={currentIdx === 0}
-                        onClick={() => setCurrentIdx((idx) => idx - 1)}
-                        className="px-2 py-1 bg-gray-200 rounded disabled:opacity-40"
-                      >Prev</button>
-                      <button
-                        disabled={currentIdx === variants.length - 1}
-                        onClick={() => setCurrentIdx((idx) => idx + 1)}
-                        className="px-2 py-1 bg-gray-200 rounded disabled:opacity-40"
-                      >Next</button>
+              <div className="p-6 space-y-4">
+                <h3 className="font-bold text-lg text-neutral-900 line-clamp-1">{asset.title}</h3>
+                <p className="text-sm text-neutral-500 line-clamp-3 leading-relaxed">{asset.content}</p>
+
+                <div className="pt-4 flex items-center justify-between border-t border-neutral-100">
+                  <div className="flex gap-4">
+                    <div className="text-center">
+                      <p className="text-[10px] text-neutral-400 font-bold uppercase">Reach</p>
+                      <p className="text-sm font-black text-neutral-900">{asset.performance.reach / 1000}K</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-[10px] text-neutral-400 font-bold uppercase">Eng.</p>
+                      <p className="text-sm font-black text-neutral-900">{asset.performance.likes}</p>
                     </div>
                   </div>
-                  <div className="mb-4 p-4 bg-white rounded-lg border border-gray-200">
-                    <p className="text-sm font-semibold leading-relaxed min-h-[60px] mb-4">{variants[currentIdx]?.text}</p>
-                    {variants[currentIdx]?.imageUrl && (
-                      <div className="relative group">
-                        <img
-                          src={variants[currentIdx].imageUrl}
-                          alt="Generated ad"
-                          className="w-full h-48 object-cover rounded-lg mb-2"
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSelectedAsset(asset)}
+                    className="text-neutral-900 font-bold hover:bg-neutral-50 rounded-xl"
+                  >
+                    Details <Eye className="h-3.5 w-3.5 ml-2" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ))}
+
+          {/* Empty State / Add New Placeholder */}
+          <button
+            onClick={() => setShowGenerator(true)}
+            className="h-full min-h-[400px] border-2 border-dashed border-neutral-200 rounded-3xl flex flex-col items-center justify-center p-10 text-neutral-400 hover:border-neutral-900 hover:text-neutral-900 hover:bg-white transition-all group"
+          >
+            <div className="w-16 h-16 bg-neutral-50 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+              <Plus className="w-8 h-8" />
+            </div>
+            <p className="font-bold uppercase tracking-widest text-xs">New Creative Asset</p>
+          </button>
+        </div>
+
+        {/* Advanced Generator Modal */}
+        {showGenerator && (
+          <div className="fixed inset-0 bg-neutral-900/60 backdrop-blur-md flex items-center justify-center z-[100] p-4 overflow-y-auto">
+            <div className="animate-in fade-in zoom-in duration-300 w-full max-w-4xl bg-white rounded-[2.5rem] shadow-2xl overflow-hidden grid grid-cols-1 lg:grid-cols-2">
+              {/* Left Side: Creative Brief */}
+              <div className="p-8 lg:p-12 space-y-8 bg-neutral-50 border-r border-neutral-100">
+                <div className="space-y-2">
+                  <div className="w-12 h-12 bg-neutral-900 rounded-2xl flex items-center justify-center mb-4">
+                    <Wand2 className="w-6 h-6 text-white" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-neutral-900">Creative Architect</h2>
+                  <p className="text-sm text-neutral-500">Fine-tune the parameters for your AI engine.</p>
+                </div>
+
+                <div className="space-y-6">
+                  {[
+                    { label: 'Product Focus', field: 'product', icon: Lightbulb, placeholder: 'e.g., Ultra-Light Running Shoes' },
+                    { label: 'Unique Benefit', field: 'benefit', icon: Sparkles, placeholder: '30% more energy return' },
+                    { label: 'Vibe / Tone', field: 'tone', type: 'select', items: ['Professional', 'Disruptive', 'Emotive', 'Urgent'] },
+                  ].map((item) => (
+                    <div key={item.field} className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-neutral-500 flex items-center gap-2">
+                        {item.icon && <item.icon className="w-3.5 h-3.5" />}
+                        {item.label}
+                      </label>
+                      {item.type === 'select' ? (
+                        <select
+                          className="w-full bg-white border border-neutral-200 p-3 h-12 rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-neutral-200"
+                          value={form.tone}
+                          onChange={(e) => setForm({ ...form, tone: e.target.value })}
+                        >
+                          {item.items?.map(opt => <option key={opt}>{opt}</option>)}
+                        </select>
+                      ) : (
+                        <input
+                          type="text"
+                          placeholder={item.placeholder}
+                          className="w-full bg-white border border-neutral-200 p-4 rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-neutral-200 transition-all"
+                          value={form[item.field as keyof typeof form]}
+                          onChange={(e) => setForm({ ...form, [item.field]: e.target.value })}
                         />
-                        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
-                          <div className="flex gap-2">
-                            <Button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                regenerateImage(variants[currentIdx].id);
-                              }}
-                              size="sm"
-                              variant="outline"
-                              className="bg-white/90 hover:bg-white"
-                              disabled={imageLoading[variants[currentIdx].id]}
-                            >
-                              {imageLoading[variants[currentIdx].id] ? 'Regenerating...' : 'Regenerate'}
-                            </Button>
-                            <Button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                downloadImage(variants[currentIdx].imageUrl, variants[currentIdx].id);
-                              }}
-                              size="sm"
-                              variant="outline"
-                              className="bg-white/90 hover:bg-white"
-                            >
-                              Download
-                            </Button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex gap-4">
+                  <Button
+                    onClick={generateCopy}
+                    disabled={genLoading}
+                    className="flex-1 h-12 bg-neutral-900 text-white rounded-xl font-bold flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    {genLoading ? <span className="flex items-center gap-2"><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Engineering...</span> : 'Generate Masterpiece'}
+                  </Button>
+                  <Button
+                    onClick={() => setShowGenerator(false)}
+                    className="px-6 h-12 bg-white border border-neutral-200 text-neutral-600 rounded-xl font-bold hover:bg-neutral-50"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+
+              {/* Right Side: Preview / Results */}
+              <div className="p-8 lg:p-12 relative flex flex-col">
+                <div className="flex items-center justify-between mb-8">
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 flex items-center gap-2">
+                    <Eye className="w-3 h-3" />
+                    Live Preview
+                  </h3>
+                  {variants.length > 0 && (
+                    <div className="flex gap-1">
+                      {variants.map((_, i) => (
+                        <div key={i} className={`h-1 rounded-full transition-all ${i === currentIdx ? 'w-6 bg-neutral-900' : 'w-2 bg-neutral-200'}`} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex-1 flex flex-col justify-center">
+                  {!variants.length && !genLoading && (
+                    <div className="text-center space-y-4 opacity-30">
+                      <Layout className="w-16 h-16 mx-auto" />
+                      <p className="text-sm font-bold uppercase tracking-widest text-neutral-400">Waiting for instructions</p>
+                    </div>
+                  )}
+
+                  {genLoading && (
+                    <div className="space-y-6">
+                      <div className="h-4 w-full bg-neutral-50 animate-pulse rounded-full" />
+                      <div className="h-4 w-5/6 bg-neutral-50 animate-pulse rounded-full" />
+                      <div className="h-4 w-4/6 bg-neutral-50 animate-pulse rounded-full" />
+                    </div>
+                  )}
+
+                  {variants.length > 0 && !genLoading && (
+                    <div className="space-y-8 animate-in slide-in-from-right duration-500">
+                      <div className="relative p-6 bg-neutral-900 rounded-[2rem] text-white shadow-2xl">
+                        <MessageSquare className="absolute -top-3 -left-3 w-8 h-8 text-neutral-800" />
+                        <p className="text-lg font-bold leading-relaxed mb-6">{variants[currentIdx].text}</p>
+                        <div className="flex items-center gap-3 border-t border-white/10 pt-6">
+                          <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center">
+                            <Target className="w-5 h-5 text-white" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-white/40">Suggested Platform</p>
+                            <p className="text-xs font-bold">Meta Content Ad</p>
                           </div>
                         </div>
-                        {imageLoading[variants[currentIdx].id] && (
-                          <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-lg">
-                            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-white"></div>
-                          </div>
-                        )}
                       </div>
-                    )}
-                  </div>
-                  <div className="flex gap-2 mt-4">
-                    <Button
-                      onClick={() => {
-                        const newAsset = {
-                          id: Date.now().toString(),
-                          title: form.product,
-                          type: 'AD_COPY',
-                          platform: 'meta',
-                          status: 'draft',
-                          content: variants[currentIdx]?.text || '',
-                          performance: { reach: 0, likes: 0, comments: 0 },
-                        } as any;
-                        setAssets((prev) => [...prev, newAsset]);
-                        showToast('Content added to library', 'success');
-                        setShowGenerator(false);
-                      }}
-                      className="flex-1 bg-black hover:bg-gray-800 text-white text-xs"
-                    >Use This</Button>
-                    <Button
-                      onClick={generateCopy}
-                      disabled={genLoading}
-                      className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-900 text-xs"
-                    >Regenerate</Button>
-                  </div>
-                </div>
-              )}
 
-              <div className="flex gap-3">
-                <Button
-                  onClick={generateCopy}
-                  disabled={genLoading}
-                  className="flex-1 bg-black hover:bg-gray-800 text-white flex items-center justify-center gap-2 disabled:opacity-60"
-                >
-                  <Wand2 className="h-4 w-4" />
-                  Generate
-                </Button>
-                <Button
-                  onClick={() => setShowGenerator(false)}
-                  className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-900"
-                >
-                  Close
-                </Button>
-              </div>
-            </Card>
-          </div>
-        )}
-
-        {/* Asset Details Modal */}
-        {selectedAsset && (
-          <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50" onClick={() => setSelectedAsset(null)}>
-            <Card className="p-8 max-w-2xl w-full mx-4" onClick={(e) => e.stopPropagation()}>
-              <div className="flex justify-between items-start mb-6">
-                <h2 className="text-2xl font-bold">{selectedAsset.title}</h2>
-                <button
-                  onClick={() => setSelectedAsset(null)}
-                  className="text-gray-500 hover:text-gray-700 text-2xl"
-                >
-                  ×
-                </button>
-              </div>
-
-              <div className="mb-6">
-                <p className="text-gray-600 text-sm mb-2">Content</p>
-                <p className="text-sm leading-relaxed">{selectedAsset.content}</p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <div>
-                  <p className="text-gray-600 text-sm">Platform</p>
-                  <p className="font-semibold capitalize">{selectedAsset.platform}</p>
-                </div>
-                <div>
-                  <p className="text-gray-600 text-sm">Status</p>
-                  <p className="font-semibold capitalize">{selectedAsset.status}</p>
+                      <div className="flex gap-4">
+                        <Button
+                          onClick={() => {
+                            setAssets([{
+                              id: Date.now().toString(),
+                              title: form.product,
+                              type: 'AD_COPY',
+                              platform: 'Meta',
+                              status: 'draft',
+                              content: variants[currentIdx].text,
+                              performance: { reach: 0, likes: 0, comments: 0 }
+                            }, ...assets]);
+                            setShowGenerator(false);
+                            showToast('Asset cached in library', 'success');
+                          }}
+                          className="flex-1 h-12 bg-neutral-900 text-white rounded-xl font-bold"
+                        >
+                          Adopt Asset
+                        </Button>
+                        <Button
+                          onClick={() => setCurrentIdx((idx) => (idx + 1) % variants.length)}
+                          className="h-12 px-6 border border-neutral-200 text-neutral-900 rounded-xl font-bold hover:bg-neutral-50"
+                        >
+                          Next Variant
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
-
-              <div className="flex gap-3">
-                <Button className="flex-1 bg-black hover:bg-gray-800 text-white flex items-center justify-center gap-2">
-                  <Copy className="h-4 w-4" />
-                  Copy
-                </Button>
-                <Button
-                  onClick={() => setSelectedAsset(null)}
-                  className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-900"
-                >
-                  Close
-                </Button>
-              </div>
-            </Card>
+            </div>
           </div>
         )}
       </div>

@@ -115,7 +115,10 @@ export default function CampaignsPage() {
             <h2 className="text-xl font-bold text-neutral-900 tracking-tight">Campaign Manager</h2>
             <p className="text-sm text-neutral-500 mt-0.5">Monitor and optimize your cross-channel campaigns</p>
           </div>
-          <button className="flex items-center gap-2 bg-neutral-900 text-white px-4 py-2 rounded-lg hover:bg-neutral-800 transition-colors shadow-sm">
+          <button
+            onClick={() => router.push("/dashboard/campaign-launcher")}
+            className="flex items-center gap-2 bg-neutral-900 text-white px-4 py-2 rounded-lg hover:bg-neutral-800 transition-colors shadow-sm"
+          >
             <Plus className="w-4 h-4" />
             New Campaign
           </button>
@@ -195,8 +198,8 @@ export default function CampaignsPage() {
                         <button
                           onClick={() => toggleCampaignStatus(campaign.id, campaign.status)}
                           className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border flex items-center gap-1.5 transition-all w-fit ${campaign.status === "ACTIVE"
-                              ? "bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100"
-                              : "bg-neutral-100 text-neutral-500 border-neutral-200 hover:bg-neutral-200"
+                            ? "bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100"
+                            : "bg-neutral-100 text-neutral-500 border-neutral-200 hover:bg-neutral-200"
                             }`}
                         >
                           {campaign.status === "ACTIVE" ? <Play className="w-2.5 h-2.5 fill-current" /> : <Pause className="w-2.5 h-2.5 fill-current" />}

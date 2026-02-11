@@ -10,11 +10,32 @@ import {
   Globe,
   Filter,
 } from "lucide-react"
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  AreaChart,
+  Area
+} from "recharts"
 
 const PLATFORMS = [
-  { name: "Google Ads", spend: "$15,200", revenue: "$48,600", roas: "3.2x", leads: 412, change: 8.3, color: "bg-neutral-900" },
-  { name: "Meta Ads", spend: "$18,400", revenue: "$62,100", roas: "3.37x", leads: 538, change: 12.1, color: "bg-neutral-700" },
-  { name: "LinkedIn Ads", spend: "$7,300", revenue: "$18,450", roas: "2.53x", leads: 186, change: -3.2, color: "bg-neutral-500" },
+  { name: "Google Ads", spend: 15200, revenue: 48600, roas: 3.2, leads: 412, change: 8.3, color: "#171717" },
+  { name: "Meta Ads", spend: 18400, revenue: 62100, roas: 3.37, leads: 538, change: 12.1, color: "#404040" },
+  { name: "LinkedIn Ads", spend: 7300, revenue: 18450, roas: 2.53, leads: 186, change: -3.2, color: "#737373" },
+]
+
+const PERFORMANCE_DATA = [
+  { name: "Mon", revenue: 4000, spend: 2400 },
+  { name: "Tue", revenue: 3000, spend: 1398 },
+  { name: "Wed", revenue: 2000, spend: 9800 },
+  { name: "Thu", revenue: 2780, spend: 3908 },
+  { name: "Fri", revenue: 1890, spend: 4800 },
+  { name: "Sat", revenue: 2390, spend: 3800 },
+  { name: "Sun", revenue: 3490, spend: 4300 },
 ]
 
 const COMBINED_METRICS = [
@@ -36,22 +57,70 @@ const AI_CROSS_INSIGHTS = [
 export default function AnalyticsPage() {
   return (
     <DashboardLayout>
-      <div className="p-6 lg:p-8 space-y-6">
+      <div className="p-6 lg:p-8 space-y-8 bg-neutral-50/50 min-h-screen">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-neutral-900 tracking-tight">Analytics Overview</h2>
-            <p className="text-sm text-neutral-500 mt-0.5">Aggregated performance across all platforms</p>
+            <h1 className="text-2xl font-bold text-neutral-900 tracking-tight">Analytics Command Center</h1>
+            <p className="text-sm text-neutral-500 mt-1">Real-time performance metrics across your entire ecosystem</p>
           </div>
           <div className="flex items-center gap-2">
-            <button className="flex items-center gap-2 text-sm text-neutral-600 bg-white border border-neutral-200 px-3 py-2 rounded-lg hover:border-neutral-300 transition-colors">
+            <button className="flex items-center gap-2 text-sm font-semibold text-neutral-600 bg-white border border-neutral-200 px-4 py-2 rounded-xl hover:border-neutral-900 transition-all shadow-sm">
               <Filter className="w-4 h-4" />
-              Filters
+              Advanced Filters
             </button>
-            <div className="flex items-center bg-neutral-100 rounded-lg p-0.5">
+            <div className="flex items-center bg-white border border-neutral-200 rounded-xl p-1 shadow-sm">
               {["7d", "30d", "90d"].map((r) => (
-                <button key={r} className={`px-3 py-1.5 text-xs font-medium rounded-md ${r === "30d" ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500"}`}>{r}</button>
+                <button key={r} className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${r === "30d" ? "bg-neutral-900 text-white shadow-md" : "text-neutral-500 hover:text-neutral-900"}`}>{r}</button>
               ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Visual Charts Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 bg-white rounded-2xl border border-neutral-200 p-6 shadow-sm">
+            <div className="flex items-center justify-between mb-8">
+              <h3 className="text-base font-bold text-neutral-900">Revenue vs Spend Trend</h3>
+              <div className="flex items-center gap-4 text-xs font-medium">
+                <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-neutral-900" /> Revenue</div>
+                <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-neutral-300" /> Spend</div>
+              </div>
+            </div>
+            <div className="h-[300px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={PERFORMANCE_DATA}>
+                  <defs>
+                    <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#171717" stopOpacity={0.1} />
+                      <stop offset="95%" stopColor="#171717" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#888' }} dy={10} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#888' }} />
+                  <Tooltip
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
+                  />
+                  <Area type="monotone" dataKey="revenue" stroke="#171717" strokeWidth={3} fillOpacity={1} fill="url(#colorRev)" />
+                  <Area type="monotone" dataKey="spend" stroke="#d4d4d4" strokeWidth={2} fill="transparent" strokeDasharray="5 5" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-neutral-200 p-6 shadow-sm">
+            <h3 className="text-base font-bold text-neutral-900 mb-8">Spend by Platform</h3>
+            <div className="h-[300px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={PLATFORMS} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#f0f0f0" />
+                  <XAxis type="number" hide />
+                  <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 600, fill: '#444' }} width={80} />
+                  <Tooltip cursor={{ fill: 'transparent' }} />
+                  <Bar dataKey="spend" fill="#171717" radius={[0, 8, 8, 0]} barSize={24} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           </div>
         </div>

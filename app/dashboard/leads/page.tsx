@@ -38,6 +38,9 @@ const PIPELINE_STAGES = [
 
 export default function LeadsPage() {
   const [view, setView] = useState<"table" | "pipeline">("table")
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false)
+  const [leads, setLeads] = useState(LEADS)
 
   const statusColor = (s: string) => {
     if (s === "Hot") return "bg-red-100 text-red-700"
@@ -47,7 +50,7 @@ export default function LeadsPage() {
 
   return (
     <DashboardLayout>
-      <div className="p-6 lg:p-8 space-y-6">
+      <div className="p-6 lg:p-8 space-y-6 relative">
         {/* Header */}
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
@@ -55,16 +58,88 @@ export default function LeadsPage() {
             <p className="text-sm text-neutral-500 mt-0.5">Manage, score, and convert your leads</p>
           </div>
           <div className="flex items-center gap-2">
-            <button className="flex items-center gap-2 text-sm text-neutral-600 bg-white border border-neutral-200 px-3 py-2 rounded-lg hover:border-neutral-300">
+            <button
+              onClick={() => setIsImportModalOpen(true)}
+              className="flex items-center gap-2 text-sm text-neutral-600 bg-white border border-neutral-200 px-3 py-2 rounded-lg hover:border-neutral-300"
+            >
               <Upload className="w-4 h-4" />
               Import
             </button>
-            <button className="flex items-center gap-2 text-sm text-white bg-neutral-900 px-4 py-2 rounded-lg hover:bg-neutral-800">
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              className="flex items-center gap-2 text-sm text-white bg-neutral-900 px-4 py-2 rounded-lg hover:bg-neutral-800"
+            >
               <Plus className="w-4 h-4" />
               Add Lead
             </button>
           </div>
         </div>
+
+        {/* Add Lead Modal Overlay */}
+        {isAddModalOpen && (
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+            <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-neutral-200 overflow-hidden animate-in fade-in zoom-in duration-200">
+              <div className="p-6 border-b border-neutral-100 flex items-center justify-between">
+                <h3 className="text-lg font-bold text-neutral-900">Add New Lead</h3>
+                <button onClick={() => setIsAddModalOpen(false)} className="text-neutral-400 hover:text-neutral-900 transition-colors">✕</button>
+              </div>
+              <div className="p-6 space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Full Name</label>
+                  <input type="text" placeholder="e.g. John Doe" className="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-neutral-200 outline-none text-sm" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Email Address</label>
+                  <input type="email" placeholder="john@company.com" className="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-neutral-200 outline-none text-sm" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Company</label>
+                    <input type="text" placeholder="Company Inc" className="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-neutral-200 outline-none text-sm" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Lead Value</label>
+                    <input type="text" placeholder="$5,000" className="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-neutral-200 outline-none text-sm" />
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsAddModalOpen(false)}
+                  className="w-full py-3.5 bg-neutral-900 text-white rounded-xl font-bold hover:bg-neutral-800 transition-all mt-4"
+                >
+                  Create Lead
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Import Leads Modal Overlay */}
+        {isImportModalOpen && (
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+            <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-neutral-200 overflow-hidden animate-in fade-in zoom-in duration-200">
+              <div className="p-6 border-b border-neutral-100 flex items-center justify-between">
+                <h3 className="text-lg font-bold text-neutral-900">Import Leads</h3>
+                <button onClick={() => setIsImportModalOpen(false)} className="text-neutral-400 hover:text-neutral-900 transition-colors">✕</button>
+              </div>
+              <div className="p-10 flex flex-col items-center text-center space-y-4">
+                <div className="w-16 h-16 bg-neutral-50 rounded-full flex items-center justify-center border-2 border-dashed border-neutral-200">
+                  <Upload className="w-8 h-8 text-neutral-300" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-neutral-900">Drag and drop your file</p>
+                  <p className="text-xs text-neutral-500 mt-1">Supports CSV, XLS, or XLSX formats</p>
+                </div>
+                <button className="px-6 py-2 bg-neutral-100 text-neutral-900 rounded-lg text-sm font-medium hover:bg-neutral-200 transition-colors">
+                  Browse Files
+                </button>
+              </div>
+              <div className="p-4 bg-neutral-50 border-t border-neutral-100 flex justify-end gap-3">
+                <button onClick={() => setIsImportModalOpen(false)} className="px-4 py-2 text-sm font-medium text-neutral-500 hover:text-neutral-900">Cancel</button>
+                <button className="px-4 py-2 bg-neutral-900 text-white rounded-lg text-sm font-medium">Continue</button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* View Toggle + Search */}
         <div className="flex items-center justify-between gap-4">
