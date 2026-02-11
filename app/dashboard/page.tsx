@@ -248,27 +248,31 @@ function InsightCard({ insight }: { insight: typeof MOCK_INSIGHTS[0] }) {
 
 function RecommendationCard({ rec }: { rec: typeof MOCK_RECOMMENDATIONS[0] }) {
   const router = useRouter()
+
+  const handleAction = () => {
+    if (rec.action.includes("Pause") || rec.action.includes("Budget")) {
+      router.push("/dashboard/campaigns");
+    } else if (rec.action.includes("Creative")) {
+      router.push("/dashboard/creatives");
+    } else if (rec.action.includes("Campaign")) {
+      router.push("/dashboard/campaign-launcher");
+    }
+  }
+
   return (
-    <div className="flex items-start gap-3 p-4 rounded-lg border border-neutral-100 hover:border-neutral-300 hover:shadow-sm transition-all duration-200 group cursor-pointer">
-      <div className="w-9 h-9 bg-neutral-900 rounded-lg flex items-center justify-center flex-shrink-0">
+    <div
+      onClick={handleAction}
+      className="flex items-start gap-3 p-4 rounded-lg border border-neutral-100 hover:border-neutral-900 hover:bg-neutral-50 hover:shadow-lg transition-all duration-300 group cursor-pointer"
+    >
+      <div className="w-9 h-9 bg-neutral-900 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
         <rec.icon className="w-4 h-4 text-white" />
       </div>
       <div className="flex-1 min-w-0">
-        <h4 className="text-sm font-medium text-neutral-900">{rec.title}</h4>
+        <h4 className="text-sm font-bold text-neutral-900 group-hover:text-black">{rec.title}</h4>
         <p className="text-[13px] text-neutral-500 mt-1 leading-relaxed">{rec.desc}</p>
       </div>
       <button
-        onClick={(e) => {
-          e.stopPropagation();
-          if (rec.action.includes("Pause") || rec.action.includes("Budget")) {
-            router.push("/dashboard/campaigns");
-          } else if (rec.action.includes("Creative")) {
-            router.push("/dashboard/creatives");
-          } else if (rec.action.includes("Campaign")) {
-            router.push("/dashboard/campaign-launcher");
-          }
-        }}
-        className="flex items-center gap-1 text-xs font-medium text-neutral-900 bg-neutral-100 hover:bg-neutral-200 px-3 py-2 rounded-lg transition-colors flex-shrink-0"
+        className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-neutral-900 bg-neutral-100 group-hover:bg-neutral-900 group-hover:text-white px-3 py-2 rounded-lg transition-all flex-shrink-0"
       >
         {rec.action}
         <ChevronRight className="w-3 h-3" />

@@ -1,14 +1,14 @@
 'use client';
 import { ReactNode, useState } from 'react';
 import Link from 'next/link';
-import { 
-  LayoutDashboard, 
-  BarChart2, 
-  Zap, 
-  Bot, 
-  Settings, 
-  Bell, 
-  Search, 
+import {
+  LayoutDashboard,
+  BarChart2,
+  Zap,
+  Bot,
+  Settings,
+  Bell,
+  Search,
   ChevronDown,
   ChevronRight,
   Plus,
@@ -36,8 +36,8 @@ export function DashboardLayout({ children, activeTab = 'overview' }: DashboardL
   const [expandedSections, setExpandedSections] = useState<string[]>(['analytics']);
 
   const toggleSection = (section: string) => {
-    setExpandedSections(prev => 
-      prev.includes(section) 
+    setExpandedSections(prev =>
+      prev.includes(section)
         ? prev.filter(s => s !== section)
         : [...prev, section]
     );
@@ -74,28 +74,19 @@ export function DashboardLayout({ children, activeTab = 'overview' }: DashboardL
         { id: 'linkedin-leadgen', label: 'Lead Gen', href: '/dashboard/analytics/linkedin/leads' },
       ]
     },
-    {
-      id: 'shopify',
-      label: 'Shopify',
-      icon: <ShoppingBag className="h-4 w-4" />,
-      subsections: [
-        { id: 'shopify-overview', label: 'Overview', href: '/dashboard/analytics/shopify' },
-        { id: 'shopify-products', label: 'Products', href: '/dashboard/analytics/shopify/products' },
-        { id: 'shopify-orders', label: 'Orders', href: '/dashboard/analytics/shopify/orders' },
-      ]
-    },
   ];
 
   const navItems = [
-    { id: 'overview', label: 'Overview', icon: <LayoutDashboard className="h-4 w-4" /> },
-    { id: 'analytics', label: 'Analytics', icon: <BarChart2 className="h-4 w-4" />, hasSubsections: true },
-    { id: 'campaigns', label: 'Campaigns', icon: <Zap className="h-4 w-4" /> },
-    { id: 'copilot', label: 'AI Co-Pilot', icon: <Bot className="h-4 w-4" /> },
-    { id: 'leads', label: 'Leads & CRM', icon: <Users className="h-4 w-4" /> },
-    { id: 'content', label: 'Content Studio', icon: <FileText className="h-4 w-4" /> },
-    { id: 'automations', label: 'Automations', icon: <Sparkles className="h-4 w-4" /> },
-    { id: 'reports', label: 'Reports', icon: <FileBarChart2 className="h-4 w-4" /> },
-    { id: 'settings', label: 'Settings', icon: <Settings className="h-4 w-4" /> },
+    { id: 'overview', label: 'Overview', icon: <LayoutDashboard className="h-4 w-4" />, href: '/dashboard' },
+    { id: 'creatives', label: 'AI Ad Creatives', icon: <Sparkles className="h-4 w-4" />, href: '/dashboard/creatives' },
+    { id: 'content', label: 'Content Studio', icon: <FileText className="h-4 w-4" />, href: '/dashboard/content' },
+    { id: 'campaigns', label: 'Campaign Manager', icon: <Zap className="h-4 w-4" />, href: '/dashboard/campaigns' },
+    { id: 'leads', label: 'Leads & CRM', icon: <Users className="h-4 w-4" />, href: '/dashboard/leads' },
+    { id: 'analytics', label: 'Analytics', icon: <BarChart2 className="h-4 w-4" />, hasSubsections: true, href: '/dashboard/analytics' },
+    { id: 'copilot', label: 'AI Co-Pilot', icon: <Bot className="h-4 w-4" />, href: '/dashboard/copilot' },
+    { id: 'automations', label: 'Automations', icon: <Sparkles className="h-4 w-4" />, href: '/dashboard/automations' },
+    { id: 'reports', label: 'Reports', icon: <FileBarChart2 className="h-4 w-4" />, href: '/dashboard/reports' },
+    { id: 'settings', label: 'Settings', icon: <Settings className="h-4 w-4" />, href: '/dashboard/settings' },
   ];
 
   return (
@@ -113,12 +104,11 @@ export function DashboardLayout({ children, activeTab = 'overview' }: DashboardL
               {navItems.map((item) => (
                 <div key={item.id}>
                   <Link
-                    href={item.id === 'overview' ? '/dashboard' : `/dashboard/${item.id}`}
-                    className={`flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${
-                      activeTab === item.id
-                        ? 'bg-black text-white'
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }`}
+                    href={item.href || '#'}
+                    className={`flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${activeTab === item.id
+                      ? 'bg-black text-white'
+                      : 'text-gray-700 hover:bg-gray-100'
+                      }`}
                     onClick={() => item.hasSubsections && toggleSection(item.id)}
                   >
                     <span className="mr-3">{item.icon}</span>
@@ -133,7 +123,7 @@ export function DashboardLayout({ children, activeTab = 'overview' }: DashboardL
                       </span>
                     )}
                   </Link>
-                  
+
                   {/* Platform Subsections */}
                   {item.hasSubsections && expandedSections.includes(item.id) && (
                     <div className="ml-4 mt-1 space-y-1">
@@ -153,7 +143,7 @@ export function DashboardLayout({ children, activeTab = 'overview' }: DashboardL
                               )}
                             </span>
                           </button>
-                          
+
                           {expandedSections.includes(platform.id) && (
                             <div className="ml-6 mt-1 space-y-1">
                               {platform.subsections.map((subsection) => (
@@ -201,7 +191,7 @@ export function DashboardLayout({ children, activeTab = 'overview' }: DashboardL
                 </h1>
               </div>
             </div>
-            
+
             <div className="flex items-center space-x-4">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -211,12 +201,12 @@ export function DashboardLayout({ children, activeTab = 'overview' }: DashboardL
                   className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
                 />
               </div>
-              
+
               <Button variant="ghost" size="icon" className="relative">
                 <Bell className="h-5 w-5 text-gray-600" />
                 <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500"></span>
               </Button>
-              
+
               <div className="flex items-center space-x-2">
                 <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
                   <span className="text-sm font-medium text-gray-700">JD</span>

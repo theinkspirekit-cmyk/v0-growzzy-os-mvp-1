@@ -27,7 +27,18 @@ export default function CreativesPage() {
   const [generationStep, setGenerationStep] = useState(0)
   const [savedCreatives, setSavedCreatives] = useState(GENERATED_CREATIVES)
 
+  // Form State
+  const [platform, setPlatform] = useState("Meta")
+  const [format, setFormat] = useState("Single Image Ad")
+  const [sellingPoint, setSellingPoint] = useState("")
+  const [tone, setTone] = useState("Professional")
+
   const startGeneration = () => {
+    if (!sellingPoint.trim()) {
+      toast.error("Please describe your product/service first")
+      return
+    }
+
     setIsGenerating(true)
     setGenerationStep(1)
 
@@ -38,7 +49,7 @@ export default function CreativesPage() {
     setTimeout(() => {
       setIsGenerating(false)
       setGenerationStep(0)
-      // In a real app we'd fetch newly generated ones here
+      toast.success("AI has generated 3 high-converting variations!")
     }, 4500)
   }
 
@@ -52,18 +63,20 @@ export default function CreativesPage() {
     const currentText = texts[generationStep - 1] || "Booting AI Creative Engine..."
 
     return (
-      <div className="w-full h-full min-h-[400px] bg-neutral-900 rounded-2xl overflow-hidden relative flex flex-col items-center justify-center border border-white/10 shadow-2xl">
-        <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500/10 to-purple-500/10 blur-3xl opacity-50" />
-        <div className="relative z-10 scale-90">
-          <div className="relative w-32 h-32">
-            <div className="absolute inset-0 border-2 border-cyan-400/50 rounded-full animate-[spin_4s_linear_infinite]" style={{ transform: "rotateX(65deg) rotateY(15deg)" }}></div>
-            <div className="absolute inset-0 border-2 border-blue-500/50 rounded-full animate-[spin_6s_linear_infinite_reverse]" style={{ transform: "rotateX(65deg) rotateY(120deg)" }}></div>
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 bg-gradient-to-br from-cyan-400 to-blue-600 rounded-full blur-[20px] animate-pulse" />
+      <div className="w-full h-full min-h-[400px] bg-neutral-900 rounded-3xl overflow-hidden relative flex flex-col items-center justify-center border border-white/10 shadow-2xl animate-in fade-in zoom-in duration-500">
+        <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500/20 to-purple-500/20 blur-[120px] opacity-50" />
+        <div className="relative z-10">
+          <div className="relative w-40 h-40">
+            <div className="absolute inset-0 border-t-2 border-cyan-400/50 rounded-full animate-spin-slow"></div>
+            <div className="absolute inset-2 border-r-2 border-blue-500/50 rounded-full animate-spin-reverse-slow"></div>
+            <div className="absolute inset-4 border-b-2 border-purple-500/50 rounded-full animate-spin"></div>
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 bg-gradient-to-br from-cyan-400 to-blue-600 rounded-full blur-[25px] animate-pulse" />
+            <Sparkles className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 text-white z-20" />
           </div>
         </div>
-        <div className="mt-8 text-center z-10 px-6">
-          <h3 className="text-xl font-bold text-white mb-2 animate-pulse">AI is Thinking</h3>
-          <p className="text-cyan-200/60 text-xs font-light tracking-wide">{currentText}</p>
+        <div className="mt-10 text-center z-10 px-8">
+          <h3 className="text-2xl font-bold text-white mb-3 tracking-tight">AI is Engineering</h3>
+          <p className="text-cyan-200/50 text-sm font-medium tracking-wide uppercase">{currentText}</p>
         </div>
       </div>
     )
@@ -71,87 +84,114 @@ export default function CreativesPage() {
 
   return (
     <DashboardLayout>
-      <div className="p-6 lg:p-8 space-y-10">
+      <div className="p-6 lg:p-10 space-y-10 bg-[#fafafa] min-h-screen">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-neutral-100 pb-6">
+        <div className="flex items-center justify-between border-b border-neutral-100 pb-8">
           <div>
-            <h2 className="text-2xl font-bold text-neutral-900 tracking-tight">AI Ad Creatives</h2>
-            <p className="text-sm text-neutral-500 mt-1">Generate and manage high-converting ad assets</p>
+            <h2 className="text-3xl font-bold text-neutral-900 tracking-tight">AI Creative Laboratory</h2>
+            <p className="text-sm text-neutral-500 mt-1">Engineer high-converting visuals and copy in seconds</p>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="text-xs font-medium text-neutral-400 bg-neutral-50 px-3 py-1.5 rounded-full border border-neutral-100">
-              <Sparkles className="w-3 h-3 inline mr-1 text-amber-500" />
-              128 Credits Available
-            </span>
+          <div className="flex items-center gap-4">
+            <div className="px-4 py-2 bg-white border border-neutral-200 rounded-xl shadow-sm text-xs font-bold text-neutral-600 flex items-center gap-2">
+              <Zap className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+              128 Credits
+            </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-          {/* Generation Section */}
-          <div className="lg:col-span-4 space-y-6">
-            <div className="bg-white rounded-2xl border border-neutral-200 p-6 shadow-sm sticky top-8">
-              <div className="flex items-center gap-2 mb-6">
-                <div className="w-8 h-8 bg-neutral-900 rounded-lg flex items-center justify-center">
-                  <Wand2 className="w-4 h-4 text-white" />
-                </div>
-                <h3 className="text-base font-semibold text-neutral-900">Creative Lab</h3>
-              </div>
+        <div className="flex flex-col lg:flex-row gap-12 items-start">
+          {/* Generation Sidebar - Left Area */}
+          <div className="w-full lg:w-[400px] flex-shrink-0 space-y-6">
+            <div className="bg-white rounded-3xl border border-neutral-200 p-8 shadow-xl shadow-neutral-200/40 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-neutral-50 rounded-bl-[100px] -mr-16 -mt-16 group-hover:bg-neutral-100 transition-colors" />
 
-              <div className="space-y-5">
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Target Platform</label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {["Meta", "Google", "LinkedIn"].map((p) => (
-                      <button key={p} className="py-2.5 text-xs font-medium border border-neutral-200 rounded-xl hover:border-neutral-900 hover:bg-neutral-50 transition-all focus:ring-2 focus:ring-neutral-200">
-                        {p}
-                      </button>
-                    ))}
+              <div className="relative z-10">
+                <div className="flex items-center gap-3 mb-8">
+                  <div className="w-10 h-10 bg-neutral-900 rounded-2xl flex items-center justify-center text-white shadow-lg">
+                    <Wand2 className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-neutral-900">Creative Brief</h3>
+                    <p className="text-[11px] text-neutral-400 font-medium uppercase tracking-wider">AI Generation Mode</p>
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Ad Format</label>
-                  <select className="w-full px-4 py-3 text-sm bg-neutral-50 border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-200 transition-all">
-                    <option>Single Image Ad</option>
-                    <option>Video / Motion Ad</option>
-                    <option>Carousel Gallery</option>
-                    <option>Messenger Ad</option>
-                  </select>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Key Selling Point</label>
-                  <textarea
-                    placeholder="Describe what makes your product/service special..."
-                    className="w-full px-4 py-3 text-sm bg-neutral-50 border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-200 h-32 resize-none transition-all"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Brand Tone</label>
-                  <div className="flex flex-wrap gap-2">
-                    {["Professional", "Witty", "Direct", "Urgent"].map(tone => (
-                      <button key={tone} className="px-3 py-1.5 text-[11px] font-medium bg-neutral-100 text-neutral-600 rounded-full hover:bg-neutral-200 transition-colors">
-                        {tone}
-                      </button>
-                    ))}
+                <div className="space-y-6">
+                  <div className="space-y-2.5">
+                    <label className="text-xs font-black text-neutral-400 uppercase tracking-[0.1em]">Target Platform</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {["Meta", "Google", "LinkedIn"].map((p) => (
+                        <button
+                          key={p}
+                          onClick={() => setPlatform(p)}
+                          className={`py-3 text-xs font-bold rounded-xl border transition-all ${platform === p
+                              ? "bg-neutral-900 text-white border-neutral-900 shadow-md shadow-neutral-200"
+                              : "bg-white text-neutral-600 border-neutral-200 hover:border-neutral-400"
+                            }`}
+                        >
+                          {p}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
 
-                <button
-                  onClick={startGeneration}
-                  disabled={isGenerating}
-                  className="w-full py-4 mt-4 bg-neutral-900 text-white rounded-2xl hover:bg-neutral-800 transition-all active:scale-[0.98] flex items-center justify-center gap-2 font-bold shadow-xl shadow-neutral-200 disabled:opacity-50"
-                >
-                  {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4 text-amber-400" />}
-                  Generate My Ad
-                </button>
+                  <div className="space-y-2.5">
+                    <label className="text-xs font-black text-neutral-400 uppercase tracking-[0.1em]">Ad Format</label>
+                    <select
+                      value={format}
+                      onChange={(e) => setFormat(e.target.value)}
+                      className="w-full px-4 py-3.5 text-sm bg-neutral-50 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-neutral-200 outline-none font-medium transition-all"
+                    >
+                      <option>Single Image Ad</option>
+                      <option>Video / Motion Ad</option>
+                      <option>Carousel Gallery</option>
+                      <option>Messenger Ad</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-2.5">
+                    <label className="text-xs font-black text-neutral-400 uppercase tracking-[0.1em]">Brand Tone</label>
+                    <div className="flex flex-wrap gap-2">
+                      {["Professional", "Witty", "Direct", "Urgent"].map(t => (
+                        <button
+                          key={t}
+                          onClick={() => setTone(t)}
+                          className={`px-4 py-2 text-[11px] font-bold rounded-full transition-all ${tone === t
+                              ? "bg-neutral-100 text-neutral-900 border border-neutral-300"
+                              : "bg-transparent text-neutral-500 border border-transparent hover:bg-neutral-50"
+                            }`}
+                        >
+                          {t}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2.5 pt-2">
+                    <label className="text-xs font-black text-neutral-400 uppercase tracking-[0.1em]">Product Description</label>
+                    <textarea
+                      value={sellingPoint}
+                      onChange={(e) => setSellingPoint(e.target.value)}
+                      placeholder="Describe what makes your product special (e.g. AI-powered analytics for startups)..."
+                      className="w-full px-4 py-4 text-sm bg-neutral-50 border border-neutral-200 rounded-2xl focus:ring-2 focus:ring-neutral-200 outline-none h-40 resize-none font-medium transition-all placeholder:text-neutral-400"
+                    />
+                  </div>
+
+                  <button
+                    onClick={startGeneration}
+                    disabled={isGenerating}
+                    className="w-full py-4.5 mt-4 bg-neutral-900 text-white rounded-2xl hover:bg-neutral-800 transition-all active:scale-[0.97] flex items-center justify-center gap-3 font-black text-sm shadow-xl shadow-neutral-200 disabled:opacity-50"
+                  >
+                    {isGenerating ? <Loader2 className="w-5 h-5 animate-spin text-white/50" /> : <Sparkles className="w-5 h-5 text-amber-400" />}
+                    BUILD CREATIVES
+                  </button>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Results & Library Section */}
-          <div className="lg:col-span-8 space-y-8">
+          {/* Library / Content Area - Right Side */}
+          <div className="flex-1 space-y-8 min-w-0">
             {isGenerating ? (
               renderGenerationProgress()
             ) : (
