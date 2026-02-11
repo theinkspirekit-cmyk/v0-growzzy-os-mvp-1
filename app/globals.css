@@ -78,14 +78,18 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  --font-inter: "Inter", system-ui, -apple-system, sans-serif;
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
-    @apply bg-background text-foreground antialiased font-inter;
+    @apply bg-background text-foreground antialiased;
+    font-family: var(--font-inter);
   }
 }
 
@@ -93,13 +97,12 @@
   .enterprise-card {
     @apply bg-white border border-border shadow-sm rounded-md transition-all;
   }
+
   .enterprise-button {
     @apply px-4 py-2 bg-primary text-primary-foreground font-medium rounded-md hover:bg-neutral-800 transition-colors disabled:opacity-50;
   }
+
   .enterprise-input {
     @apply w-full px-3 py-2 bg-white border border-border rounded-md focus:ring-1 focus:ring-ring focus:border-ring outline-none transition-all;
-  }
-  .font-inter {
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
   }
 }
