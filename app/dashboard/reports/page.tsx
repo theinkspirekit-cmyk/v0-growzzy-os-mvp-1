@@ -23,8 +23,6 @@ import {
   Zap,
 } from "lucide-react"
 import { toast } from "sonner"
-import { jsPDF } from "jspdf"
-import "jspdf-autotable"
 import { cn } from "@/lib/utils"
 
 export default function ReportsPage() {
@@ -89,7 +87,11 @@ export default function ReportsPage() {
     }
   }
 
-  const exportPDF = (report: any) => {
+  const exportPDF = async (report: any) => {
+    // Dynamic import to avoid SSR issues
+    const { jsPDF } = await import("jspdf")
+    await import("jspdf-autotable")
+
     const doc = new jsPDF() as any
 
     // Header
