@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Check, Plus, Image as ImageIcon, Video, FileText, X, Upload } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { useCampaignLauncher } from '../_context/CampaignLauncherContext';
 
 type CreativeType = 'image' | 'video' | 'carousel' | 'story';
@@ -63,7 +64,7 @@ export function CreativeStep() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  
+
   const selectedCreatives = data.creatives || [];
 
   const filteredCreatives = mockCreatives.filter(creative =>
@@ -125,29 +126,18 @@ export function CreativeStep() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div className="relative w-96">
+    <div className="space-y-10 font-satoshi">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div className="relative w-full md:w-96">
           <Input
             type="text"
-            placeholder="Search creatives..."
+            placeholder="Search asset repository..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
+            className="pl-12 h-12 border-[#F1F5F9] bg-[#F8FAFC] text-[14px] focus:ring-[#1F57F5]/20 focus:border-[#1F57F5] rounded-xl"
           />
-          <Button 
-            className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
-            onClick={() => {
-              // In a real app, you might want to validate selection here
-              console.log('Selected creatives:', selectedCreatives);
-            }}
-          >
-            {selectedCreatives.length > 0 
-              ? `Use ${selectedCreatives.length} Creative${selectedCreatives.length > 1 ? 's' : ''}`
-              : 'Skip for Now'}
-          </Button>
           <svg
-            className="absolute left-3 top-2.5 h-5 w-5 text-gray-400"
+            className="absolute left-4 top-3.5 h-5 w-5 text-[#A3A3A3]"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -161,8 +151,8 @@ export function CreativeStep() {
             />
           </svg>
         </div>
-        
-        <div className="relative">
+
+        <div className="flex items-center gap-4 w-full md:w-auto">
           <input
             type="file"
             id="creative-upload"
@@ -173,98 +163,83 @@ export function CreativeStep() {
           />
           <label
             htmlFor="creative-upload"
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 cursor-pointer transition-colors"
+            className="flex-1 md:flex-none h-12 px-8 bg-[#F8FAFC] border border-[#F1F5F9] text-[#64748B] hover:text-[#05090E] hover:border-[#1F57F5] rounded-xl flex items-center justify-center gap-2.5 cursor-pointer transition-all font-bold uppercase tracking-wider text-[11px]"
           >
             <Upload className="h-4 w-4" />
-            Upload New
+            Upload New Asset
           </label>
         </div>
       </div>
 
       {isUploading && (
-        <div className="space-y-2">
-          <div className="flex justify-between text-sm text-gray-600">
-            <span>Uploading...</span>
-            <span>{uploadProgress}%</span>
+        <div className="p-8 bg-[#F8FAFC] border border-[#F1F5F9] rounded-2xl space-y-4 animate-in fade-in zoom-in duration-300">
+          <div className="flex justify-between items-center text-[12px] font-bold text-[#64748B] uppercase tracking-widest">
+            <span>Transmitting asset data...</span>
+            <span className="text-[#1F57F5]">{uploadProgress}% COMPLETE</span>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-2.5">
-            <div 
-              className="bg-blue-600 h-2.5 rounded-full" 
+          <div className="w-full bg-white border border-[#F1F5F9] rounded-full h-3 overflow-hidden">
+            <div
+              className="bg-[#1F57F5] h-full transition-all duration-300 shadow-md shadow-[#1F57F5]/20"
               style={{ width: `${uploadProgress}%` }}
             ></div>
           </div>
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
         {filteredCreatives.map((creative) => (
-          <Card 
+          <div
             key={creative.id}
-            className={`overflow-hidden transition-all ${
+            className={cn(
+              "group relative bg-white border-2 rounded-[2rem] overflow-hidden transition-all duration-300",
               selectedCreatives.includes(creative.id)
-                ? 'ring-2 ring-blue-500 ring-offset-2'
-                : 'hover:shadow-md'
-            }`}
+                ? "border-[#1F57F5] shadow-xl shadow-[#1F57F5]/5"
+                : "border-[#F1F5F9] hover:border-[#2BAFF2]"
+            )}
           >
-            <div className="relative group">
-              <div className="aspect-[4/3] bg-gray-100 overflow-hidden">
-                <img
-                  src={creative.url}
-                  alt={creative.title}
-                  className="w-full h-full object-cover"
-                />
+            <div className="aspect-[4/5] bg-[#F8FAFC] relative overflow-hidden">
+              <img
+                src={creative.url}
+                alt={creative.title}
+                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+              />
+              <div className="absolute inset-x-0 bottom-0 p-6 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                <p className="text-white text-[12px] font-bold">{creative.dimensions} • {creative.size}</p>
               </div>
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   toggleCreative(creative.id);
                 }}
-                className={`absolute top-2 right-2 p-1.5 rounded-full ${
+                className={cn(
+                  "absolute top-4 right-4 h-10 w-10 rounded-xl flex items-center justify-center transition-all shadow-lg active:scale-90",
                   selectedCreatives.includes(creative.id)
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-white/90 text-gray-400 hover:text-gray-600'
-                }`}
+                    ? "bg-[#1F57F5] text-white"
+                    : "bg-white/90 text-[#A3A3A3] hover:text-[#1F57F5]"
+                )}
               >
                 {selectedCreatives.includes(creative.id) ? (
-                  <Check className="h-4 w-4" />
+                  <Check className="h-5 w-5" />
                 ) : (
-                  <Plus className="h-4 w-4" />
+                  <Plus className="h-5 w-5" />
                 )}
               </button>
             </div>
-            <CardHeader className="p-4">
+            <div className="p-6 space-y-4">
               <div className="flex items-start justify-between">
-                <div>
-                  <CardTitle className="text-base font-medium line-clamp-1">
-                    {creative.title}
-                  </CardTitle>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {creative.dimensions} • {creative.size}
-                  </p>
+                <div className="space-y-1">
+                  <h4 className="text-[15px] font-bold text-[#05090E] line-clamp-1">{creative.title}</h4>
+                  <p className="text-[12px] font-medium text-[#64748B] uppercase tracking-wider">{creative.type}</p>
                 </div>
-                {getTypeIcon(creative.type)}
+                <div className="p-2 bg-[#F8FAFC] rounded-lg">
+                  {creative.type === 'video' ? <Video className="w-5 h-5 text-[#2BAFF2]" /> : <ImageIcon className="w-5 h-5 text-[#1F57F5]" />}
+                </div>
               </div>
-            </CardHeader>
-          </Card>
-        ))}
-      </div>
-
-      {selectedCreatives.length > 0 && (
-        <div className="fixed bottom-20 left-0 right-0 bg-white border-t p-4 shadow-lg">
-          <div className="max-w-7xl mx-auto flex justify-between items-center">
-            <div>
-              <h3 className="font-medium">{selectedCreatives.length} creative(s) selected</h3>
-              <p className="text-sm text-gray-500">Click on a creative to select/deselect</p>
-            </div>
-            <div className="flex gap-3">
-              <Button variant="outline" onClick={() => setSelectedCreatives([])}>
-                Clear Selection
-              </Button>
-              <Button>Use Selected Creatives</Button>
             </div>
           </div>
-        </div>
-      )}
+        ))}
+      </div>
     </div>
+
   );
 }

@@ -234,25 +234,41 @@ model Creative {
 // ============================================
 
 model Automation {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   
-  // Automation Details
-  name      String
-  trigger   Json     // Conditions to fire
-  action    Json     // Actions to execute
+  name        String
+  description String?
+  triggerType String   // "ROAS_DROP", "CPA_SPIKE", "BUDGET_EXHAUST", "CTR_LOW", "TIME_BASED"
+  trigger     Json     
+  actionType  String   // "PAUSE_CAMPAIGN", "INCREASE_BUDGET", "NOTIFY_SLACK", "GENERATE_REPORT"
+  action      Json     
   
-  isActive  Boolean  @default(false)
+  isActive    Boolean  @default(false)
+  lastRun     DateTime?
+  runCount    Int      @default(0)
   
-  // Execution tracking
-  lastRun   DateTime?
-  runCount  Int      @default(0)
-  
-createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  logs        AutomationLog[]
 
   @@index([userId, isActive])
+}
+
+model AutomationLog {
+  id           String     @id @default(cuid())
+  automationId String
+  automation   Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+  
+  runTime      DateTime   @default(now())
+  actionTaken  String
+  result       String?    @db.Text
+  success      Boolean
+  impact       String?    
+
+  @@index([automationId])
 }
 
 // ============================================
@@ -260,30 +276,29 @@ createdAt DateTime @default(now())
 // ============================================
 
 model Report {
-  id         String   @id @default(cuid())
-  userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   
-  // Report Details
-  name       String
-  type       String   // "weekly", "monthly", "quarterly", "custom"
-  format     String   @default("pdf") // "pdf", "excel", "json"
+  name        String
+  type        String   // "performance", "lead_gen", "revenue", "executive"
+  format      String   @default("pdf") 
   
-  // Date Range
-  startDate  DateTime
-  endDate    DateTime
+  platforms   String[] 
+  filters     Json?    
+  schedule    Json?    
   
-  // Content
-  data       Json?    // Report data snapshot
-  aiSummary  String?  @db.Text
+  startDate   DateTime
+  endDate     DateTime
   
-  // File
-  fileUrl    String?
+  data        Json?    
+  aiSummary   String?  @db.Text
+  fileUrl     String?
   
-  status     String   @default("pending") // "pending", "generating", "ready", "failed"
+  status      String   @default("pending") 
   
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@index([userId])
 }

@@ -14,6 +14,9 @@ import {
   Users,
   Search,
   Download,
+  Activity,
+  Zap,
+  ShieldCheck
 } from "lucide-react"
 import {
   XAxis,
@@ -24,11 +27,12 @@ import {
   AreaChart,
   Area
 } from "recharts"
+import { cn } from "@/lib/utils"
 
 const PLATFORMS = [
-  { name: "Google Ads", spend: 15200, revenue: 48600, roas: 3.2, leads: 412, change: 8.3, color: "bg-black" },
-  { name: "Meta Ads", spend: 18400, revenue: 62100, roas: 3.37, leads: 538, change: 12.1, color: "bg-neutral-800" },
-  { name: "LinkedIn Ads", spend: 7300, revenue: 18450, roas: 2.53, leads: 186, change: -3.2, color: "bg-neutral-600" },
+  { name: "Google Ads", spend: 15200, revenue: 48600, roas: 3.2, leads: 412, change: 8.3 },
+  { name: "Meta Ads", spend: 18400, revenue: 62100, roas: 3.37, leads: 538, change: 12.1 },
+  { name: "LinkedIn Ads", spend: 7300, revenue: 18450, roas: 2.53, leads: 186, change: -3.2 },
 ]
 
 const PERFORMANCE_DATA = [
@@ -44,108 +48,139 @@ const PERFORMANCE_DATA = [
 export default function AnalyticsPage() {
   return (
     <DashboardLayout>
-      <div className="p-8 lg:p-12 space-y-12 bg-white min-h-[calc(100vh-64px)] overflow-y-auto pb-24">
+      <div className="p-8 lg:p-12 space-y-12 bg-white min-h-[calc(100vh-64px)] overflow-y-auto pb-40 font-satoshi">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-neutral-100 pb-10 gap-6">
+        <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-[#F1F5F9] pb-10 gap-6">
           <div className="space-y-1 text-left">
-            <h1 className="text-3xl font-bold text-neutral-900 tracking-tight">Marketing Intelligence</h1>
-            <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">Global cross-channel attribution</p>
+            <h1 className="text-[32px] font-bold text-[#05090E] tracking-tight">Marketing Intelligence</h1>
+            <p className="text-[12px] font-medium text-[#64748B] uppercase tracking-[0.2em]">Cross-Channel Attribution Engine</p>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center bg-neutral-100 rounded-md p-1 border border-neutral-200">
+          <div className="flex items-center gap-6">
+            <div className="flex bg-[#F8FAFC] rounded-2xl p-1.5 border border-[#F1F5F9]">
               {["7D", "30D", "90D"].map((r) => (
                 <button
                   key={r}
-                  className={`px-4 py-1.5 text-[9px] font-black rounded transition-all ${r === "30D" ? "bg-black text-white" : "text-neutral-400 hover:text-black"}`}
+                  className={cn(
+                    "px-6 py-2.5 text-[11px] font-bold rounded-xl transition-all",
+                    r === "30D" ? "bg-white text-[#05090E] shadow-sm ring-1 ring-[#F1F5F9]" : "text-[#64748B] hover:text-[#05090E]"
+                  )}
                 >
                   {r}
                 </button>
               ))}
             </div>
-            <button className="enterprise-button h-10 px-6 flex items-center gap-2">
-              <Download className="w-4 h-4" />
+            <button className="h-12 px-8 bg-[#1F57F5] text-white text-[12px] font-bold uppercase tracking-widest rounded-xl shadow-lg shadow-[#1F57F5]/20 hover:bg-[#1A4AD1] transition-all flex items-center gap-2.5">
+              <Download className="w-5 h-5" />
               Export Analysis
             </button>
           </div>
         </div>
 
         {/* Intelligence Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {[
-            { label: "Aggregate ROAS", value: "3.42x", change: 8.2, icon: Target, status: "up" },
-            { label: "Net Revenue", value: "$429,400", change: 14.1, icon: DollarSign, status: "up" },
-            { label: "Customer Acquisition", value: "4,840", change: 9.8, icon: Users, status: "up" },
-            { label: "Avg. CPC Index", value: "$1.82", change: -4.3, icon: BarChart3, status: "down" },
+            { label: "Aggregate ROAS", value: "3.42x", change: 8.2, icon: Target, color: "#1F57F5" },
+            { label: "Net Revenue", value: "$429,400", change: 14.1, icon: DollarSign, color: "#00DDFF" },
+            { label: "Acquired Leads", value: "4,840", change: 9.8, icon: Users, color: "#2BAFF2" },
+            { label: "Avg. CPC Index", value: "$1.82", change: -4.3, icon: Activity, color: "#FFB800" },
           ].map((stat) => (
-            <div key={stat.label} className="enterprise-card p-6 border-l-4 border-l-transparent hover:border-l-black transition-all group">
-              <div className="flex items-center justify-between mb-4 text-left">
-                <div className={`w-10 h-10 bg-neutral-50 rounded flex items-center justify-center text-neutral-400 group-hover:bg-black group-hover:text-white transition-all`}>
-                  <stat.icon className="w-5 h-5" />
+            <div key={stat.label} className="bg-white p-8 border-2 border-[#F1F5F9] rounded-[2rem] hover:border-[#1F57F5] transition-all duration-300 shadow-sm hover:shadow-xl group">
+              <div className="flex items-center justify-between mb-6">
+                <div className="w-12 h-12 bg-[#F8FAFC] rounded-2xl flex items-center justify-center transition-all group-hover:scale-110" style={{ color: stat.color }}>
+                  <stat.icon className="w-6 h-6" />
                 </div>
-                <div className={`flex items-center gap-1 text-[10px] font-black ${stat.status === "up" ? "text-black" : "text-neutral-400"}`}>
-                  {stat.status === "up" ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
-                  {Math.abs(stat.change)}%
+                <div className={cn(
+                  "px-3 py-1 rounded-full text-[11px] font-bold",
+                  stat.change >= 0 ? "bg-[#00DDFF]/10 text-[#00DDFF]" : "bg-[#F43F5E]/10 text-[#F43F5E]"
+                )}>
+                  {stat.change >= 0 ? "+" : ""}{stat.change}%
                 </div>
               </div>
               <div className="space-y-1 text-left">
-                <p className="text-2xl font-bold text-neutral-900">{stat.value}</p>
-                <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">{stat.label}</p>
+                <p className="text-[28px] font-bold text-[#05090E] tracking-tight">{stat.value}</p>
+                <p className="text-[11px] font-bold text-[#64748B] uppercase tracking-[0.15em]">{stat.label}</p>
               </div>
             </div>
           ))}
         </div>
 
-        {/* Viz Area */}
+        {/* Chart Section */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-          <div className="lg:col-span-8 space-y-6">
-            <div className="flex items-center justify-between px-2">
-              <h3 className="text-sm font-bold uppercase tracking-tight text-left">Revenue Growth Velocity</h3>
+          <div className="lg:col-span-8 space-y-8 bg-white p-10 rounded-[3rem] border-2 border-[#F1F5F9] shadow-sm">
+            <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-4">
-                <div className="flex items-center gap-1.5 text-[9px] font-black uppercase text-neutral-400">
-                  <div className="w-1.5 h-1.5 rounded-full bg-black" />
-                  Performance
+                <div className="w-1.5 h-8 bg-[#1F57F5] rounded-full" />
+                <div className="space-y-0.5">
+                  <h3 className="text-[18px] font-bold text-[#05090E]">Revenue Growth Velocity</h3>
+                  <p className="text-[12px] font-medium text-[#64748B] uppercase tracking-wider">Historical Performance Sync</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-6 bg-[#F8FAFC] px-6 py-2 rounded-xl border border-[#F1F5F9]">
+                <div className="flex items-center gap-2 text-[11px] font-bold uppercase text-[#05090E]">
+                  <div className="w-2.5 h-2.5 rounded-full bg-[#1F57F5]" />
+                  Revenue
+                </div>
+                <div className="flex items-center gap-2 text-[11px] font-bold uppercase text-[#05090E]">
+                  <div className="w-2.5 h-2.5 rounded-full bg-[#2BAFF2] shadow-[0_0_8px_rgba(43,175,242,0.4)]" />
+                  Ad Spend
                 </div>
               </div>
             </div>
-            <div className="enterprise-card p-8 h-[450px]">
+            <div className="h-[450px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={PERFORMANCE_DATA}>
                   <defs>
-                    <linearGradient id="anGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#000000" stopOpacity={0.05} />
-                      <stop offset="95%" stopColor="#000000" stopOpacity={0} />
+                    <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#1F57F5" stopOpacity={0.15} />
+                      <stop offset="95%" stopColor="#1F57F5" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: 800, fill: '#A3A3A3' }} dy={10} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: 800, fill: '#A3A3A3' }} />
-                  <Tooltip
-                    contentStyle={{ borderRadius: '4px', border: '1px solid #E5E5E5', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
-                    labelStyle={{ fontSize: '10px', fontWeight: 800, marginBottom: '4px' }}
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
+                  <XAxis
+                    dataKey="name"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 11, fontWeight: 700, fill: '#64748B', fontFamily: 'Satoshi' }}
+                    dy={15}
                   />
-                  <Area type="monotone" dataKey="revenue" stroke="#000000" strokeWidth={3} fillOpacity={1} fill="url(#anGradient)" />
-                  <Area type="monotone" dataKey="spend" stroke="#E5E5E5" strokeWidth={2} fill="transparent" />
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 11, fontWeight: 700, fill: '#64748B', fontFamily: 'Satoshi' }}
+                  />
+                  <Tooltip
+                    contentStyle={{ borderRadius: '24px', border: '2px solid #F1F5F9', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.1)', fontFamily: 'Satoshi', padding: '16px' }}
+                    itemStyle={{ fontSize: '13px', fontWeight: 700, padding: '4px 0' }}
+                    cursor={{ stroke: '#1F57F5', strokeWidth: 2, strokeDasharray: '6 6' }}
+                  />
+                  <Area type="monotone" dataKey="revenue" stroke="#1F57F5" strokeWidth={5} fillOpacity={1} fill="url(#revenueGradient)" animationDuration={2000} />
+                  <Area type="monotone" dataKey="spend" stroke="#2BAFF2" strokeWidth={3} strokeDasharray="8 8" fill="transparent" animationDuration={2500} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
           </div>
 
-          <div className="lg:col-span-4 space-y-12">
-            <div className="space-y-6 text-left">
-              <h3 className="text-sm font-bold uppercase tracking-tight px-2">Channel Efficiency</h3>
-              <div className="space-y-6">
+          <div className="lg:col-span-4 space-y-8">
+            <div className="bg-white p-10 rounded-[3rem] border-2 border-[#F1F5F9] shadow-sm space-y-10">
+              <div className="flex items-center gap-4">
+                <div className="w-1.5 h-8 bg-[#2BAFF2] rounded-full" />
+                <h3 className="text-[18px] font-bold text-[#05090E]">Efficiency Matrix</h3>
+              </div>
+              <div className="space-y-10">
                 {PLATFORMS.map((p) => (
-                  <div key={p.name} className="space-y-3">
+                  <div key={p.name} className="space-y-5">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-neutral-900">{p.name}</span>
-                      <span className="text-[10px] font-black text-black">{p.roas}x ROAS</span>
+                      <span className="text-[15px] font-bold text-[#05090E]">{p.name}</span>
+                      <div className="px-4 py-1.5 bg-[#1F57F5]/5 text-[#1F57F5] text-[12px] font-bold rounded-full ring-1 ring-[#1F57F5]/10">
+                        {p.roas}x ROAS
+                      </div>
                     </div>
-                    <div className="h-1.5 w-full bg-neutral-50 rounded-full overflow-hidden">
-                      <div className={`h-full bg-black transition-all duration-1000`} style={{ width: `${(p.roas / 4) * 100}%` }} />
+                    <div className="h-2.5 w-full bg-[#F8FAFC] rounded-full overflow-hidden border border-[#F1F5F9]">
+                      <div className="h-full bg-[#1F57F5] rounded-full transition-all duration-1500 ease-in-out shadow-sm" style={{ width: `${(p.roas / 4) * 100}%` }} />
                     </div>
-                    <div className="flex justify-between text-[9px] font-bold text-neutral-400 uppercase tracking-widest">
-                      <span>Contribution Index</span>
-                      <span className={p.change >= 0 ? "text-black" : "text-neutral-400"}>
+                    <div className="flex justify-between text-[11px] font-bold text-[#64748B] uppercase tracking-widest">
+                      <span>Market Contribution</span>
+                      <span className={cn(p.change >= 0 ? "text-[#00DDFF]" : "text-[#F43F5E]")}>
                         {p.change >= 0 ? "+" : ""}{p.change}% Velocity
                       </span>
                     </div>
@@ -154,58 +189,79 @@ export default function AnalyticsPage() {
               </div>
             </div>
 
-            <div className="enterprise-card bg-black text-white p-8 space-y-6">
-              <div className="w-10 h-10 bg-white/10 rounded flex items-center justify-center">
-                <Sparkles className="w-5 h-5 text-amber-400" />
+            <div className="bg-[#05090E] p-10 rounded-[3rem] shadow-2xl relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-[#1F57F5]/20 rounded-full -mr-32 -mt-32 blur-3xl group-hover:bg-[#1F57F5]/30 transition-all duration-500" />
+              <div className="relative z-10 space-y-8">
+                <div className="w-14 h-14 bg-white/10 rounded-2xl flex items-center justify-center border border-white/10">
+                  <Sparkles className="w-7 h-7 text-[#00DDFF]" />
+                </div>
+                <div className="space-y-3">
+                  <h3 className="text-white text-[20px] font-bold tracking-tight">Cognitive Forecasting</h3>
+                  <p className="text-white/50 text-[14px] leading-relaxed font-medium">
+                    Current trajectory projects <span className="text-[#00DDFF]">22% increase</span> in yield for Q2 if deduplication protocols are applied to cross-platform segments.
+                  </p>
+                </div>
+                <button className="w-full h-14 bg-[#1F57F5] text-white text-[12px] font-bold uppercase tracking-[0.2em] rounded-2xl shadow-xl shadow-[#1F57F5]/20 hover:bg-[#1A4AD1] transition-all active:scale-95">
+                  Execute Optimization Logic
+                </button>
               </div>
-              <div className="space-y-2">
-                <h3 className="text-sm font-bold uppercase tracking-tight">AI Forecasting</h3>
-                <p className="text-[11px] text-neutral-400 leading-relaxed font-medium">
-                  Current trajectory projects 22% increase in ROAS for Q2 if deduplication is applied to Google/Meta overlapping segments.
-                </p>
-              </div>
-              <button className="w-full h-10 bg-white text-black rounded text-[10px] font-black uppercase tracking-widest hover:bg-neutral-100 transition-all">
-                Execute Optimization
-              </button>
             </div>
           </div>
         </div>
 
-        {/* Audit Table */}
-        <div className="space-y-6">
-          <div className="flex items-center justify-between border-b border-neutral-100 pb-4">
-            <h3 className="text-sm font-bold uppercase tracking-tight text-left">Intelligence Audit Trail</h3>
+        {/* Audit Trail */}
+        <div className="bg-white rounded-[3rem] border-2 border-[#F1F5F9] shadow-sm overflow-hidden">
+          <div className="p-10 border-b border-[#F1F5F9] flex flex-col md:flex-row md:items-center justify-between gap-6 bg-[#F8FAFC]/50">
+            <div className="flex items-center gap-4">
+              <Activity className="w-6 h-6 text-[#1F57F5]" />
+              <div className="text-left">
+                <h3 className="text-[18px] font-bold text-[#05090E]">Intelligence Audit Trail</h3>
+                <p className="text-[12px] font-medium text-[#64748B] uppercase tracking-widest">Real-time Platform Logs</p>
+              </div>
+            </div>
             <div className="relative">
-              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
-              <input type="text" placeholder="Filter audit trail..." className="enterprise-input pl-9 h-9 text-[10px] w-48" />
+              <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-[#A3A3A3]" />
+              <input
+                type="text"
+                placeholder="Filter audit trail..."
+                className="w-full md:w-80 h-12 pl-12 pr-6 bg-white border-2 border-[#F1F5F9] text-[13px] font-medium rounded-xl focus:border-[#1F57F5] outline-none transition-all placeholder:text-[#A3A3A3]"
+              />
             </div>
           </div>
 
-          <div className="enterprise-card overflow-hidden">
+          <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
-                <tr className="bg-neutral-50/50 border-b border-neutral-100">
-                  <th className="px-8 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-widest">Platform Intelligence</th>
-                  <th className="px-8 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-widest text-right">Allocation</th>
-                  <th className="px-8 py-4 text-[10px) font-black text-neutral-400 uppercase tracking-widest text-right">CPL</th>
-                  <th className="px-8 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-widest text-right">Conv. Rate</th>
-                  <th className="px-8 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-widest text-right">Action Index</th>
+                <tr className="bg-[#F8FAFC]">
+                  <th className="px-10 py-6 text-[11px] font-bold text-[#64748B] uppercase tracking-[0.2em]">Deployment Node</th>
+                  <th className="px-10 py-6 text-[11px] font-bold text-[#64748B] uppercase tracking-[0.2em] text-right">Allocation</th>
+                  <th className="px-10 py-6 text-[11px] font-bold text-[#64748B] uppercase tracking-[0.2em] text-right">CPL Index</th>
+                  <th className="px-10 py-6 text-[11px] font-bold text-[#64748B] uppercase tracking-[0.2em] text-right">Conv. Matrix</th>
+                  <th className="px-10 py-6 text-[11px] font-bold text-[#64748B] uppercase tracking-[0.2em] text-right">Operational Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-neutral-100">
+              <tbody className="divide-y divide-[#F1F5F9]">
                 {[
-                  { name: "Google Engine", cost: "$15,200", cpl: "$36.80", cr: "4.21%", action: "OPTIMIZE" },
-                  { name: "Meta Architecture", cost: "$18,400", cpl: "$34.20", cr: "5.18%", action: "SCALE" },
-                  { name: "LinkedIn Segment", cost: "$7,300", cpl: "$58.40", cr: "2.84%", action: "AUDIT" },
+                  { name: "Google Engine Alpha", cost: "$15,200", cpl: "$36.80", cr: "4.21%", status: "OPTIMIZED", color: "#1F57F5" },
+                  { name: "Meta Architecture Core", cost: "$18,400", cpl: "$34.20", cr: "5.18%", status: "SCALING", color: "#00DDFF" },
+                  { name: "LinkedIn High-Yield Segment", cost: "$7,300", cpl: "$58.40", cr: "2.84%", status: "AUDITING", color: "#2BAFF2" },
                 ].map((row) => (
-                  <tr key={row.name} className="hover:bg-neutral-50/50 transition-colors">
-                    <td className="px-8 py-6 text-sm font-bold text-neutral-900 text-left">{row.name}</td>
-                    <td className="px-8 py-6 text-right text-xs font-bold text-neutral-600">{row.cost}</td>
-                    <td className="px-8 py-6 text-right text-xs font-bold text-neutral-600">{row.cpl}</td>
-                    <td className="px-8 py-6 text-right text-xs font-bold text-neutral-600">{row.cr}</td>
-                    <td className="px-8 py-6 text-right">
-                      <button className={`px-4 py-1.5 rounded text-[9px] font-black uppercase tracking-widest border transition-all ${row.action === 'SCALE' ? 'bg-black text-white border-black' : 'bg-neutral-50 text-neutral-400 border-neutral-200 hover:border-black hover:text-black'}`}>
-                        {row.action}
+                  <tr key={row.name} className="hover:bg-[#F8FAFC]/50 transition-colors group">
+                    <td className="px-10 py-8">
+                      <div className="flex items-center gap-4">
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: row.color }} />
+                        <span className="text-[15px] font-bold text-[#05090E] group-hover:text-[#1F57F5] transition-colors">{row.name}</span>
+                      </div>
+                    </td>
+                    <td className="px-10 py-8 text-right text-[15px] font-bold text-[#05090E]">{row.cost}</td>
+                    <td className="px-10 py-8 text-right text-[15px] font-medium text-[#64748B]">{row.cpl}</td>
+                    <td className="px-10 py-8 text-right text-[15px] font-bold text-[#1F57F5]">{row.cr}</td>
+                    <td className="px-10 py-8 text-right">
+                      <button className={cn(
+                        "px-6 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all",
+                        row.status === 'SCALING' ? 'bg-[#1F57F5] text-white shadow-lg shadow-[#1F57F5]/20' : 'bg-[#F8FAFC] text-[#64748B] border border-[#F1F5F9] hover:border-[#1F57F5] hover:text-[#1F57F5]'
+                      )}>
+                        {row.status}
                       </button>
                     </td>
                   </tr>

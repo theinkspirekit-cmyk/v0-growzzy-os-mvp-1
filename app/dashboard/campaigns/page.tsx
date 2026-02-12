@@ -16,9 +16,15 @@ import {
   CheckCircle2,
   Filter,
   BarChart2,
+  Zap,
+  ShieldCheck,
+  Target,
+  Globe,
+  MoreVertical,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
+import { cn } from "@/lib/utils"
 
 interface Campaign {
   id: string
@@ -55,11 +61,10 @@ export default function CampaignsPage() {
         setCampaigns(data.campaigns || [])
         generateAIAlerts(data.campaigns || [])
       } else {
-        // Fallback mock data for demo if API fails
         const mock: Campaign[] = [
           { id: "1", name: "Summer Pro Launch", platform: "Meta", status: "ACTIVE", budget: 5000, spend: 1200, revenue: 4200, roas: 3.5, ctr: 2.1, cpc: 1.2, health: "Good" },
           { id: "2", name: "Enterprise B2B Search", platform: "Google", status: "ACTIVE", budget: 10000, spend: 4500, revenue: 9000, roas: 2.0, ctr: 1.8, cpc: 4.5, health: "Fair" },
-          { id: "3", name: "Talent Acquisition", platform: "LinkedIn", status: "PAUSED", budget: 2000, spend: 1900, revenue: 0, roas: 0, ctr: 0.5, cpc: 12.0, health: "Critical" },
+          { id: "3", name: "Talent Acquisition Hub", platform: "LinkedIn", status: "PAUSED", budget: 2000, spend: 1900, revenue: 0, roas: 0, ctr: 0.5, cpc: 12.0, health: "Critical" },
         ]
         setCampaigns(mock)
         generateAIAlerts(mock)
@@ -79,7 +84,7 @@ export default function CampaignsPage() {
         id: "alert-1",
         type: "critical",
         title: "Capital Drainage Detected",
-        message: `${criticalCampaigns.length} campaigns are operating below target ROI. Automated pause recommended.`,
+        message: `${criticalCampaigns.length} campaigns are operating below target ROI. Automated pause recommended to preserve liquidity.`,
         action: "Pause Underperformers"
       })
     }
@@ -100,44 +105,62 @@ export default function CampaignsPage() {
   const toggleStatus = (id: string, current: string) => {
     const newStatus = current === "ACTIVE" ? "PAUSED" : "ACTIVE"
     setCampaigns(prev => prev.map(c => c.id === id ? { ...c, status: newStatus as any } : c))
-    toast.success(`Campaign ${newStatus.toLowerCase()} successfully`)
+    toast.success(`Campaign ${newStatus.toLowerCase()} successfully synchronized`)
   }
 
   const filteredCampaigns = campaigns.filter(c => filter === "ALL" || c.status === filter)
 
   return (
     <DashboardLayout>
-      <div className="p-8 lg:p-12 space-y-12 bg-white min-h-[calc(100vh-64px)] overflow-y-auto pb-24">
+      <div className="p-8 lg:p-12 space-y-12 bg-white min-h-[calc(100vh-64px)] overflow-y-auto pb-40 font-satoshi">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-neutral-100 pb-10 gap-6">
+        <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-[#F1F5F9] pb-10 gap-6">
           <div className="space-y-1 text-left">
-            <h1 className="text-3xl font-bold text-neutral-900 tracking-tight">Campaign Manager</h1>
-            <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">Global Cross-channel Orchestration</p>
+            <h1 className="text-[32px] font-bold text-[#05090E] tracking-tight">Campaign Matrix</h1>
+            <p className="text-[12px] font-medium text-[#64748B] uppercase tracking-[0.2em]">Cross-Channel Deployment Orchestrator</p>
           </div>
           <button
             onClick={() => router.push("/dashboard/campaign-launcher")}
-            className="enterprise-button h-12 px-8 flex items-center gap-2"
+            className="h-12 px-10 bg-[#1F57F5] text-white text-[12px] font-bold uppercase tracking-widest rounded-xl shadow-lg shadow-[#1F57F5]/20 hover:bg-[#1A4AD1] transition-all flex items-center gap-3 active:scale-95"
           >
-            <Plus className="w-4 h-4" />
-            Launch New Campaign
+            <Plus className="w-5 h-5" />
+            Launch New Mission
           </button>
         </div>
 
-        {/* AI Orchestrator Alerts */}
+        {/* AI Orchestrator Alerts (Staging Area) */}
         {aiAlerts.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {aiAlerts.map(alert => (
-              <div key={alert.id} className={`p-6 rounded-md border flex items-start gap-4 transition-all shadow-sm ${alert.type === "critical" ? "bg-white border-l-4 border-l-black border-neutral-200" : "bg-neutral-900 text-white border-none shadow-xl"}`}>
-                <div className={`mt-0.5 p-2 rounded ${alert.type === "critical" ? "bg-neutral-100 text-black" : "bg-white/10 text-white"}`}>
-                  {alert.type === "critical" ? <AlertTriangle className="w-5 h-5" /> : <TrendingUp className="w-5 h-5" />}
+              <div key={alert.id} className={cn(
+                "p-10 rounded-[2.5rem] border-2 flex items-start gap-8 transition-all duration-500 relative overflow-hidden",
+                alert.type === "critical"
+                  ? "bg-white border-[#F1F5F9] border-l-[#F43F5E] shadow-sm"
+                  : "bg-[#05090E] border-[#05090E] shadow-2xl"
+              )}>
+                {alert.type !== "critical" && (
+                  <div className="absolute top-0 right-0 w-48 h-48 bg-[#1F57F5]/10 rounded-full -mr-24 -mt-24 blur-3xl opacity-50 transition-all group-hover:bg-[#1F57F5]/20" />
+                )}
+                <div className={cn(
+                  "w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 relative z-10 shadow-sm",
+                  alert.type === "critical" ? "bg-[#F43F5E]/5 text-[#F43F5E]" : "bg-white/10 text-[#00DDFF]"
+                )}>
+                  {alert.type === "critical" ? <AlertTriangle className="w-8 h-8" /> : <Zap className="w-8 h-8" />}
                 </div>
-                <div className="flex-1 space-y-3 text-left">
-                  <div>
-                    <h4 className="text-sm font-bold uppercase tracking-tight">{alert.title}</h4>
-                    <p className={`text-xs mt-1 leading-relaxed ${alert.type === "critical" ? "text-neutral-500" : "text-neutral-400"}`}>{alert.message}</p>
+                <div className="flex-1 space-y-6 text-left relative z-10">
+                  <div className="space-y-2">
+                    <h4 className={cn("text-[16px] font-bold uppercase tracking-[0.1em]", alert.type === "critical" ? "text-[#05090E]" : "text-white")}>
+                      {alert.title}
+                    </h4>
+                    <p className={cn("text-[14px] leading-relaxed font-medium", alert.type === "critical" ? "text-[#64748B]" : "text-[#A3A3A3]")}>
+                      {alert.message}
+                    </p>
                   </div>
-                  <button className={`text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded transition-all flex items-center gap-2 ${alert.type === "critical" ? "bg-black text-white hover:bg-neutral-800" : "bg-white text-black hover:bg-neutral-100"}`}>
-                    {alert.action} <ArrowRight className="w-3.5 h-3.5" />
+                  <button className={cn(
+                    "text-[12px] font-bold uppercase tracking-widest h-12 px-8 rounded-xl transition-all flex items-center gap-3 active:scale-95 shadow-lg",
+                    alert.type === "critical" ? "bg-[#05090E] text-white hover:bg-neutral-800" : "bg-[#1F57F5] text-white hover:bg-[#1A4AD1] shadow-[#1F57F5]/20"
+                  )}>
+                    {alert.action} <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
               </div>
@@ -145,91 +168,112 @@ export default function CampaignsPage() {
           </div>
         )}
 
-        {/* Intelligence Table */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between border-b border-neutral-100 pb-4">
-            <div className="flex items-center gap-1.5">
+        {/* Intelligence Table Index */}
+        <div className="space-y-10">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-8 pb-4 border-b border-[#F1F5F9]">
+            <div className="flex bg-[#F8FAFC] p-1.5 rounded-2xl border border-[#F1F5F9]">
               {["ALL", "ACTIVE", "PAUSED"].map((f) => (
                 <button
                   key={f}
                   onClick={() => setFilter(f)}
-                  className={`px-4 py-2 text-[10px] font-bold uppercase tracking-widest rounded-md transition-all ${filter === f ? "bg-black text-white" : "text-neutral-400 hover:text-black hover:bg-neutral-50"}`}
+                  className={cn(
+                    "px-10 py-3 text-[11px] font-bold uppercase tracking-wider rounded-xl transition-all",
+                    filter === f ? "bg-white text-[#05090E] shadow-sm ring-1 ring-[#F1F5F9]" : "text-[#64748B] hover:text-[#05090E]"
+                  )}
                 >
                   {f}
                 </button>
               ))}
             </div>
-            <button className="p-2 text-neutral-400 hover:text-black transition-colors"><Filter className="w-4 h-4" /></button>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 px-4 py-2 bg-[#F8FAFC] border border-[#F1F5F9] rounded-xl">
+                <ShieldCheck className="w-4 h-4 text-[#00DDFF]" />
+                <span className="text-[11px] font-bold text-[#A3A3A3] uppercase tracking-widest">Global Protocol Sync: OK</span>
+              </div>
+              <button className="h-10 w-10 flex items-center justify-center rounded-xl border-2 border-[#F1F5F9] text-[#64748B] hover:text-[#1F57F5] hover:border-[#1F57F5] transition-all hover:bg-white bg-[#F8FAFC] shadow-sm">
+                <Filter className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
           {isLoading ? (
-            <div className="h-64 flex items-center justify-center">
-              <Loader2 className="w-8 h-8 text-neutral-200 animate-spin" />
+            <div className="h-96 flex flex-col items-center justify-center space-y-6 bg-[#F8FAFC]/50 rounded-[3rem] border-2 border-dashed border-[#F1F5F9]">
+              <Loader2 className="w-12 h-12 animate-spin text-[#1F57F5] opacity-20" />
+              <p className="text-[12px] font-bold text-[#64748B] uppercase tracking-[0.2em]">Synthesizing Deployment Matrix...</p>
             </div>
           ) : (
-            <div className="enterprise-card overflow-hidden">
+            <div className="bg-white rounded-[3rem] border-2 border-[#F1F5F9] shadow-sm overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left">
                   <thead>
-                    <tr className="bg-neutral-50/50 border-b border-neutral-100">
-                      <th className="px-8 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-widest">Campaign Identity</th>
-                      <th className="px-8 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-widest">Operational Status</th>
-                      <th className="px-8 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-widest text-right">Effective Spend</th>
-                      <th className="px-8 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-widest text-right">Yield (ROAS)</th>
-                      <th className="px-8 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-widest text-center">System Health</th>
-                      <th className="px-8 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-widest text-right">Actions</th>
+                    <tr className="bg-[#F8FAFC]">
+                      <th className="px-12 py-8 text-[11px] font-bold text-[#64748B] uppercase tracking-[0.2em]">Campaign Identity</th>
+                      <th className="px-12 py-8 text-[11px] font-bold text-[#64748B] uppercase tracking-[0.2em] text-center">Protocol Node</th>
+                      <th className="px-12 py-8 text-[11px] font-bold text-[#64748B] uppercase tracking-[0.2em] text-right">Investment Sync</th>
+                      <th className="px-12 py-8 text-[11px] font-bold text-[#64748B] uppercase tracking-[0.2em] text-right">Yield Index (ROAS)</th>
+                      <th className="px-12 py-8 text-[11px] font-bold text-[#64748B] uppercase tracking-[0.2em] text-center">Matrix Health</th>
+                      <th className="px-12 py-8 text-[11px] font-bold text-[#64748B] uppercase tracking-[0.2em] text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-neutral-100">
+                  <tbody className="divide-y divide-[#F1F5F9]">
                     {filteredCampaigns.map((campaign) => (
-                      <tr key={campaign.id} className="group hover:bg-neutral-50/30 transition-colors">
-                        <td className="px-8 py-6">
-                          <div className="space-y-0.5 text-left">
-                            <p className="text-sm font-bold text-neutral-900 group-hover:text-black">{campaign.name}</p>
-                            <div className="flex items-center gap-2">
-                              <span className={`w-1.5 h-1.5 rounded-full ${campaign.platform === 'Meta' ? 'bg-blue-600' : campaign.platform === 'Google' ? 'bg-red-500' : 'bg-blue-800'}`} />
-                              <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider">{campaign.platform} Intelligence</span>
+                      <tr key={campaign.id} className="group hover:bg-[#F8FAFC]/30 transition-all duration-300">
+                        <td className="px-12 py-10">
+                          <div className="flex items-center gap-6">
+                            <div className={cn(
+                              "w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-lg shadow-black/5 group-hover:scale-110 transition-transform",
+                              campaign.platform === 'Meta' ? 'bg-[#1877F2]' : campaign.platform === 'Google' ? 'bg-[#EA4335]' : 'bg-[#0A66C2]'
+                            )}>
+                              <Globe className="w-5 h-5" />
+                            </div>
+                            <div className="space-y-1 text-left">
+                              <p className="text-[17px] font-bold text-[#05090E] group-hover:text-[#1F57F5] transition-colors tracking-tight">{campaign.name}</p>
+                              <p className="text-[11px] font-bold text-[#A3A3A3] uppercase tracking-[0.1em]">{campaign.platform} Performance Engine</p>
                             </div>
                           </div>
                         </td>
-                        <td className="px-8 py-6 text-left">
+                        <td className="px-12 py-10 text-center">
                           <button
                             onClick={() => toggleStatus(campaign.id, campaign.status)}
-                            className={`px-3 py-1 rounded bg-neutral-50 border border-neutral-200 text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 hover:border-black transition-all ${campaign.status === 'ACTIVE' ? 'text-black' : 'text-neutral-400 opacity-60'}`}
+                            className={cn(
+                              "px-6 py-2 rounded-xl text-[10px] font-bold uppercase tracking-[0.2em] flex items-center justify-center gap-2.5 mx-auto transition-all border-2",
+                              campaign.status === 'ACTIVE'
+                                ? "bg-[#1F57F5]/5 text-[#1F57F5] border-[#1F57F5]/20 hover:bg-[#1F57F5]/10 shadow-sm"
+                                : "bg-[#F8FAFC] text-[#A3A3A3] border-[#F1F5F9] opacity-60"
+                            )}
                           >
-                            <div className={`w-1.5 h-1.5 rounded-full ${campaign.status === 'ACTIVE' ? 'bg-black animate-pulse' : 'bg-neutral-300'}`} />
+                            <div className={cn("w-2 h-2 rounded-full", campaign.status === 'ACTIVE' ? "bg-[#1F57F5] animate-pulse" : "bg-[#A3A3A3]")} />
                             {campaign.status}
                           </button>
                         </td>
-                        <td className="px-8 py-6 text-right">
-                          <p className="text-xs font-bold text-neutral-900">${campaign.spend.toLocaleString()}</p>
-                          <p className="text-[10px] text-neutral-400 font-medium">of ${campaign.budget.toLocaleString()}</p>
+                        <td className="px-12 py-10 text-right">
+                          <p className="text-[16px] font-bold text-[#05090E] tracking-tight">${campaign.spend.toLocaleString()}</p>
+                          <p className="text-[11px] text-[#A3A3A3] font-bold uppercase tracking-wider mt-0.5">ALLOCATION: ${campaign.budget.toLocaleString()}</p>
                         </td>
-                        <td className="px-8 py-6 text-right">
-                          <div className={`inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-black tracking-tighter ${campaign.roas >= 3 ? "bg-emerald-50 text-emerald-700" : campaign.roas >= 2 ? "bg-amber-50 text-amber-700" : "bg-red-50 text-red-700"}`}>
-                            {campaign.roas.toFixed(2)}x <BarChart2 className="w-3 h-3" />
+                        <td className="px-12 py-10 text-right">
+                          <div className={cn(
+                            "inline-flex items-center gap-2 px-4 py-1.5 rounded-xl text-[15px] font-bold tracking-tight shadow-sm ring-1",
+                            campaign.roas >= 3 ? "bg-[#00DDFF]/10 text-[#00DDFF] ring-[#00DDFF]/20" : campaign.roas >= 2 ? "bg-[#1F57F5]/10 text-[#1F57F5] ring-[#1F57F5]/20" : "bg-[#F43F5E]/10 text-[#F43F5E] ring-[#F43F5E]/20"
+                          )}>
+                            {campaign.roas.toFixed(2)}x <BarChart2 className="w-5 h-5" />
                           </div>
                         </td>
-                        <td className="px-8 py-6 text-center">
-                          <div className="flex justify-center">
-                            <div className={`w-2 h-2 rounded-full ${campaign.health === 'Good' ? 'bg-black' : campaign.health === 'Fair' ? 'bg-neutral-400' : 'bg-red-500'} shadow-[0_0_8px_rgba(0,0,0,0.1)]`} title={`Health: ${campaign.health}`} />
+                        <td className="px-12 py-10 text-center">
+                          <div className="flex justify-center items-center gap-3">
+                            <div className={cn(
+                              "w-3 h-3 rounded-full shadow-[0_0_12px_rgba(31,87,245,0.3)]",
+                              campaign.health === 'Good' ? 'bg-[#00DDFF]' : campaign.health === 'Fair' ? 'bg-[#1F57F5]' : 'bg-[#F43F5E]'
+                            )} />
+                            <span className="text-[11px] font-bold text-[#05090E] uppercase tracking-widest">{campaign.health}</span>
                           </div>
                         </td>
-                        <td className="px-8 py-6 text-right">
-                          <button className="p-2 text-neutral-400 hover:text-black transition-colors">
-                            <MoreHorizontal className="w-4 h-4" />
+                        <td className="px-12 py-10 text-right">
+                          <button className="h-12 w-12 flex items-center justify-center text-[#A3A3A3] hover:text-[#05090E] transition-all rounded-2xl hover:bg-[#F8FAFC] bg-white border border-[#F1F5F9] shadow-sm">
+                            <MoreVertical className="w-5 h-5" />
                           </button>
                         </td>
                       </tr>
                     ))}
-                    {filteredCampaigns.length === 0 && (
-                      <tr>
-                        <td colSpan={6} className="px-8 py-20 text-center space-y-2">
-                          <p className="text-xs font-bold text-neutral-400 uppercase tracking-widest leading-loose">No Operational Campaigns Found</p>
-                          <button onClick={() => router.push("/dashboard/campaign-launcher")} className="text-[10px] font-black text-black underline uppercase tracking-widest">Execute First Launch</button>
-                        </td>
-                      </tr>
-                    )}
                   </tbody>
                 </table>
               </div>

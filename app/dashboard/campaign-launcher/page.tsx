@@ -1,139 +1,78 @@
 "use client";
 
-import { useState, createContext, useContext, ReactNode } from "react";
+import { useState, createContext, useContext, ReactNode, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Zap, Target, Users, Sparkles, BarChart3, ChevronRight, ArrowLeft, Wand2, Globe, Rocket, ShieldCheck, DollarSign, Smartphone } from "lucide-react";
+import {
+  Zap, Target, Users, Sparkles, BarChart3, ChevronRight, ArrowLeft, Wand2, Globe, Rocket, ShieldCheck, DollarSign, Smartphone, Loader2,
+  Facebook, Linkedin
+} from "lucide-react";
 import DashboardLayout from "@/components/dashboard-layout";
 import { AudienceStep } from "./_components/AudienceStep";
 import { CreativeStep } from "./_components/CreativeStep";
 import { ReviewStep } from "./_components/ReviewStep";
-
 import { useCampaignLauncher, CampaignLauncherProvider, type Goal, type Strategy, type CampaignSetup } from "./_context/CampaignLauncherContext";
 
 const steps = [
-  "Goal Selection",
-  "AI Strategy Templates",
-  "Budget Allocation",
-  "Audience Recommendations",
-  "Creative Selection",
-  "Review & Launch"
+  "Platform Matrix",
+  "Strategic Goals",
+  "Blueprint Selection",
+  "Capital Allocation",
+  "Audience Index",
+  "Creative Synthesis",
+  "Review & Deploy"
 ] as const;
 
-type StepKey = typeof steps[number];
-
-function StrategyStep() {
+function PlatformStep() {
   const { data, update } = useCampaignLauncher();
-  const strategies: Strategy[] = [
-    "Full-Funnel",
-    "Conversion Booster",
-    "Audience Expansion",
-  ];
+  const [platforms, setPlatforms] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/platforms")
+      .then(res => res.json())
+      .then(d => {
+        setPlatforms(d.platforms || []);
+        setLoading(false);
+      });
+  }, []);
+
+  const PLATFORM_ICONS: any = {
+    google: Globe,
+    meta: Facebook,
+    linkedin: Linkedin,
+  };
+
+  if (loading) return <div className="h-64 flex items-center justify-center"><Loader2 className="animate-spin text-neutral-200" /></div>;
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {strategies.map((s) => (
-        <button
-          key={s}
-          className={cn(
-            "group p-8 rounded-[2rem] border-2 text-left transition-all duration-300",
-            data.strategy === s
-              ? "border-neutral-900 bg-neutral-900 text-white shadow-2xl"
-              : "border-neutral-100 bg-white hover:border-neutral-300"
-          )}
-          onClick={() => update({ strategy: s })}
-        >
-          <div className={cn(
-            "w-10 h-10 rounded-xl flex items-center justify-center mb-4 transition-all",
-            data.strategy === s ? "bg-white/10 text-white" : "bg-neutral-50 text-neutral-900"
-          )}>
-            <Sparkles className="w-5 h-5" />
-          </div>
-          <h3 className="text-lg font-black tracking-tight mb-2">{s}</h3>
-          <p className={cn(
-            "text-[10px] font-bold uppercase tracking-widest",
-            data.strategy === s ? "text-neutral-400" : "text-neutral-400"
-          )}>Template Active</p>
-        </button>
-      ))}
+      {platforms.map((p) => {
+        const Icon = PLATFORM_ICONS[p.name.toLowerCase()] || Globe;
+        return (
+          <button
+            key={p.id}
+            className={cn(
+              "p-8 rounded-[2rem] border-2 text-left transition-all duration-300",
+              data.platformId === p.id ? "bg-black text-white border-black" : "bg-white border-neutral-100"
+            )}
+            onClick={() => update({ platformId: p.id } as any)}
+          >
+            <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center mb-4", data.platformId === p.id ? "bg-white/10" : "bg-neutral-50")}>
+              <Icon className="w-5 h-5" />
+            </div>
+            <h3 className="text-lg font-black">{p.accountName || p.name}</h3>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Node ID: {p.id.slice(-6)}</p>
+          </button>
+        )
+      })}
+      {platforms.length === 0 && (
+        <div className="col-span-3 p-12 text-center bg-neutral-50 rounded-[2rem] border border-dashed border-neutral-200">
+          <p className="text-[10px] font-black uppercase text-neutral-400 tracking-widest">No production nodes connected. Please bridge a platform in Settings.</p>
+        </div>
+      )}
     </div>
-  );
-}
-
-function StepContent({ step }: { step: number }) {
-  switch (step) {
-    case 0: return <GoalStep />;
-    case 1: return <StrategyStep />;
-    case 2: return <BudgetStep />;
-    case 3: return <AudienceStep />;
-    case 4: return <CreativeStep />;
-    case 5: return <ReviewStep />;
-    default: return null;
-  }
-}
-
-function Sidebar({ currentStep }: { currentStep: number }) {
-  const stepIcons = [Target, Zap, DollarSign, Users, Sparkles, Rocket];
-
-  return (
-    <aside className="w-80 border-r border-neutral-100 bg-white p-8 flex flex-col h-full sticky top-0 hidden lg:flex">
-      <div className="flex items-center gap-3 mb-10 pb-6 border-b border-neutral-100">
-        <div className="w-10 h-10 bg-neutral-900 rounded-2xl flex items-center justify-center text-white shadow-xl">
-          <Wand2 className="w-5 h-5" />
-        </div>
-        <div>
-          <h2 className="text-lg font-black text-neutral-900 leading-tight">Launch Wizard</h2>
-          <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider">Campaign Architect v2.0</p>
-        </div>
-      </div>
-
-      <nav className="flex-1">
-        <ol className="space-y-2">
-          {steps.map((label, idx) => {
-            const Icon = stepIcons[idx] || Target;
-            const isCompleted = idx < currentStep;
-            const isActive = idx === currentStep;
-
-            return (
-              <li key={label} className="relative">
-                {idx < steps.length - 1 && (
-                  <div className={`absolute left-5 top-10 w-0.5 h-6 ${isCompleted ? "bg-neutral-900" : "bg-neutral-100"}`} />
-                )}
-                <div className={cn(
-                  "flex items-center gap-4 p-3 rounded-2xl transition-all duration-300",
-                  isActive ? "bg-neutral-50 shadow-sm border border-neutral-100" : "opacity-60"
-                )}>
-                  <div className={cn(
-                    "w-10 h-10 rounded-xl flex items-center justify-center transition-all",
-                    isCompleted ? "bg-emerald-50 text-emerald-600 border border-emerald-100" :
-                      isActive ? "bg-neutral-900 text-white shadow-lg" : "bg-neutral-50 text-neutral-400 border border-neutral-100"
-                  )}>
-                    {isCompleted ? <ShieldCheck className="w-5 h-5" /> : <Icon className="w-5 h-5" />}
-                  </div>
-                  <div>
-                    <h4 className={cn("text-xs font-black uppercase tracking-wider", isActive ? "text-neutral-900" : "text-neutral-400")}>{label}</h4>
-                    {isActive && <p className="text-[10px] text-neutral-500 font-medium mt-0.5">Focus: Precision</p>}
-                  </div>
-                </div>
-              </li>
-            )
-          })}
-        </ol>
-      </nav>
-
-      <div className="mt-auto p-5 bg-neutral-50 rounded-[2rem] border border-neutral-100">
-        <div className="flex items-center gap-3 mb-3">
-          <div className="w-8 h-8 bg-white rounded-xl flex items-center justify-center shadow-sm">
-            <Sparkles className="w-4 h-4 text-amber-500" />
-          </div>
-          <span className="text-[10px] font-black text-neutral-900 uppercase tracking-widest">AI Safety Score</span>
-        </div>
-        <div className="h-1.5 w-full bg-neutral-200 rounded-full overflow-hidden">
-          <div className="h-full bg-emerald-500 rounded-full" style={{ width: "92%" }} />
-        </div>
-        <p className="text-[10px] text-neutral-400 mt-2 font-medium">92% Launch Confidence</p>
-      </div>
-    </aside>
   );
 }
 
@@ -143,51 +82,46 @@ function GoalStep() {
     { id: "Sales", desc: "Drive high-intent purchases", icon: DollarSign },
     { id: "Leads", desc: "Capture prospect information", icon: Users },
     { id: "Traffic", desc: "Flood your site with visitors", icon: Globe },
-    { id: "App Installs", desc: "Maximize app mobile growth", icon: Smartphone },
+    { id: "App Installs", desc: "Maximize mobile growth", icon: Smartphone },
   ];
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {goals.map((g) => (
-          <button
-            key={g.id}
-            className={cn(
-              "group relative flex items-start gap-4 p-8 rounded-[2rem] border-2 text-left transition-all duration-300",
-              data.goal === g.id
-                ? "border-neutral-900 bg-neutral-900 text-white shadow-2xl shadow-neutral-200"
-                : "border-neutral-100 bg-white hover:border-neutral-300"
-            )}
-            onClick={() => update({ goal: g.id })}
-          >
-            <div className={cn(
-              "w-12 h-12 rounded-2xl flex items-center justify-center transition-all",
-              data.goal === g.id ? "bg-white/10 text-white" : "bg-neutral-50 text-neutral-900 group-hover:scale-110"
-            )}>
-              <g.icon className="w-6 h-6" />
-            </div>
-            <div className="flex-1">
-              <h3 className="text-lg font-black tracking-tight">{g.id}</h3>
-              <p className={cn(
-                "text-xs font-medium mt-1 leading-relaxed",
-                data.goal === g.id ? "text-neutral-400" : "text-neutral-500"
-              )}>{g.desc}</p>
-            </div>
-            {data.goal === g.id && (
-              <div className="absolute top-6 right-6 w-3 h-3 bg-emerald-400 rounded-full animate-pulse shadow-[0_0_15px_rgba(52,211,153,0.5)]" />
-            )}
-          </button>
-        ))}
-      </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-bottom-4">
+      {goals.map((g) => (
+        <button
+          key={g.id}
+          className={cn("p-8 rounded-[2rem] border-2 text-left transition-all", data.goal === g.id ? "bg-black text-white border-black" : "bg-white border-neutral-100 hover:border-neutral-300")}
+          onClick={() => update({ goal: g.id })}
+        >
+          <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center mb-4 transition-all", data.goal === g.id ? "bg-white/10" : "bg-neutral-50")}>
+            <g.icon className="w-5 h-5" />
+          </div>
+          <h3 className="text-lg font-black">{g.id}</h3>
+          <p className="text-xs text-neutral-400 mt-1">{g.desc}</p>
+        </button>
+      ))}
+    </div>
+  );
+}
 
-      <div className="bg-amber-50 border border-amber-100 p-6 rounded-[2rem] flex items-center gap-4">
-        <div className="w-10 h-10 bg-amber-400/20 rounded-2xl flex items-center justify-center text-amber-600 flex-shrink-0">
-          <Sparkles className="w-5 h-5" />
-        </div>
-        <p className="text-xs text-amber-800 font-bold leading-relaxed">
-          AI Suggestion: For your current industry profile (SaaS), a "Leads" objective typically yields 40% higher ROI.
-        </p>
-      </div>
+function StrategyStep() {
+  const { data, update } = useCampaignLauncher();
+  const strategies: Strategy[] = ["Full-Funnel", "Conversion Booster", "Audience Expansion"];
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-4">
+      {strategies.map((s) => (
+        <button
+          key={s}
+          className={cn("p-8 rounded-[2rem] border-2 text-left transition-all", data.strategy === s ? "bg-black text-white border-black" : "bg-white border-neutral-100 hover:border-neutral-300")}
+          onClick={() => update({ strategy: s })}
+        >
+          <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center mb-4", data.strategy === s ? "bg-white/10" : "bg-neutral-50")}>
+            <Sparkles className="w-5 h-5" />
+          </div>
+          <h3 className="text-lg font-black tracking-tight mb-2">{s}</h3>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">AI TEMPLATE</p>
+        </button>
+      ))}
     </div>
   );
 }
@@ -197,15 +131,10 @@ function BudgetStep() {
   return (
     <div className="max-w-xl mx-auto space-y-12 py-10 animate-in fade-in zoom-in duration-500">
       <div className="text-center space-y-3">
-        <div className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">Automatic Intelligence</div>
-        <h3 className="text-3xl font-black text-neutral-900 tracking-tight">Optimal Daily spend</h3>
-        <p className="text-sm text-neutral-500 font-medium leading-relaxed">
-          Our algorithm recommends a budget of <span className="text-neutral-900 font-black">$450.00</span> to saturate your prime audience within 48 hours.
-        </p>
+        <h3 className="text-3xl font-black text-neutral-900 tracking-tight">Optimal Allocation</h3>
+        <p className="text-xs text-neutral-500 font-medium tracking-widest uppercase">SYTEM ENFORCED LIMIT: $50+</p>
       </div>
-
       <div className="space-y-6 relative">
-        <div className="absolute -left-12 top-1/2 -translate-y-1/2 text-4xl font-black text-neutral-100 select-none">$</div>
         <input
           type="number"
           min={50}
@@ -213,19 +142,17 @@ function BudgetStep() {
           onChange={(e) => update({ dailyBudget: parseFloat(e.target.value) })}
           placeholder="0.00"
           className="w-full text-7xl font-black text-center tracking-tighter bg-transparent outline-none focus:ring-0 placeholder:text-neutral-50 border-none"
-          autoFocus
         />
-        <div className="h-px w-full bg-gradient-to-r from-transparent via-neutral-200 to-transparent" />
+        <div className="h-px w-full bg-gradient-to-r from-transparent via-neutral-100 to-transparent" />
       </div>
-
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-4 gap-4">
         {[250, 500, 1000, 2500].map(val => (
           <button
             key={val}
             onClick={() => update({ dailyBudget: val })}
-            className="py-4 rounded-2xl border border-neutral-100 text-sm font-black text-neutral-500 hover:border-neutral-900 hover:text-neutral-900 transition-all bg-white"
+            className={cn("py-3 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all", data.dailyBudget === val ? "bg-black text-white border-black" : "bg-white border-neutral-100 hover:border-black")}
           >
-            ${val.toLocaleString()}
+            ${val}
           </button>
         ))}
       </div>
@@ -233,81 +160,105 @@ function BudgetStep() {
   );
 }
 
+function StepContent({ step }: { step: number }) {
+  switch (step) {
+    case 0: return <PlatformStep />;
+    case 1: return <GoalStep />;
+    case 2: return <StrategyStep />;
+    case 3: return <BudgetStep />;
+    case 4: return <AudienceStep />;
+    case 5: return <CreativeStep />;
+    case 6: return <ReviewStep />;
+    default: return null;
+  }
+}
+
 function CampaignLauncherContent() {
   const [currentStep, setCurrentStep] = useState(0);
+  const [isLaunching, setIsLaunching] = useState(false);
   const router = useRouter();
-  const isFirst = currentStep === 0;
-  const isLast = currentStep === steps.length - 1;
-  const { data } = useCampaignLauncher();
+  const { data, reset } = useCampaignLauncher();
 
-  // Robust check for next step availability
-  const nextDisabled = (() => {
-    if (!data) return true;
-    switch (currentStep) {
-      case 0: return !data.goal;
-      case 1: return !data.strategy;
-      case 2: return !data.dailyBudget || data.dailyBudget <= 0;
-      case 3: return !(data.audiences?.length > 0);
-      case 4: return !(data.creatives?.length > 0);
-      default: return false;
+  const handleLaunch = async () => {
+    setIsLaunching(true);
+    toast.info("Transmitting operational blueprints...");
+
+    try {
+      const res = await fetch("/api/campaigns", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          platformId: (data as any).platformId || "demo-platform",
+          name: `STRATEGIC_${data.goal?.toUpperCase()}_${new Date().getMonth() + 1}${new Date().getDate()}`,
+          objective: data.goal,
+          dailyBudget: data.dailyBudget,
+          status: 'active',
+          targeting: { audiences: data.audiences },
+          creatives: data.creatives
+        })
+      });
+
+      const resData = await res.json();
+      if (resData.success) {
+        toast.success("Cognitive Campaign Deployed Successfully");
+        reset();
+        router.push("/dashboard/campaigns");
+      } else {
+        toast.error(resData.error || "Deployment Failure");
+      }
+    } catch (err) {
+      toast.error("Bridge connection refused");
+    } finally {
+      setIsLaunching(false);
     }
-  })();
-
-  const handleLaunch = () => {
-    toast.success("Deployment initiated");
-    setTimeout(() => {
-      toast.success("Campaign groups synchronized");
-      router.push("/dashboard/campaigns");
-    }, 1500);
   };
 
   return (
     <DashboardLayout>
-      <div className="flex h-[calc(100vh-64px)] overflow-hidden bg-white">
-        <Sidebar currentStep={currentStep} />
-
-        <div className="flex-1 flex flex-col relative min-w-0">
-          <main className="flex-1 p-8 lg:p-12 overflow-y-auto pb-44">
-            <div className="max-w-4xl mx-auto space-y-8">
-              <div className="space-y-1">
-                <div className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">Step {currentStep + 1} of {steps.length}</div>
-                <h1 className="text-3xl font-bold text-neutral-900 leading-tight">{steps[currentStep]}</h1>
-              </div>
-
-              <div className="border-t border-neutral-100 pt-8">
-                <StepContent step={currentStep} />
-              </div>
+      <div className="flex h-[calc(100vh-72px)] overflow-hidden bg-white gemini-surface p-8 lg:p-12 font-satoshi">
+        <div className="max-w-6xl mx-auto w-full flex flex-col space-y-12">
+          <div className="flex items-end justify-between border-b border-[#F1F5F9] pb-10">
+            <div className="space-y-1 text-left">
+              <h1 className="text-[32px] font-bold text-[#05090E] tracking-tight">{steps[currentStep]}</h1>
+              <p className="text-[12px] font-medium text-[#64748B] uppercase tracking-[0.2em]">Campaign Architect v2.2 // NODE_STEP_{currentStep + 1}</p>
             </div>
-          </main>
+            <div className="flex items-center gap-3">
+              {steps.map((_, i) => (
+                <div key={i} className={cn("w-10 h-1 rounded-full transition-all duration-300", i <= currentStep ? "bg-[#1F57F5]" : "bg-[#F1F5F9]")} />
+              ))}
+            </div>
+          </div>
 
-          {/* Navigation Bar - Clean SaaS style */}
-          <div className="absolute bottom-0 inset-x-0 p-6 bg-white border-t border-neutral-100 shadow-[0_-4px_12px_rgba(0,0,0,0.03)]">
-            <div className="max-w-4xl mx-auto flex justify-between items-center">
+          <div className="flex-1 overflow-y-auto pb-32">
+            <StepContent step={currentStep} />
+          </div>
+
+          {/* Unified Navigation Bar */}
+          <div className="fixed bottom-0 left-0 right-0 h-32 bg-white/90 backdrop-blur-xl border-t border-[#F1F5F9] flex items-center px-12 z-50">
+            <div className="max-w-6xl mx-auto w-full flex justify-between items-center">
               <button
-                className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-neutral-500 hover:text-neutral-900 hover:bg-neutral-50 rounded-md transition-all"
-                onClick={() => isFirst ? router.back() : setCurrentStep((s) => Math.max(s - 1, 0))}
+                onClick={() => currentStep > 0 ? setCurrentStep(s => s - 1) : router.back()}
+                className="px-8 py-3 text-[11px] font-bold uppercase tracking-widest text-[#64748B] hover:text-[#05090E] transition-all"
               >
-                <ArrowLeft className="w-4 h-4" />
-                {isFirst ? "Cancel" : "Back"}
+                {currentStep === 0 ? 'Abort Mission' : 'Reverse Matrix'}
               </button>
 
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-4">
                 {currentStep < steps.length - 1 ? (
                   <button
-                    onClick={() => !nextDisabled && setCurrentStep((s) => Math.min(s + 1, steps.length - 1))}
-                    disabled={nextDisabled}
-                    className="enterprise-button group"
+                    onClick={() => setCurrentStep(s => s + 1)}
+                    className="h-14 px-12 bg-[#1F57F5] text-white text-[12px] font-bold uppercase tracking-widest rounded-lg hover:bg-[#1A4AD1] transition-all flex items-center gap-3 shadow-xl shadow-[#1F57F5]/20 active:scale-[0.98]"
                   >
-                    Continue
-                    <ChevronRight className="w-4 h-4 ml-2 group-hover:translate-x-0.5 transition-transform" />
+                    Advance Layer <ChevronRight className="w-4 h-4" />
                   </button>
                 ) : (
                   <button
+                    disabled={isLaunching}
                     onClick={handleLaunch}
-                    className="px-6 py-2.5 bg-black text-white font-semibold text-sm rounded-md hover:bg-neutral-800 transition-all flex items-center gap-2 shadow-sm"
+                    className="h-14 px-12 bg-[#1F57F5] text-white text-[12px] font-bold uppercase tracking-widest rounded-lg hover:bg-[#1A4AD1] transition-all flex items-center gap-3 shadow-xl shadow-[#1F57F5]/20 active:scale-[0.98]"
                   >
-                    Deploy Campaign
-                    <Rocket className="w-4 h-4" />
+                    {isLaunching ? <Loader2 className="animate-spin" /> : <Rocket className="w-5 h-5 text-[#00DDFF]" />}
+                    Execute Deployment
                   </button>
                 )}
               </div>
@@ -316,6 +267,7 @@ function CampaignLauncherContent() {
         </div>
       </div>
     </DashboardLayout>
+
   );
 }
 

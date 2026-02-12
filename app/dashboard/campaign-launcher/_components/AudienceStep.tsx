@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Check, Plus, X } from 'lucide-react';
+import { Check, Plus, X, Target } from 'lucide-react';
+import { cn } from '@/lib/utils';
 // Import from the context file instead of page
 import { useCampaignLauncher } from '../_context/CampaignLauncherContext';
 
@@ -49,12 +50,12 @@ export function AudienceStep() {
   const [newAudienceName, setNewAudienceName] = useState('');
   const [newAudienceDescription, setNewAudienceDescription] = useState('');
   const [newAudienceInterests, setNewAudienceInterests] = useState('');
-  
+
   const selectedAudiences = data.audiences || [];
 
   const filteredAudiences = mockAudiences.filter(audience =>
     audience.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    audience.interests.some(interest => 
+    audience.interests.some(interest =>
       interest.toLowerCase().includes(searchTerm.toLowerCase())
     )
   );
@@ -73,7 +74,7 @@ export function AudienceStep() {
       description: newAudienceDescription,
       interests: newAudienceInterests.split(',').map(s => s.trim())
     });
-    
+
     // Reset form
     setNewAudienceName('');
     setNewAudienceDescription('');
@@ -82,18 +83,18 @@ export function AudienceStep() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div className="relative w-96">
+    <div className="space-y-10 font-satoshi">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div className="relative w-full md:w-96">
           <Input
             type="text"
-            placeholder="Search audiences..."
+            placeholder="Search global audience index..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
+            className="pl-12 h-12 border-[#F1F5F9] bg-[#F8FAFC] text-[14px] focus:ring-[#1F57F5]/20 focus:border-[#1F57F5] rounded-xl"
           />
           <svg
-            className="absolute left-3 top-2.5 h-5 w-5 text-gray-400"
+            className="absolute left-4 top-3.5 h-5 w-5 text-[#A3A3A3]"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -107,124 +108,118 @@ export function AudienceStep() {
             />
           </svg>
         </div>
-        
-        <Button 
-          onClick={() => setShowNewAudienceForm(true)}
-          variant="outline"
-          className="flex items-center gap-2"
-        >
-          <Plus className="h-4 w-4" />
-          Create New Audience
-        </Button>
-        <Button 
-          className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
-          onClick={() => {
-            // In a real app, you might want to validate selection here
-            console.log('Selected audiences:', selectedAudiences);
-          }}
-        >
-          {selectedAudiences.length > 0 
-            ? `Continue with ${selectedAudiences.length} Audience${selectedAudiences.length > 1 ? 's' : ''}`
-            : 'Skip for Now'}
-        </Button>
+
+        <div className="flex items-center gap-4 w-full md:w-auto">
+          <Button
+            onClick={() => setShowNewAudienceForm(true)}
+            variant="outline"
+            className="flex-1 md:flex-none h-12 px-6 border-[#F1F5F9] text-[13px] font-bold uppercase tracking-wider text-[#64748B] hover:text-[#05090E] hover:border-[#1F57F5] rounded-xl"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Synthesize New Audience
+          </Button>
+        </div>
       </div>
 
       {showNewAudienceForm && (
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Create New Audience</CardTitle>
+        <Card className="mb-10 border-[#F1F5F9] shadow-xl rounded-2xl overflow-hidden animate-in fade-in slide-in-from-top-4">
+          <CardHeader className="bg-[#F8FAFC] border-b border-[#F1F5F9] p-8">
+            <CardTitle className="text-[18px] font-bold text-[#05090E]">Audience Synthesis Engine</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Audience Name</label>
-              <Input 
-                value={newAudienceName}
-                onChange={(e) => setNewAudienceName(e.target.value)}
-                placeholder="e.g., Tech Startup Founders"
-              />
+          <CardContent className="space-y-6 p-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="text-[12px] font-bold text-[#64748B] uppercase tracking-wider">Audience Identity</label>
+                <Input
+                  value={newAudienceName}
+                  onChange={(e) => setNewAudienceName(e.target.value)}
+                  placeholder="e.g., Enterprise Decision Makers"
+                  className="h-12 border-[#F1F5F9] bg-[#F8FAFC]"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[12px] font-bold text-[#64748B] uppercase tracking-wider">Interest Vector Matrix</label>
+                <Input
+                  value={newAudienceInterests}
+                  onChange={(e) => setNewAudienceInterests(e.target.value)}
+                  placeholder="technology, logistics, procurement"
+                  className="h-12 border-[#F1F5F9] bg-[#F8FAFC]"
+                />
+              </div>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Description</label>
-              <Input 
+              <label className="text-[12px] font-bold text-[#64748B] uppercase tracking-wider">Contextual Description</label>
+              <Input
                 value={newAudienceDescription}
                 onChange={(e) => setNewAudienceDescription(e.target.value)}
-                placeholder="Describe this audience..."
+                placeholder="High-intent operational leaders in the APAC region..."
+                className="h-12 border-[#F1F5F9] bg-[#F8FAFC]"
               />
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Interests (comma-separated)</label>
-              <Input 
-                value={newAudienceInterests}
-                onChange={(e) => setNewAudienceInterests(e.target.value)}
-                placeholder="e.g., technology, startups, saas"
-              />
-            </div>
-            <div className="flex justify-end space-x-2 pt-2">
-              <Button 
-                variant="outline" 
+            <div className="flex justify-end gap-3 pt-4">
+              <Button
+                variant="outline"
                 onClick={() => setShowNewAudienceForm(false)}
+                className="h-11 px-6 border-[#F1F5F9] text-[13px] font-bold uppercase tracking-wider text-[#64748B]"
               >
-                Cancel
+                Abort
               </Button>
-              <Button onClick={createNewAudience}>
-                Create Audience
+              <Button
+                onClick={createNewAudience}
+                className="h-11 px-8 bg-[#1F57F5] text-white text-[13px] font-bold uppercase tracking-widest shadow-lg shadow-[#1F57F5]/20"
+              >
+                Finalize Synthesis
               </Button>
             </div>
           </CardContent>
         </Card>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {filteredAudiences.map((audience) => (
-          <Card 
+          <div
             key={audience.id}
-            className={`cursor-pointer transition-colors ${
-              selectedAudiences.includes(audience.id) 
-                ? 'border-blue-500 bg-blue-50' 
-                : 'hover:border-gray-300'
-            }`}
+            className={cn(
+              "group cursor-pointer p-8 rounded-[2rem] border-2 transition-all duration-300 relative overflow-hidden",
+              selectedAudiences.includes(audience.id)
+                ? "bg-white border-[#1F57F5] shadow-xl shadow-[#1F57F5]/5"
+                : "bg-white border-[#F1F5F9] hover:border-[#2BAFF2] hover:bg-[#F8FAFC]"
+            )}
             onClick={() => toggleAudience(audience.id)}
           >
-            <CardHeader className="pb-2">
-              <div className="flex justify-between items-start">
-                <CardTitle className="text-lg">{audience.name}</CardTitle>
-                {selectedAudiences.includes(audience.id) && (
-                  <div className="bg-blue-500 text-white p-1 rounded-full">
-                    <Check className="h-3 w-3" />
-                  </div>
-                )}
+            <div className="flex justify-between items-start mb-6">
+              <div className={cn(
+                "w-12 h-12 rounded-2xl flex items-center justify-center transition-all",
+                selectedAudiences.includes(audience.id) ? "bg-[#1F57F5] text-white" : "bg-[#F8FAFC] text-[#A3A3A3] group-hover:bg-white group-hover:text-[#2BAFF2]"
+              )}>
+                <Target className="w-6 h-6" />
               </div>
-              <div className="text-sm text-gray-500">
-                {audience.size} users
+              {selectedAudiences.includes(audience.id) && (
+                <div className="bg-[#00DDFF] text-white p-1 rounded-full shadow-lg shadow-[#00DDFF]/20">
+                  <Check className="h-4 w-4" />
+                </div>
+              )}
+            </div>
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-[18px] font-bold text-[#05090E] tracking-tight">{audience.name}</h3>
+                <p className="text-[12px] font-medium text-[#64748B] mt-1">{audience.size} users identified</p>
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-2">
-                {audience.interests.map((interest, i) => (
-                  <span 
-                    key={i} 
-                    className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full"
+              <div className="flex flex-wrap gap-2 pt-2">
+                {audience.interests.slice(0, 3).map((interest, i) => (
+                  <span
+                    key={i}
+                    className="text-[10px] font-bold bg-[#F8FAFC] text-[#64748B] px-3 py-1 rounded-full uppercase tracking-widest border border-[#F1F5F9]"
                   >
                     {interest}
                   </span>
                 ))}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         ))}
       </div>
-
-      {selectedAudiences.length > 0 && (
-        <div className="fixed bottom-20 left-0 right-0 bg-white border-t p-4 shadow-lg">
-          <div className="max-w-7xl mx-auto flex justify-between items-center">
-            <div>
-              <h3 className="font-medium">{selectedAudiences.length} audience(s) selected</h3>
-              <p className="text-sm text-gray-500">Click on an audience to select/deselect</p>
-            </div>
-            <Button>Continue with Selected Audiences</Button>
-          </div>
-        </div>
-      )}
     </div>
+
   );
 }

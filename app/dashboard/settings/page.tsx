@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import DashboardLayout from "@/components/dashboard-layout"
 import {
   User,
@@ -17,7 +17,17 @@ import {
   Smartphone,
   Mail,
   Zap,
+  Facebook,
+  Linkedin,
+  Plus,
+  Loader2,
+  Trash2,
+  ShieldCheck,
+  Activity,
+  Command,
 } from "lucide-react"
+import { toast } from "sonner"
+import { cn } from "@/lib/utils"
 
 const SETTINGS_TABS = [
   {
@@ -25,170 +35,205 @@ const SETTINGS_TABS = [
     items: [
       { id: "profile", label: "My Profile", icon: User },
       { id: "general", label: "General", icon: Settings },
-      { id: "preferences", label: "Preferences", icon: Layers },
-      { id: "applications", label: "Applications", icon: Zap },
+      { id: "applications", label: "Platform Bridges", icon: Globe },
     ],
   },
   {
     category: "WORKSPACE",
     items: [
-      { id: "workspace-settings", label: "Settings", icon: Settings },
-      { id: "members", label: "Members", icon: User },
-      { id: "upgrade", label: "Upgrade", icon: Zap },
-      { id: "security", label: "Security", icon: Shield },
-      { id: "billing", label: "Billing", icon: CreditCard },
+      { id: "members", label: "Team Members", icon: User },
+      { id: "billing", label: "Billing & Plans", icon: CreditCard },
+      { id: "security", label: "Security Hub", icon: Shield },
     ],
   },
 ]
 
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState("profile")
-  const [notifications, setNotifications] = useState({
-    dailyUpdate: true,
-    newEvent: true,
-    newTeam: true,
-    mobile: true,
-    desktop: true,
-    email: false,
-    twoFactor: true,
-  })
+  const [activeTab, setActiveTab] = useState("applications")
+  const [platforms, setPlatforms] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(false)
 
-  const toggle = (key: keyof typeof notifications) => {
-    setNotifications(prev => ({ ...prev, [key]: !prev[key] }))
+  const fetchPlatforms = async () => {
+    try {
+      const res = await fetch("/api/platforms")
+      const data = await res.json()
+      if (data.success) setPlatforms(data.platforms)
+    } catch (e) {
+      toast.error("Cloud bridge handshake failed")
+    }
+  }
+
+  useEffect(() => {
+    if (activeTab === "applications") fetchPlatforms()
+  }, [activeTab])
+
+  const connectPlatform = async (name: string) => {
+    setIsLoading(true)
+    toast.info(`Initializing ${name} OAuth protocol...`)
+
+    setTimeout(async () => {
+      try {
+        const res = await fetch("/api/platforms", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name,
+            accountName: `${name} Production Node`,
+            accessToken: "fake-token",
+            refreshToken: "fake-refresh"
+          })
+        })
+        if (res.ok) {
+          toast.success(`${name} Bridge Established`)
+          fetchPlatforms()
+        }
+      } finally {
+        setIsLoading(false)
+      }
+    }, 1500)
+  }
+
+  const disconnectPlatform = async (id: string) => {
+    if (!confirm("Terminate this platform bridge?")) return
+    try {
+      await fetch(`/api/platforms?id=${id}`, { method: 'DELETE' })
+      setPlatforms(prev => prev.filter(p => p.id !== id))
+      toast.success("Bridge Terminated")
+    } catch (e) {
+      toast.error("Cleanup failed")
+    }
   }
 
   const renderContent = () => {
     switch (activeTab) {
-      case "profile":
+      case "applications":
         return (
-          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <section className="space-y-6">
-              <div className="flex items-center gap-6">
-                <div className="w-20 h-20 bg-neutral-900 rounded-md flex items-center justify-center text-white text-2xl font-bold">
-                  SK
-                </div>
-                <div className="space-y-2">
-                  <button className="enterprise-button text-xs py-1.5 h-auto">Change Avatar</button>
-                  <p className="text-[11px] text-neutral-500 uppercase font-bold tracking-tight">JPG, PNG or GIF. Max size 2MB.</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-6 pt-4">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">Full Name</label>
-                  <input type="text" defaultValue="Srikrishna" className="enterprise-input text-sm" />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">Public Email</label>
-                  <input type="email" defaultValue="admin@growzzy.os" className="enterprise-input text-sm" />
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">Bio</label>
-                <textarea className="enterprise-input text-sm h-24 resize-none" placeholder="Add a short bio..." />
-              </div>
-            </section>
-            <div className="pt-6 border-t border-neutral-100 flex justify-end">
-              <button className="enterprise-button">Save Changes</button>
-            </div>
-          </div>
-        );
-      case "billing":
-        return (
-          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <div className="enterprise-card p-6 border-l-4 border-l-black">
-              <div className="flex justify-between items-start">
-                <div className="space-y-1">
-                  <h3 className="text-sm font-bold uppercase tracking-tight">Current Plan: Pro Enterprise</h3>
-                  <p className="text-xs text-neutral-500">Your next billing date is March 1st, 2024</p>
-                </div>
-                <div className="text-xl font-bold">$129.00/mo</div>
-              </div>
-            </div>
-            <section className="space-y-4">
-              <h3 className="text-xs font-bold uppercase tracking-widest text-neutral-400">Payment Methods</h3>
-              <div className="enterprise-card p-4 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <CreditCard className="w-5 h-5" />
-                  <div>
-                    <p className="text-sm font-bold">Visa ending in 4242</p>
-                    <p className="text-xs text-neutral-500">Expires 12/26</p>
-                  </div>
-                </div>
-                <button className="text-xs font-bold hover:underline">Edit</button>
-              </div>
-            </section>
-          </div>
-        );
-      case "members":
-        return (
-          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <div className="flex justify-between items-center bg-neutral-50 p-4 rounded-md border border-neutral-100">
-              <p className="text-xs text-neutral-600">You have 4 vacant seats in your current plan.</p>
-              <button className="enterprise-button text-xs py-1.5 h-auto">Invite Member</button>
-            </div>
-            <div className="space-y-1">
+          <div className="space-y-16 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
               {[
-                { name: "Srikrishna", email: "admin@growzzy.os", role: "Owner" },
-                { name: "Sarah Chen", email: "sarah@techcorp.com", role: "Manager" },
-              ].map((member, i) => (
-                <div key={i} className="flex items-center justify-between p-4 border-b border-neutral-100 last:border-0">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-neutral-100 rounded-md flex items-center justify-center text-[10px] font-bold">
-                      {member.name[0]}
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold">{member.name}</p>
-                      <p className="text-xs text-neutral-500">{member.email}</p>
-                    </div>
-                  </div>
-                  <span className="text-[10px] font-bold uppercase py-1 px-2 bg-neutral-50 border border-neutral-200 rounded-md">
-                    {member.role}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      case "general":
-      default:
-        return (
-          <div className="space-y-10 animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <section className="space-y-6">
-              <div className="space-y-1">
-                <h3 className="text-sm font-bold uppercase tracking-tight">Organization Name</h3>
-                <p className="text-xs text-neutral-500">This will be shown on reports and billing.</p>
-              </div>
-              <input type="text" defaultValue="Growzzy Inc" className="enterprise-input text-sm" />
-            </section>
-
-            <section className="space-y-6 border-t border-neutral-100 pt-8">
-              <div className="space-y-1">
-                <h3 className="text-sm font-bold uppercase tracking-tight">Notification Channels</h3>
-                <p className="text-xs text-neutral-500">How would you like to receive activity alerts?</p>
-              </div>
-              <div className="grid grid-cols-1 gap-3">
-                {[
-                  { id: "mobile", label: "Push Notifications", icon: Smartphone },
-                  { id: "desktop", label: "Browser Notifications", icon: Bell },
-                  { id: "email", label: "Email Summaries", icon: Mail },
-                ].map((item) => (
-                  <div key={item.id} className="enterprise-card p-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-neutral-50 rounded-md flex items-center justify-center">
-                        <item.icon className="w-4 h-4 text-neutral-400" />
+                { name: 'Google Ads', icon: Globe, color: '#1F57F5', desc: 'Unified Search & Display Engine' },
+                { name: 'Meta Ads', icon: Facebook, color: '#1F57F5', desc: 'Behavioral Social Architecture' },
+                { name: 'LinkedIn Ads', icon: Linkedin, color: '#1F57F5', desc: 'Enterprise B2B Targeting Segment' },
+              ].map(p => {
+                const isConnected = platforms.some(ep => ep.name.toLowerCase().includes(p.name.toLowerCase().split(' ')[0].toLowerCase()))
+                return (
+                  <div key={p.name} className="bg-white p-10 rounded-[3rem] border-2 border-[#F1F5F9] hover:border-[#1F57F5] transition-all duration-300 shadow-sm hover:shadow-2xl group flex flex-col justify-between min-h-[340px]">
+                    <div className="space-y-8">
+                      <div className="flex items-center justify-between">
+                        <div className="w-16 h-16 bg-[#F8FAFC] rounded-2xl flex items-center justify-center text-[#1F57F5] group-hover:scale-110 transition-transform">
+                          <p.icon className="w-8 h-8" />
+                        </div>
+                        <div className={cn(
+                          "px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest flex items-center gap-2",
+                          isConnected ? "bg-[#00DDFF]/10 text-[#00DDFF]" : "bg-[#F8FAFC] text-[#A3A3A3] border border-[#F1F5F9]"
+                        )}>
+                          {isConnected ? <Check className="w-3 h-3" /> : null}
+                          {isConnected ? 'Synchronized' : 'Not Connected'}
+                        </div>
                       </div>
-                      <span className="text-sm font-semibold">{item.label}</span>
+                      <div className="text-left space-y-2">
+                        <h4 className="text-[20px] font-bold text-[#05090E]">{p.name}</h4>
+                        <p className="text-[14px] text-[#64748B] font-medium leading-relaxed">{p.desc}</p>
+                      </div>
                     </div>
                     <button
-                      onClick={() => toggle(item.id as any)}
-                      className={`w-9 h-5 rounded-full transition-all relative flex items-center px-1 ${notifications[item.id as keyof typeof notifications] ? "bg-black" : "bg-neutral-200"}`}
+                      disabled={isLoading || isConnected}
+                      onClick={() => connectPlatform(p.name)}
+                      className={cn(
+                        "w-full h-14 rounded-2xl text-[12px] font-bold uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3",
+                        isConnected
+                          ? "bg-[#F8FAFC] text-[#A3A3A3] border-2 border-[#F1F5F9] cursor-not-allowed"
+                          : "bg-[#05090E] text-white hover:bg-[#1F57F5] shadow-lg shadow-[#05090E]/5"
+                      )}
                     >
-                      <div className={`w-3.5 h-3.5 rounded-full bg-white transition-transform ${notifications[item.id as keyof typeof notifications] ? "translate-x-4" : "translate-x-0"}`} />
+                      {isLoading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : isConnected ? 'Operational Node Active' : `Establish Bridge`}
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+
+            <div className="space-y-10 pt-8">
+              <div className="flex items-center justify-between border-b border-[#F1F5F9] pb-8">
+                <div className="flex items-center gap-4">
+                  <Activity className="w-6 h-6 text-[#1F57F5]" />
+                  <div className="text-left">
+                    <h3 className="text-[18px] font-bold text-[#05090E]">Active Connection Hub</h3>
+                    <p className="text-[12px] font-medium text-[#64748B] uppercase tracking-widest">Global Protocol Matrix</p>
+                  </div>
+                </div>
+                <div className="px-6 py-2 bg-[#F8FAFC] border border-[#F1F5F9] rounded-2xl">
+                  <span className="text-[12px] font-bold text-[#05090E] tracking-tight">{platforms.length} Autonomous Nodes Active</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {platforms.map(p => (
+                  <div key={p.id} className="bg-white p-8 rounded-[2.5rem] border-2 border-[#F1F5F9] flex items-center justify-between hover:border-[#1F57F5] transition-all group shadow-sm">
+                    <div className="flex items-center gap-6">
+                      <div className="w-14 h-14 bg-gradient-to-tr from-[#05090E] to-[#1F57F5] rounded-2xl flex items-center justify-center text-white shadow-xl shadow-[#1F57F5]/10">
+                        <Zap className="w-6 h-6 text-[#00DDFF] fill-[#00DDFF]" />
+                      </div>
+                      <div className="text-left space-y-1">
+                        <p className="text-[16px] font-bold text-[#05090E]">{p.accountName || p.name}</p>
+                        <p className="text-[10px] font-bold text-[#A3A3A3] uppercase tracking-[0.2em] font-mono">PROTOCOL_XID_{p.id.slice(-8)}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => disconnectPlatform(p.id)}
+                      className="p-3.5 text-[#A3A3A3] hover:text-[#F43F5E] hover:bg-[#F43F5E]/5 rounded-2xl transition-all"
+                    >
+                      <Trash2 className="w-5 h-5" />
                     </button>
                   </div>
                 ))}
+                {platforms.length === 0 && (
+                  <div className="col-span-2 py-32 rounded-[3rem] border-2 border-dashed border-[#F1F5F9] bg-[#F8FAFC]/50 flex flex-col items-center justify-center space-y-4 opacity-30">
+                    <Layers className="w-16 h-16" />
+                    <p className="text-[12px] font-bold uppercase tracking-[0.4em]">Zero Active Mission Bridges</p>
+                  </div>
+                )}
               </div>
+            </div>
+          </div>
+        )
+      case "profile":
+        return (
+          <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500 text-left">
+            <section className="space-y-12">
+              <div className="flex items-center gap-10 bg-[#F8FAFC] p-10 rounded-[3rem] border-2 border-[#F1F5F9]">
+                <div className="w-24 h-24 bg-[#05090E] rounded-[2rem] flex items-center justify-center text-[#1F57F5] text-3xl font-bold shadow-2xl shadow-[#05090E]/20 ring-4 ring-white">
+                  MR
+                </div>
+                <div className="space-y-4">
+                  <button className="h-11 px-8 bg-white border-2 border-[#F1F5F9] text-[12px] font-bold uppercase tracking-widest rounded-xl hover:border-[#1F57F5] transition-all shadow-sm">Update Avatar</button>
+                  <div className="flex items-center gap-3">
+                    <div className="w-2 h-2 rounded-full bg-[#00DDFF] animate-pulse" />
+                    <p className="text-[11px] text-[#A3A3A3] font-bold uppercase tracking-[0.25em]">Authorized Operator: Max Reynolds</p>
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-10">
+                <div className="space-y-3">
+                  <label className="text-[12px] font-bold text-[#64748B] uppercase tracking-[0.2em] pl-2">Operational Name</label>
+                  <input type="text" defaultValue="Max Reynolds" className="w-full h-16 px-8 bg-[#F8FAFC] border-2 border-[#F1F5F9] text-[16px] font-bold rounded-2xl focus:border-[#1F57F5] outline-none transition-all" />
+                </div>
+                <div className="space-y-3">
+                  <label className="text-[12px] font-bold text-[#64748B] uppercase tracking-[0.2em] pl-2">Neural Link (Email)</label>
+                  <input type="email" defaultValue="max@growzzy.global" className="w-full h-16 px-8 bg-[#F8FAFC] border-2 border-[#F1F5F9] text-[16px] font-bold rounded-2xl focus:border-[#1F57F5] outline-none transition-all" />
+                </div>
+              </div>
+              <button className="h-16 px-12 bg-[#1F57F5] text-white text-[13px] font-bold uppercase tracking-[0.3em] rounded-2xl shadow-xl shadow-[#1F57F5]/20 hover:bg-[#1A4AD1] transition-all active:scale-95">
+                Save Identity Changes
+              </button>
             </section>
+          </div>
+        );
+      default:
+        return (
+          <div className="py-40 text-center flex flex-col items-center space-y-6 opacity-10">
+            <Command className="w-20 h-20" />
+            <p className="text-[14px] font-bold uppercase tracking-[0.5em]">Protocol Staging Area</p>
           </div>
         );
     }
@@ -196,31 +241,31 @@ export default function SettingsPage() {
 
   return (
     <DashboardLayout>
-      <div className="flex flex-col lg:flex-row max-w-7xl mx-auto h-full p-8 lg:p-12 gap-16 bg-white min-h-[calc(100vh-64px)] overflow-y-auto">
-        {/* Settings Navigation */}
-        <div className="w-full lg:w-56 flex-shrink-0 space-y-10">
-          <div className="space-y-1">
-            <h1 className="text-3xl font-bold text-neutral-900 tracking-tight">Settings</h1>
-            <p className="text-xs text-neutral-500 font-medium uppercase tracking-wider">Workspace Management</p>
+      <div className="flex flex-col lg:flex-row min-h-[calc(100vh-88px)] bg-white font-satoshi relative">
+        {/* Navigation Sidebar */}
+        <div className="w-full lg:w-80 border-r border-[#F1F5F9] p-12 space-y-16">
+          <div className="space-y-4">
+            <h1 className="text-[36px] font-bold text-[#05090E] tracking-tight leading-none">Settings <br /> <span className="text-[#1F57F5]">Config</span></h1>
+            <p className="text-[11px] text-[#64748B] font-bold uppercase tracking-[0.3em]">Neural OS Control Center</p>
           </div>
 
-          <nav className="space-y-8">
+          <nav className="space-y-16">
             {SETTINGS_TABS.map((group) => (
-              <div key={group.category} className="space-y-2">
-                <h3 className="text-[10px] font-bold text-neutral-400 pl-3 tracking-widest uppercase">{group.category}</h3>
-                <div className="space-y-0.5">
+              <div key={group.category} className="space-y-6">
+                <h3 className="text-[11px] font-bold text-[#A3A3A3] pl-2 tracking-[0.4em] uppercase">{group.category}</h3>
+                <div className="space-y-3">
                   {group.items.map((item) => (
                     <button
                       key={item.id}
                       onClick={() => setActiveTab(item.id)}
-                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[13px] font-medium transition-all
-                        ${activeTab === item.id
-                          ? "bg-neutral-900 text-white shadow-sm"
-                          : "text-neutral-500 hover:text-neutral-900 hover:bg-neutral-50"
-                        }
-                      `}
+                      className={cn(
+                        "w-full flex items-center gap-5 px-6 py-4 rounded-2xl text-[12px] font-bold uppercase tracking-widest transition-all duration-300",
+                        activeTab === item.id
+                          ? "bg-[#05090E] text-white shadow-2xl shadow-[#05090E]/20 scale-[1.05]"
+                          : "text-[#64748B] hover:text-[#05090E] hover:bg-[#F8FAFC]"
+                      )}
                     >
-                      <item.icon className="w-4 h-4" />
+                      <item.icon className={cn("w-5 h-5", activeTab === item.id ? "text-[#1F57F5]" : "text-[#A3A3A3]")} />
                       {item.label}
                     </button>
                   ))}
@@ -228,24 +273,32 @@ export default function SettingsPage() {
               </div>
             ))}
           </nav>
+
+          <div className="pt-20">
+            <div className="bg-[#F8FAFC] p-8 rounded-[2.5rem] border-2 border-[#F1F5F9] space-y-4">
+              <ShieldCheck className="w-8 h-8 text-[#00DDFF]" />
+              <p className="text-[13px] font-bold text-[#05090E] uppercase tracking-wider leading-tight">Secure Management Environment</p>
+              <p className="text-[11px] text-[#A3A3A3] font-medium leading-relaxed">All infrastructure changes are executed via AES-256 encrypted protocols.</p>
+            </div>
+          </div>
         </div>
 
-        {/* Dynamic Content */}
-        <div className="flex-1 max-w-2xl">
-          <div className="space-y-8">
-            <div className="pb-8 border-b border-neutral-100 flex justify-between items-end">
-              <div className="space-y-1 text-left">
-                <h2 className="text-xl font-bold text-neutral-900 tracking-tight capitalize">
+        {/* Content Area */}
+        <div className="flex-1 p-16 lg:p-24 overflow-y-auto pb-40">
+          <div className="max-w-6xl mx-auto space-y-16">
+            <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-[#F1F5F9] pb-10 gap-8">
+              <div className="space-y-2 text-left">
+                <h2 className="text-[32px] font-bold text-[#05090E] tracking-tight uppercase">
                   {activeTab.replace('-', ' ')}
                 </h2>
-                <p className="text-xs text-neutral-500">Configure your specific workspace parameters and preferences.</p>
-              </div>
-              <div className="hidden sm:block text-[10px] font-black text-neutral-400 uppercase tracking-widest">
-                System OK
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 rounded-full bg-[#00DDFF] animate-pulse" />
+                  <p className="text-[12px] font-medium text-[#64748B] uppercase tracking-widest">Protocol status: synchronized and active</p>
+                </div>
               </div>
             </div>
 
-            <div className="pt-2">
+            <div className="pt-4">
               {renderContent()}
             </div>
           </div>

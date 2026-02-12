@@ -6,6 +6,7 @@ export type Goal = 'Sales' | 'Leads' | 'Traffic' | 'App Installs';
 export type Strategy = 'Full-Funnel' | 'Conversion Booster' | 'Audience Expansion';
 
 export interface CampaignSetup {
+  platformId?: string;
   goal?: Goal;
   strategy?: Strategy;
   dailyBudget?: number;
@@ -23,11 +24,11 @@ interface CampaignLauncherContextValue {
 
 const CampaignLauncherContext = createContext<CampaignLauncherContextValue | null>(null);
 
-export function CampaignLauncherProvider({ 
+export function CampaignLauncherProvider({
   children,
   initialData,
   campaignId
-}: { 
+}: {
   children: ReactNode;
   initialData?: Partial<CampaignSetup>;
   campaignId?: string;
@@ -83,10 +84,10 @@ export function CampaignLauncherProvider({
   };
 
   return (
-    <CampaignLauncherContext.Provider 
-      value={{ 
-        data, 
-        update, 
+    <CampaignLauncherContext.Provider
+      value={{
+        data,
+        update,
         reset,
         isEditing: !!campaignId,
         campaignId
