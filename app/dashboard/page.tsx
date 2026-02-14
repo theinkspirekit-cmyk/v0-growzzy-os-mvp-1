@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation"
 import {
   Users, DollarSign, Target, Activity, RefreshCw, Plus, ArrowRight, Zap,
   ChevronRight, ShieldCheck, Globe, MoreVertical, X, AlertTriangle,
-  TrendingUp, TrendingDown, Bell, Sparkles
+  TrendingUp, TrendingDown, Bell, Sparkles, CheckCircle
 } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
@@ -147,34 +147,80 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* AI Insights */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {AI_INSIGHTS.map((insight) => (
-            <div key={insight.id} className="bg-white border border-[#E2E8F0] shadow-sm rounded-xl p-4 flex items-start gap-4 transition-colors group">
-              <div className={cn(
-                "w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0",
-                insight.type === 'critical' ? "bg-red-50 text-red-500" :
-                  insight.type === 'opportunity' ? "bg-emerald-50 text-emerald-500" :
-                    "bg-amber-50 text-amber-500"
-              )}>
-                {insight.type === 'critical' ? <TrendingDown className="w-5 h-5" /> :
-                  insight.type === 'opportunity' ? <TrendingUp className="w-5 h-5" /> :
-                    <AlertTriangle className="w-5 h-5" />}
+        {/* Neural Insights & Recommendations */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="lg:col-span-8 flex flex-col gap-4">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-[#1F57F5]" />
+                <h2 className="text-[18px] font-bold text-[#05090E]">Neural Intelligence Stream</h2>
               </div>
-              <div className="flex-1 min-w-0 text-left">
-                <span className={cn(
-                  "text-[10px] font-extrabold uppercase tracking-wider",
-                  insight.type === 'critical' ? "text-red-500" :
-                    insight.type === 'opportunity' ? "text-emerald-500" :
-                      "text-amber-500"
-                )}>{insight.type}</span>
-                <p className="text-[13px] font-medium text-[#1F2937] leading-snug mb-2 mt-0.5">{insight.message}</p>
-                <button className="text-[11px] font-bold text-[#1F57F5] hover:underline flex items-center gap-1 group-hover:gap-2 transition-all">
-                  {insight.action} <ArrowRight className="w-3 h-3" />
-                </button>
+              <span className="text-[10px] font-bold text-[#1F57F5] bg-[#1F57F5]/5 px-3 py-1 rounded-full border border-[#1F57F5]/20 animate-pulse">
+                Real-time Optimization Active
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {AI_INSIGHTS.map((insight) => (
+                <div key={insight.id} className="glass-card p-5 flex flex-col justify-between hover:border-[#1F57F5]/40 transition-all cursor-pointer group">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className={cn(
+                      "w-10 h-10 rounded-xl flex items-center justify-center shadow-sm",
+                      insight.type === 'critical' ? "bg-red-50 text-red-500" :
+                        insight.type === 'opportunity' ? "bg-emerald-50 text-emerald-500" :
+                          "bg-amber-50 text-amber-500"
+                    )}>
+                      {insight.type === 'critical' ? <TrendingDown className="w-5 h-5" /> :
+                        insight.type === 'opportunity' ? <TrendingUp className="w-5 h-5" /> :
+                          <AlertTriangle className="w-5 h-5" />}
+                    </div>
+                    <span className={cn(
+                      "text-[9px] font-black uppercase tracking-[0.15em] px-2 py-0.5 rounded",
+                      insight.type === 'critical' ? "bg-red-100/50 text-red-600" :
+                        insight.type === 'opportunity' ? "bg-emerald-100/50 text-emerald-600" :
+                          "bg-amber-100/50 text-amber-600"
+                    )}>{insight.type}</span>
+                  </div>
+                  <div className="text-left space-y-3">
+                    <p className="text-[14px] font-bold text-[#1F2937] leading-tight">{insight.message}</p>
+                    <button className="flex items-center gap-2 text-[11px] font-bold text-[#1F57F5] group-hover:translate-x-1 transition-transform">
+                      {insight.action} <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="lg:col-span-4 bg-white/40 border border-[#E2E8F0] rounded-[2rem] p-6 flex flex-col justify-between relative overflow-hidden group shadow-sm">
+            <div className="relative z-10">
+              <div className="flex items-center gap-2 mb-6">
+                <Zap className="w-5 h-5 text-amber-500" />
+                <h2 className="text-[16px] font-bold text-[#05090E]">Deep Recommendations</h2>
+              </div>
+              <div className="space-y-4">
+                {[
+                  "Reallocate 15% budget to high-performing Creative X",
+                  "A/B Test landing page variant for TikTok segment",
+                  "Audit Google Search keywords with CTR < 1.2%"
+                ].map((rec, i) => (
+                  <div key={i} className="flex items-center gap-3 p-3 bg-white/60 border border-white rounded-xl shadow-sm text-left">
+                    <div className="w-6 h-6 rounded-full bg-[#EFF6FF] text-[#1F57F5] flex items-center justify-center text-[10px] font-bold">
+                      {i + 1}
+                    </div>
+                    <p className="text-[12px] font-medium text-[#475569] leading-tight">{rec}</p>
+                  </div>
+                ))}
               </div>
             </div>
-          ))}
+            <button
+              onClick={() => setExecuteModalOpen(true)}
+              className="relative z-10 w-full h-11 bg-[#1F2937] hover:bg-black text-white rounded-xl text-[11px] font-semibold uppercase tracking-[0.15em] transition-all flex items-center justify-center gap-2 mt-6"
+            >
+              Apply Matrix Suggestions <CheckCircle className="w-4 h-4" />
+            </button>
+            <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-[#1F57F5]/5 rounded-full blur-3xl group-hover:bg-[#1F57F5]/10 transition-all duration-700" />
+          </div>
         </div>
 
         {/* KPIs */}

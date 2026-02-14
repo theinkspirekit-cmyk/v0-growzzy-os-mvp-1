@@ -21,7 +21,8 @@ import {
   Shield,
   Activity,
   Command,
-  Home
+  Home,
+  RefreshCw
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -58,6 +59,8 @@ const navItems: NavItem[] = [
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
   const [expandedItems, setExpandedItems] = useState<string[]>(['Intelligence'])
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const [quickActionOpen, setQuickActionOpen] = useState(false)
   const router = useRouter()
   const pathname = usePathname()
 
@@ -207,14 +210,76 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              <button className="relative p-2 bg-white hover:bg-[#F8FAFC] border border-transparent hover:border-[#E2E8F0] rounded-md text-[#64748B] transition-all">
-                <Bell className="w-5 h-5" />
-                <span className="absolute top-2 right-2.5 w-1.5 h-1.5 bg-[#F43F5E] rounded-full ring-2 ring-white" />
-              </button>
-              <button className="h-8 px-3 bg-[#1F57F5] hover:bg-[#1A4AD1] text-white text-[12px] font-medium rounded-md shadow-sm transition-all">
-                Quick Action +
-              </button>
+            <div className="flex items-center gap-3 relative">
+              <div className="relative">
+                <button
+                  onClick={() => setNotificationsOpen(!notificationsOpen)}
+                  className={cn(
+                    "relative p-2 bg-white hover:bg-[#F8FAFC] border rounded-md text-[#64748B] transition-all",
+                    notificationsOpen ? "border-[#1F57F5] bg-[#EFF6FF]" : "border-transparent hover:border-[#E2E8F0]"
+                  )}
+                >
+                  <Bell className="w-5 h-5" />
+                  <span className="absolute top-2 right-2.5 w-1.5 h-1.5 bg-[#F43F5E] rounded-full ring-2 ring-white" />
+                </button>
+
+                {notificationsOpen && (
+                  <div className="absolute right-0 top-12 w-80 bg-white border border-[#E2E8F0] shadow-2xl rounded-xl z-[100] animate-in fade-in slide-in-from-top-2">
+                    <div className="p-4 border-b border-[#E2E8F0] flex justify-between items-center bg-[#F8FAFC]">
+                      <span className="text-[12px] font-bold text-[#1F2937] uppercase tracking-wider">System Alerts</span>
+                      <button className="text-[10px] text-[#1F57F5] font-bold hover:underline">Clear Matrix</button>
+                    </div>
+                    <div className="max-h-80 overflow-y-auto">
+                      {[
+                        { title: "Anomaly Detected", desc: "TikTok ROAS drop in Southeast region.", time: "2m ago", type: "warning" },
+                        { title: "Sync Complete", desc: "Meta Ads platform data synchronized.", time: "1h ago", type: "success" },
+                        { title: "Budget Warning", desc: "Daily limit approaching for Campaign X.", time: "3h ago", type: "error" },
+                      ].map((n, i) => (
+                        <div key={i} className="p-4 hover:bg-[#F8FAFC] border-b border-[#F1F5F9] last:border-0 cursor-pointer group">
+                          <div className="flex justify-between items-start mb-1">
+                            <span className="text-[13px] font-bold text-[#1F2937] group-hover:text-[#1F57F5] transition-colors">{n.title}</span>
+                            <span className="text-[10px] text-[#94A3B8] font-medium">{n.time}</span>
+                          </div>
+                          <p className="text-[11px] text-[#64748B] leading-tight font-medium">{n.desc}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="relative">
+                <button
+                  onClick={() => setQuickActionOpen(!quickActionOpen)}
+                  className="h-10 px-4 bg-[#1F57F5] hover:bg-[#1A4AD1] text-white text-[12px] font-bold uppercase tracking-wider rounded-md shadow-md shadow-[#1F57F5]/20 transition-all flex items-center gap-2"
+                >
+                  Quick Action <ChevronDown className={cn("w-3.5 h-3.5 transition-transform", quickActionOpen ? "rotate-180" : "")} />
+                </button>
+
+                {quickActionOpen && (
+                  <div className="absolute right-0 top-12 w-56 bg-white border border-[#E2E8F0] shadow-2xl rounded-xl z-[100] overflow-hidden animate-in fade-in slide-in-from-top-2">
+                    {[
+                      { label: "New Campaign", icon: Megaphone, href: "/dashboard/campaigns" },
+                      { label: "AI Creative", icon: Sparkles, href: "/dashboard/creatives" },
+                      { label: "Sync Intelligence", icon: RefreshCw, action: () => { toast.success("Data re-indexed") } },
+                      { label: "Health Audit", icon: Activity, href: "/dashboard/command" },
+                    ].map((item, i) => (
+                      <button
+                        key={i}
+                        onClick={() => {
+                          if (item.href) router.push(item.href)
+                          if (item.action) item.action()
+                          setQuickActionOpen(false)
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-[12px] font-bold text-[#475569] hover:bg-[#F8FAFC] hover:text-[#1F57F5] transition-all border-b border-[#F1F5F9] last:border-0"
+                      >
+                        <item.icon className="w-4 h-4" />
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </header>

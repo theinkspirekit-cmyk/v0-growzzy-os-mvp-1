@@ -108,20 +108,24 @@ export default function AnalyticsPage() {
         ) : (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* KPI Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
               {[
                 { label: "Total Revenue", value: `$${data.kpi.revenue.value.toLocaleString()}`, change: `+${data.kpi.revenue.change}%`, color: "#10B981" },
                 { label: "Ad Spend", value: `$${data.kpi.spend.value.toLocaleString()}`, change: `+${data.kpi.spend.change}%`, color: "#F43F5E" },
                 { label: "ROAS", value: `${data.kpi.roas.value}x`, change: `+${data.kpi.roas.change}%`, color: "#1F57F5" },
-                { label: "Conv. Rate", value: `${data.kpi.conversionRate.value}%`, change: `${data.kpi.conversionRate.change}%`, color: "#F59E0B" },
+                { label: "LTV:CAC", value: `4.2:1`, change: `+0.4`, color: "#00DDFF" },
+                { label: "Churn Rate", value: `1.2%`, change: `-0.2%`, color: "#F59E0B" },
                 { label: "CPA", value: `$${data.kpi.cpa.value}`, change: `${data.kpi.cpa.change}%`, color: "#8B5CF6" },
               ].map((k, i) => (
-                <div key={i} className="bg-white p-4 border border-[#E2E8F0] rounded-lg shadow-sm text-left">
-                  <p className="text-[11px] font-medium text-[#64748B] uppercase tracking-wide mb-1">{k.label}</p>
-                  <p className="text-[18px] font-bold text-[#1F2937] tracking-tight">{k.value}</p>
-                  <span className={cn("text-[10px] font-bold", k.change.startsWith('+') ? 'text-emerald-600' : 'text-rose-500')}>
-                    {k.change} vs prev
-                  </span>
+                <div key={i} className="bg-white p-4 border border-[#E2E8F0] rounded-2xl shadow-sm text-left hover:shadow-md transition-shadow">
+                  <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider mb-1">{k.label}</p>
+                  <p className="text-[20px] font-bold text-[#0F172A] tracking-tight">{k.value}</p>
+                  <div className="flex items-center gap-1 mt-1">
+                    <span className={cn("text-[10px] font-black", k.change.startsWith('+') ? 'text-emerald-600' : 'text-rose-500')}>
+                      {k.change}
+                    </span>
+                    <span className="text-[9px] text-[#94A3B8] font-bold uppercase tracking-tight">velocity</span>
+                  </div>
                 </div>
               ))}
             </div>

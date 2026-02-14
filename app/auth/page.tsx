@@ -242,13 +242,17 @@ export default function AuthPage() {
                 {isLogin ? "Initialize New Node" : "Existing Identity Login"}
               </button>
               <button
-                onClick={() => {
-                  document.cookie = "growzzy_demo_mode=true; path=/; max-age=3600"
-                  window.location.assign("/dashboard")
+                onClick={async () => {
+                  setIsLoading(true)
+                  await signIn("credentials", {
+                    email: "admin@growzzy.com",
+                    password: "admin",
+                    callbackUrl: "/dashboard"
+                  })
                 }}
                 className="h-14 bg-white border border-[#EEF2F7] text-dark-text rounded-[14px] font-bold text-[11px] uppercase tracking-[0.2em] hover:bg-[#F7FAFC] flex items-center justify-center gap-3 group"
               >
-                Demo Mode <ChevronRight className="w-4 h-4 text-[#1F57F5] group-hover:translate-x-1 transition-transform" />
+                Bypass to Live Demo Node <ChevronRight className="w-4 h-4 text-[#1F57F5] group-hover:translate-x-1 transition-transform" />
               </button>
             </div>
           </div>
