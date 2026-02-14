@@ -32,6 +32,7 @@ model User {
   reports        Report[]
   creatives      Creative[]
   conversations  Conversation[]
+  analyticsEvents AnalyticsEvent[]
   workspaces     WorkspaceMember[]
   sessions       Session[]
   accounts       Account[]
@@ -173,15 +174,19 @@ model Analytics {
 model AnalyticsEvent {
   id           String   @id @default(cuid())
   userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   platform     String   // "meta", "google", "linkedin", etc.
   campaignId   String?
-  date         DateTime
+  date         DateTime @default(now())
+
   impressions  Int      @default(0)
   clicks       Int      @default(0)
-  spend        Float    @default(0)
   conversions  Int      @default(0)
+  spend        Float    @default(0)
   revenue      Float    @default(0)
   leads        Int      @default(0)
+
   metadata     Json?
   createdAt    DateTime @default(now())
 
@@ -405,34 +410,6 @@ model Report {
 
   @@index([userId])
   @@index([userId, status])
-}
-
-// ============================================
-// ANALYTICS EVENTS
-// ============================================
-
-model AnalyticsEvent {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  platform    String   // "meta", "google", "linkedin"
-  campaignId  String?
-  date        DateTime @default(now())
-
-  impressions Int      @default(0)
-  clicks      Int      @default(0)
-  conversions Int      @default(0)
-  spend       Float    @default(0)
-  revenue     Float    @default(0)
-
-  metadata    Json?
-
-  createdAt   DateTime @default(now())
-
-  @@index([userId, date])
-  @@index([userId, platform])
-  @@index([campaignId])
 }
 
 // ============================================
