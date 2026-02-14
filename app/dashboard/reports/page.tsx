@@ -12,16 +12,17 @@ import {
   PieChart,
   Target,
   Settings2,
-  LineChart
+  LineChart,
+  Grid
 } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 
 export default function ReportsPage() {
   const [isGenerating, setIsGenerating] = useState(false)
-  const [reportReady, setReportReady] = useState<string | null>(null) // URL or date
+  const [reportReady, setReportReady] = useState<{ url: string, name: string } | null>(null)
 
-  const [config, setConfig] = useState({
+  const [config, setConfig] = useState<any>({
     title: "Executive Weekly Summary",
     period: "Last 30 Days",
     sections: {
@@ -29,137 +30,35 @@ export default function ReportsPage() {
       channels: true,
       creatives: false,
       automations: true,
-      ga: true // NEW: Google Analytics Module
+      ga: true
     }
   })
 
-  // Simulated Google Analytics Mock Data Generator
-  // In production, this would call /api/reports/ga-data
-  const generateFAMockData = (days: number) => {
-    // Return a set of points for traffic
-    return Array.from({ length: days }).map((_, i) => [
-      new Date(Date.now() - (days - i) * 86400000).toLocaleDateString(),
-      Math.floor(Math.random() * 500) + 1200 // Sessions
-    ])
-  }
-
   const generateReport = async () => {
     setIsGenerating(true)
-    const toastId = toast.loading("Synthesizing Report Data (Including GA4)...")
+    const toastId = toast.loading("Synthesizing Report Data...")
 
     try {
-      // Dynamic Import to Fix SSR Error
-      const jsPDF = (await import("jspdf")).default
-      const autoTable = (await import("jspdf-autotable")).default
+      const response = await fetch('/api/reports/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(config)
+      })
 
-      // Simulate data fetch delay & GA API Latency
-      await new Promise(resolve => setTimeout(resolve, 2500))
+      if (!response.ok) throw new Error("Server Generation Failed")
 
-      const doc = new jsPDF()
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const filename = `${config.title.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`
 
-      // Header
-      doc.setFontSize(22)
-      doc.text("GrowzzyOS Intelligence Report", 14, 22)
-      doc.setFontSize(12)
-      doc.setTextColor(100)
-      doc.text(`Generated: ${new Date().toLocaleDateString()} | Period: ${config.period}`, 14, 32)
+      setReportReady({ url, name: filename })
 
-      let yPos = 45
+      // Auto-trigger download (optional)
+      // const a = document.createElement('a'); a.href = url; a.download = filename; a.click();
 
-      // Overview Section
-      if (config.sections.overview) {
-        doc.setFillColor(31, 87, 245) // Primary Blue
-        doc.rect(14, yPos, 182, 10, 'F')
-        doc.setTextColor(255)
-        doc.setFontSize(14)
-        doc.text("Performance Overview", 18, yPos + 7)
-        yPos += 20
+      toast.success("Report Ready for Download", { id: toastId })
 
-        const kpis = [
-          ['Revenue', '$124,592', '+12.5%'],
-          ['Spend', '$32,450', '+5.2%'],
-          ['ROAS', '3.84x', '+8.1%'],
-          ['CPA', '$42.15', '-2.4%']
-        ]
-
-        autoTable(doc, {
-          startY: yPos,
-          head: [['Metric', 'Value', 'Change']],
-          body: kpis,
-          theme: 'grid',
-          headStyles: { fillColor: [240, 240, 240], textColor: [50, 50, 50], fontStyle: 'bold' },
-          styles: { fontSize: 10, cellPadding: 6 }
-        })
-        yPos = (doc as any).lastAutoTable.finalY + 20
-      }
-
-      // Channels Section
-      if (config.sections.channels) {
-        doc.setFillColor(31, 87, 245)
-        doc.rect(14, yPos, 182, 10, 'F')
-        doc.setTextColor(255)
-        doc.text("Channel Efficiency Model", 18, yPos + 7)
-        yPos += 20
-
-        const channels = [
-          ['Facebook Ads', '$12,450', '4.2x', '342'],
-          ['Google Search', '$8,200', '3.8x', '215'],
-          ['TikTok', '$5,400', '2.1x', '128']
-        ]
-
-        autoTable(doc, {
-          startY: yPos,
-          head: [['Channel', 'Spend', 'ROAS', 'Conversions']],
-          body: channels,
-          theme: 'striped',
-          headStyles: { fillColor: [240, 240, 240], textColor: [50, 50, 50], fontStyle: 'bold' }
-        })
-        yPos = (doc as any).lastAutoTable.finalY + 20
-      }
-
-      // Google Analytics Section (New)
-      if (config.sections.ga) {
-        if (yPos > 220) { doc.addPage(); yPos = 20; }
-
-        doc.setFillColor(234, 179, 8) // Amber for GA
-        doc.rect(14, yPos, 182, 10, 'F')
-        doc.setTextColor(255)
-        doc.text("Traffic & Behavior (Google Analytics 4)", 18, yPos + 7)
-        yPos += 20
-
-        doc.setTextColor(50)
-        doc.setFontSize(10)
-        doc.text("Session Volume vs. Previous Period", 14, yPos)
-        yPos += 10
-
-        const gaData = [
-          ['Sessions', '42,501', '+15%'],
-          ['Engaged Sessions', '38,200', '+18%'],
-          ['Bounce Rate', '22.4%', '-2% (Improved)'],
-          ['Avg. Session Duration', '2m 14s', '+12s']
-        ]
-
-        autoTable(doc, {
-          startY: yPos,
-          head: [['Metric', 'Value', 'WoW Change']],
-          body: gaData,
-          theme: 'plain', // Clean look
-          headStyles: { fillColor: [255, 255, 255], textColor: [31, 87, 245], fontStyle: 'bold', lineWidth: 0 },
-          columnStyles: { 0: { fontStyle: 'bold' } }
-        })
-        yPos = (doc as any).lastAutoTable.finalY + 15
-
-        doc.setFontSize(9)
-        doc.setTextColor(150)
-        doc.text("* Data sourced via Google Analytics Data API (v1beta)", 14, yPos)
-      }
-
-      doc.save(`Growzzy_Report_${Date.now()}.pdf`)
-
-      toast.success("Report Downloaded Successfully", { id: toastId })
-      setReportReady(new Date().toLocaleTimeString())
-
-    } catch (e: any) {
+    } catch (e) {
       console.error(e)
       toast.error("Generation Protocol Failed", { id: toastId })
     } finally {
@@ -169,35 +68,36 @@ export default function ReportsPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-8 font-satoshi max-w-5xl mx-auto">
-        <div className="flex items-end justify-between border-b border-[#E2E8F0] pb-6">
+      <div className="space-y-6 font-satoshi max-w-5xl mx-auto">
+        <div className="flex items-center justify-between border-b border-border pb-6">
           <div className="space-y-1">
-            <h1 className="text-[24px] font-bold text-[#1F2937] tracking-tight">Report Generator</h1>
-            <p className="text-[11px] font-medium text-[#64748B] uppercase tracking-wider">Automated Intelligence Briefs</p>
+            <h1 className="text-[20px] font-semibold text-text-primary">Intelligence Reports</h1>
+            <p className="text-[13px] text-text-secondary">Automated PDF briefs and performance summaries.</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Config Panel */}
-          <div className="bg-white border border-[#E2E8F0] rounded-lg shadow-sm p-6 space-y-6">
-            <h3 className="text-[14px] font-bold text-[#1F2937] uppercase flex items-center gap-2">
-              <Settings2 className="w-4 h-4" /> Configuration
-            </h3>
+          <div className="card p-6 space-y-6 lg:col-span-1 h-fit">
+            <div className="flex items-center gap-2 mb-2">
+              <Settings2 className="w-4 h-4 text-text-tertiary" />
+              <h3 className="text-[13px] font-bold uppercase text-text-secondary">Configuration</h3>
+            </div>
 
             <div className="space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-[12px] font-bold text-[#64748B]">Report Title</label>
+              <div className="space-y-1">
+                <label className="text-[11px] font-medium uppercase text-text-tertiary">Report Title</label>
                 <input
                   type="text"
-                  className="w-full h-9 border border-[#E2E8F0] rounded px-3 text-[13px] outline-none focus:border-[#1F57F5]"
+                  className="input"
                   value={config.title}
                   onChange={e => setConfig({ ...config, title: e.target.value })}
                 />
               </div>
-              <div className="space-y-1.5">
-                <label className="text-[12px] font-bold text-[#64748B]">Time Horizon</label>
+              <div className="space-y-1">
+                <label className="text-[11px] font-medium uppercase text-text-tertiary">Time Horizon</label>
                 <select
-                  className="w-full h-9 border border-[#E2E8F0] rounded px-3 text-[13px] outline-none focus:border-[#1F57F5]"
+                  className="input"
                   value={config.period}
                   onChange={e => setConfig({ ...config, period: e.target.value })}
                 >
@@ -208,8 +108,8 @@ export default function ReportsPage() {
                 </select>
               </div>
 
-              <div className="space-y-3 pt-2">
-                <label className="text-[12px] font-bold text-[#64748B]">Include Modules</label>
+              <div className="space-y-2 pt-2">
+                <label className="text-[11px] font-medium uppercase text-text-tertiary">Include Modules</label>
                 {[
                   { id: 'overview', label: 'Performance Overview', icon: BarChart3 },
                   { id: 'channels', label: 'Channel Breakdown', icon: PieChart },
@@ -217,15 +117,15 @@ export default function ReportsPage() {
                   { id: 'automations', label: 'Automation Log', icon: CheckCircle2 },
                   { id: 'ga', label: 'Traffic (GA4)', icon: LineChart }
                 ].map(m => (
-                  <label key={m.id} className="flex items-center gap-3 p-3 border border-[#E2E8F0] rounded hover:bg-[#F8FAFC] cursor-pointer transition-colors">
+                  <label key={m.id} className="flex items-center gap-3 p-2 border border-border rounded-[6px] hover:bg-gray-50 cursor-pointer transition-colors group">
                     <input
                       type="checkbox"
-                      checked={(config.sections as any)[m.id]}
+                      checked={config.sections[m.id]}
                       onChange={e => setConfig({ ...config, sections: { ...config.sections, [m.id]: e.target.checked } })}
-                      className="rounded border-gray-300 text-[#1F57F5] focus:ring-[#1F57F5]"
+                      className="rounded border-gray-300 text-primary focus:ring-primary"
                     />
-                    <m.icon className="w-4 h-4 text-[#94A3B8]" />
-                    <span className="text-[13px] font-medium text-[#1F2937]">{m.label}</span>
+                    <m.icon className="w-4 h-4 text-text-tertiary group-hover:text-text-secondary" />
+                    <span className="text-[13px] font-medium text-text-primary">{m.label}</span>
                   </label>
                 ))}
               </div>
@@ -234,44 +134,56 @@ export default function ReportsPage() {
             <button
               onClick={generateReport}
               disabled={isGenerating}
-              className="w-full btn-primary h-12 justify-center text-[13px] tracking-wide"
+              className="btn btn-primary w-full h-10 justify-center"
             >
               {isGenerating ? (
-                <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Synthesizing PDF...</span>
+                <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Synthesizing...</span>
               ) : (
-                <span className="flex items-center gap-2"><FileText className="w-4 h-4" /> Generate Executive Brief</span>
+                <span className="flex items-center gap-2"><FileText className="w-4 h-4" /> Generate Brief</span>
               )}
             </button>
           </div>
 
           {/* Preview Panel */}
-          <div className="lg:col-span-2 bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg p-8 flex flex-col items-center justify-center text-center min-h-[500px]">
+          <div className="lg:col-span-2 bg-gray-50/50 border border-border border-dashed rounded-[8px] p-8 flex flex-col items-center justify-center text-center min-h-[400px]">
             {reportReady && !isGenerating ? (
-              <div className="space-y-6 animate-in fade-in zoom-in duration-300">
-                <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center border border-emerald-100 mx-auto">
-                  <CheckCircle2 className="w-10 h-10 text-emerald-500" />
+              <div className="space-y-6 animate-in fade-in zoom-in duration-300 w-full max-w-sm">
+                <div className="w-16 h-16 bg-success-bg rounded-full flex items-center justify-center border border-success/20 mx-auto">
+                  <CheckCircle2 className="w-8 h-8 text-success" />
                 </div>
                 <div className="space-y-1">
-                  <h3 className="text-[18px] font-bold text-[#1F2937]">Report Generated Successfully</h3>
-                  <p className="text-[13px] text-[#64748B]">Ready for distribution or archival.</p>
+                  <h3 className="text-[16px] font-bold text-text-primary">Generation Complete</h3>
+                  <p className="text-[13px] text-text-secondary">Your intelligence brief is ready.</p>
                 </div>
-                <div className="p-4 bg-white rounded-lg border border-[#E2E8F0] shadow-sm flex items-center gap-4 text-left max-w-sm mx-auto">
-                  <div className="w-10 h-10 bg-red-50 rounded flex items-center justify-center text-red-500">
+
+                <div className="card p-4 flex items-center gap-4 text-left bg-white shadow-sm hover:shadow-md transition-shadow">
+                  <div className="w-10 h-10 bg-red-50 rounded-[6px] flex items-center justify-center text-red-500 border border-red-100">
                     <FileText className="w-5 h-5" />
                   </div>
-                  <div>
-                    <p className="text-[13px] font-bold text-[#1F2937]">{config.title}.pdf</p>
-                    <p className="text-[11px] text-[#64748B]">{config.period} • 2.4 MB</p>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[13px] font-bold text-text-primary truncate" title={reportReady.name}>{reportReady.name}</p>
+                    <p className="text-[11px] text-text-tertiary">PDF Document • {config.period}</p>
                   </div>
+                  <a
+                    href={reportReady.url}
+                    download={reportReady.name}
+                    className="btn btn-secondary h-8 w-8 p-0 flex items-center justify-center text-text-secondary hover:text-primary"
+                  >
+                    <Download className="w-4 h-4" />
+                  </a>
                 </div>
-                <button onClick={() => setReportReady(null)} className="text-[12px] font-medium text-[#1F57F5] hover:underline">
-                  Create Another Report
+
+                <button
+                  onClick={() => setReportReady(null)}
+                  className="text-[12px] font-medium text-text-tertiary hover:text-text-primary underline decoration-dotted underline-offset-4"
+                >
+                  Configure New Report
                 </button>
               </div>
             ) : (
-              <div className="space-y-4 opacity-50">
-                <div className="w-32 h-40 border-2 border-dashed border-gray-300 rounded-lg mx-auto bg-white" />
-                <p className="text-[13px] font-medium text-[#94A3B8]">Configure settings to preview report structure</p>
+              <div className="space-y-4 opacity-40">
+                <div className="w-24 h-32 border-2 border-dashed border-gray-400 rounded mx-auto bg-white shadow-sm" />
+                <p className="text-[13px] font-medium text-text-tertiary">Configure settings to generate a report</p>
               </div>
             )}
           </div>

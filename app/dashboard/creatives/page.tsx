@@ -19,7 +19,8 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
-import { generateCreative, getCreatives, deleteCreative } from "@/app/actions/creatives"
+// import { generateCreative } from "@/app/actions/creatives" // Removed in favor of API
+import { getCreatives, deleteCreative } from "@/app/actions/creatives"
 
 export default function CreativesPage() {
   const [creatives, setCreatives] = useState<any[]>([])
@@ -46,48 +47,45 @@ export default function CreativesPage() {
   const load = async () => {
     try {
       const data = await getCreatives()
-      setCreatives(data || [])
+      if (Array.isArray(data)) setCreatives(data)
     } catch {
-      toast.error("Failed to load creative assets")
+      toast.error("Failed to load assets")
     } finally {
       setIsLoading(false)
     }
   }
 
   const handleGenerate = async () => {
-    if (!genForm.name || !genForm.productDescription) {
-      toast.error("Name and Product Description are required")
+    if (!genForm.name) {
+      toast.error("Asset Name is required")
       return
     }
 
     setIsGenerating(true)
-    const toastId = toast.loading("Initializing AI Generation Protocol...")
-
-    // Safety Timeout to prevent indefinite loading state
-    const timeoutId = setTimeout(() => {
-      if (isGenerating) {
-        setIsGenerating(false)
-        toast.error("Generation timed out. Please try again.", { id: toastId })
-      }
-    }, 15000) // 15s timeout
+    const toastId = toast.loading("Generating creatives with AI...")
 
     try {
-      const res = await generateCreative({
-        product_name: genForm.name,
-        target_audience: "General",
-        goal: genForm.objective,
-        platform: genForm.platform,
-        format: genForm.format,
-        aspect: genForm.aspect,
-        cta: genForm.cta,
-        tone: genForm.tone,
-        style: genForm.style,
+      // Call the new API Route
+      const response = await fetch('/api/ai/generate-creative', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          product_name: genForm.name,
+          goal: genForm.objective,
+          platform: genForm.platform,
+          format: genForm.format,
+          aspect: genForm.aspect,
+          // Combine description into tone/style for simplicity or pass separately if API supported
+          tone: genForm.tone,
+          style: genForm.style,
+          cta: genForm.cta
+        })
       })
 
-      clearTimeout(timeoutId)
+      const data = await response.json()
 
-      if (res.success) {
-        toast.success("Creative Asset Generated Successfully", { id: toastId })
+      if (response.ok && data.success) {
+        toast.success("Assets generated successfully", { id: toastId })
         setIsGenerateModalOpen(false)
         setGenForm({
           name: "",
@@ -100,21 +98,20 @@ export default function CreativesPage() {
           tone: "Direct",
           style: "Lifestyle",
         })
-        load()
+        load() // Reload list
       } else {
-        toast.error(res.error || "Generation failed on server", { id: toastId })
+        throw new Error(data.error || "Generation failed")
       }
     } catch (e: any) {
-      clearTimeout(timeoutId)
       console.error(e)
-      toast.error("Client-side error: " + e.message, { id: toastId })
+      toast.error(e.message || "Failed to generate assets", { id: toastId })
     } finally {
       setIsGenerating(false)
     }
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Permanently delete this asset?")) return
+    if (!confirm("Delete this asset?")) return
     setCreatives(prev => prev.filter(c => c.id !== id))
     try {
       await deleteCreative(id)
@@ -127,167 +124,124 @@ export default function CreativesPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6 font-satoshi min-h-screen">
+      <div className="space-y-6">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-[#E2E8F0] pb-6">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 text-[11px] font-medium text-[#64748B]">
-              <span>Dashboard</span>
-              <span>/</span>
-              <span className="text-[#1F2937]">Creative Studio</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-[24px] font-bold text-[#1F2937] tracking-tight">Creative Studio</h1>
-              <span className="px-2 py-0.5 bg-violet-100 text-violet-700 rounded text-[10px] font-bold uppercase tracking-wide">Beta</span>
-            </div>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-[20px] font-semibold text-text-primary">Creative Studio</h1>
+            <p className="text-[13px] text-text-secondary">AI-generated asset library.</p>
           </div>
           <div className="flex items-center gap-3">
-            <button className="h-11 px-4 bg-white border border-[#E2E8F0] rounded-md text-[13px] font-medium text-[#1F2937] hover:bg-[#F8FAFC] shadow-sm flex items-center gap-2">
-              <Upload className="w-4 h-4" /> Upload Asset
+            <button className="btn btn-secondary h-9">
+              <Upload className="w-3.5 h-3.5" /> Upload
             </button>
             <button
               onClick={() => setIsGenerateModalOpen(true)}
-              className="btn-primary h-11 px-5 flex items-center gap-2 shadow-sm hover:shadow-md transition-all"
+              className="btn btn-primary h-9"
             >
-              <Sparkles className="w-4 h-4" />
-              Generate New Asset
+              <Sparkles className="w-3.5 h-3.5" /> Generate
             </button>
           </div>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-8 items-start">
-          {/* Filters */}
-          <div className="w-full lg:w-64 flex-shrink-0 space-y-6 hidden lg:block">
-            <div className="bg-white border border-[#E2E8F0] rounded-lg p-4 shadow-sm space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-[13px] font-bold text-[#1F2937] flex items-center gap-2">
-                  <Filter className="w-3.5 h-3.5" /> Filters
-                </h3>
-                <button className="text-[10px] text-[#1F57F5] hover:underline">Reset</button>
-              </div>
-              <div className="space-y-3">
-                {['Platform', 'Format', 'Aspect Ratio', 'Style', 'Tags'].map(filter => (
-                  <div key={filter} className="space-y-1.5">
-                    <label className="text-[11px] font-medium text-[#64748B] uppercase tracking-wide">{filter}</label>
-                    <select className="w-full h-8 text-[12px] border border-[#E2E8F0] rounded bg-[#F8FAFC] px-2 outline-none focus:border-[#1F57F5]">
-                      <option>All {filter}s</option>
-                    </select>
-                  </div>
-                ))}
-              </div>
-            </div>
+        {/* Filter Bar */}
+        <div className="card p-1 flex items-center justify-between bg-white">
+          <div className="flex items-center gap-2 px-2 flex-1">
+            <Search className="w-4 h-4 text-text-tertiary" />
+            <input
+              type="text"
+              placeholder="Search assets..."
+              className="h-9 w-full text-[13px] border-none outline-none placeholder:text-text-tertiary"
+            />
           </div>
-
-          {/* Main Grid Area */}
-          <div className="flex-1 w-full">
-            {isLoading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {[1, 2, 3, 4, 5, 6].map(i => (
-                  <div key={i} className="h-[360px] bg-gray-100 rounded-lg animate-pulse" />
-                ))}
-              </div>
-            ) : creatives.length === 0 ? (
-              <div className="h-96 flex flex-col items-center justify-center border-2 border-dashed border-gray-200 rounded-lg bg-gray-50/50">
-                <div className="w-16 h-16 bg-white rounded-full shadow-sm flex items-center justify-center mb-4">
-                  <ImageIcon className="w-8 h-8 text-gray-300" />
-                </div>
-                <h3 className="text-[16px] font-bold text-[#1F2937]">Your studio is empty</h3>
-                <button onClick={() => setIsGenerateModalOpen(true)} className="mt-6 btn-primary">
-                  <Sparkles className="w-4 h-4 mr-2" /> Generate First Asset
-                </button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-12">
-                {creatives.map(c => (
-                  <div key={c.id} className="group bg-white border border-[#E2E8F0] rounded-[8px] overflow-hidden shadow-sm hover:translate-y-[-4px] hover:shadow-lg transition-all duration-300 flex flex-col h-[380px]">
-                    <div className="h-[200px] bg-gray-100 relative overflow-hidden flex-shrink-0 group">
-                      {c.imageUrl ? (
-                        <img src={c.imageUrl} alt={c.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-300 bg-gray-50">
-                          <ImageIcon className="w-10 h-10" />
-                        </div>
-                      )}
-                      <div className="absolute top-2 right-2 px-2 py-0.5 bg-black/70 backdrop-blur-md rounded text-white text-[10px] font-bold border border-white/10 flex items-center gap-1">
-                        <Sparkles className="w-3 h-3 text-yellow-400" /> {c.aiScore || 85}
-                      </div>
-                    </div>
-                    <div className="p-4 flex-1 flex flex-col">
-                      <div className="flex items-start justify-between mb-2">
-                        <h3 className="text-[14px] font-bold text-[#1F2937] line-clamp-1" title={c.name}>{c.name}</h3>
-                        <button className="text-gray-400 hover:text-gray-600"><MoreHorizontal className="w-4 h-4" /></button>
-                      </div>
-                      <p className="text-[11px] text-[#64748B] line-clamp-3 leading-relaxed bg-gray-50 p-2 rounded border border-gray-100 italic mb-auto">
-                        "{c.headline || c.bodyText}"
-                      </p>
-                      <div className="flex items-center justify-between pt-4 mt-2 border-t border-[#F1F5F9]">
-                        <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-[10px] font-bold uppercase">{c.platform || 'General'}</span>
-                        <button onClick={() => handleDelete(c.id)} className="text-gray-400 hover:text-red-500 transition-colors">
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+          <div className="flex items-center gap-2 border-l border-border pl-2">
+            <button className="btn btn-ghost h-8"><Filter className="w-3.5 h-3.5" /> Filter</button>
           </div>
         </div>
 
-        {/* Slide-over Generator Panel */}
+        {/* Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {isLoading ? (
+            [1, 2, 3, 4].map(i => (
+              <div key={i} className="h-[320px] bg-gray-100 rounded-[8px] animate-pulse" />
+            ))
+          ) : creatives.length === 0 ? (
+            <div className="col-span-full py-20 flex flex-col items-center justify-center text-center border-2 border-dashed border-gray-200 rounded-[8px]">
+              <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                <ImageIcon className="w-6 h-6 text-gray-400" />
+              </div>
+              <h3 className="font-semibold text-text-primary">No assets found</h3>
+              <p className="text-[13px] text-text-secondary mt-1 max-w-sm">
+                Upload your own creative assets or use our AI to generate high-converting ads in seconds.
+              </p>
+              <button onClick={() => setIsGenerateModalOpen(true)} className="btn btn-primary mt-4">
+                Generate First Asset
+              </button>
+            </div>
+          ) : (
+            creatives.map(c => (
+              <div key={c.id} className="card overflow-hidden group hover:shadow-md transition-all duration-300 flex flex-col h-full">
+                <div className="aspect-square bg-gray-100 relative overflow-hidden">
+                  {c.imageUrl ? (
+                    <img src={c.imageUrl} alt={c.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-gray-50 text-gray-300">
+                      <ImageIcon className="w-8 h-8" />
+                    </div>
+                  )}
+                  <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-[2px] text-white text-[10px] font-bold px-2 py-0.5 rounded-[4px] flex items-center gap-1">
+                    <Sparkles className="w-2.5 h-2.5 text-yellow-400" /> {c.aiScore || 85}
+                  </div>
+                </div>
+                <div className="p-3 flex-1 flex flex-col">
+                  <div className="flex justify-between items-start mb-1">
+                    <h3 className="font-semibold text-[13px] text-text-primary line-clamp-1" title={c.name}>{c.name}</h3>
+                    <button className="text-text-tertiary hover:text-text-primary"><MoreHorizontal className="w-4 h-4" /></button>
+                  </div>
+                  <p className="text-[11px] text-text-secondary line-clamp-2 mb-3 h-[32px]">
+                    {c.headline || c.bodyText || "No description"}
+                  </p>
+                  <div className="mt-auto flex items-center justify-between border-t border-border pt-2">
+                    <span className="badge badge-neutral lowercase">{c.platform || 'social'}</span>
+                    <button onClick={() => handleDelete(c.id)} className="text-text-tertiary hover:text-danger px-1">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Generate Slide-out */}
         {isGenerateModalOpen && (
           <div className="fixed inset-0 z-50 flex justify-end">
-            <div
-              className="absolute inset-0 bg-[#0F172A]/30 backdrop-blur-[2px] transition-opacity"
-              onClick={() => !isGenerating && setIsGenerateModalOpen(false)}
-            />
-            <div className="relative w-full max-w-[520px] bg-white h-full shadow-2xl border-l border-[#E2E8F0] animate-in slide-in-from-right duration-300 flex flex-col">
-              <div className="px-6 py-5 border-b border-[#E2E8F0] flex items-center justify-between bg-[#F8FAFC]">
-                <div>
-                  <h2 className="text-[18px] font-bold text-[#1F2937]">Asset Generator</h2>
-                  <p className="text-[11px] text-[#64748B] uppercase tracking-wide font-medium flex items-center gap-1.5 mt-0.5">
-                    <Sparkles className="w-3 h-3 text-violet-500" /> Powered by OpenAI
-                  </p>
-                </div>
-                <button
-                  onClick={() => setIsGenerateModalOpen(false)}
-                  disabled={isGenerating}
-                  className="p-2 hover:bg-white rounded-full border border-transparent hover:shadow-sm text-gray-400 hover:text-gray-600 transition-all"
-                >
-                  <X className="w-5 h-5" />
+            <div className="absolute inset-0 bg-black/20 backdrop-blur-[1px]" onClick={() => !isGenerating && setIsGenerateModalOpen(false)} />
+            <div className="relative w-full max-w-[480px] bg-white h-full shadow-2xl border-l border-border animate-in slide-in-from-right duration-300 flex flex-col">
+              <div className="px-6 py-4 border-b border-border bg-gray-50/50 flex items-center justify-between">
+                <h3 className="font-semibold text-[15px]">Generate Creative</h3>
+                <button onClick={() => setIsGenerateModalOpen(false)} disabled={isGenerating}>
+                  <X className="w-5 h-5 text-text-secondary hover:text-text-primary" />
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                <div className="space-y-1.5">
-                  <label className="text-[13px] font-bold text-[#1F2937]">Asset Name *</label>
+              <div className="flex-1 overflow-y-auto p-6 space-y-5">
+                <div className="space-y-1">
+                  <label className="text-[11px] font-medium uppercase text-text-tertiary">Asset Name</label>
                   <input
-                    type="text"
-                    className="input-field h-10"
-                    placeholder="e.g. Summer Launch Video Variant A"
+                    className="input"
+                    placeholder="e.g. Summer Promo V1"
                     value={genForm.name}
                     onChange={e => setGenForm({ ...genForm, name: e.target.value })}
+                    autoFocus
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-5">
-                  <div className="space-y-1.5">
-                    <label className="text-[12px] font-semibold text-[#64748B]">Objective</label>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-medium uppercase text-text-tertiary">Platform</label>
                     <select
-                      className="input-field h-10"
-                      value={genForm.objective}
-                      onChange={e => setGenForm({ ...genForm, objective: e.target.value })}
-                    >
-                      <option>Conversions</option>
-                      <option>Traffic</option>
-                      <option>Brand Awareness</option>
-                      <option>Lead Generation</option>
-                    </select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[12px] font-semibold text-[#64748B]">Platform</label>
-                    <select
-                      className="input-field h-10"
+                      className="input"
                       value={genForm.platform}
                       onChange={e => setGenForm({ ...genForm, platform: e.target.value })}
                     >
@@ -297,39 +251,68 @@ export default function CreativesPage() {
                       <option>LinkedIn</option>
                     </select>
                   </div>
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-medium uppercase text-text-tertiary">Goal</label>
+                    <select
+                      className="input"
+                      value={genForm.objective}
+                      onChange={e => setGenForm({ ...genForm, objective: e.target.value })}
+                    >
+                      <option>Conversions</option>
+                      <option>Traffic</option>
+                      <option>Brand Awareness</option>
+                    </select>
+                  </div>
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-[13px] font-bold text-[#1F2937]">Product / Offer Description *</label>
+                <div className="space-y-1">
+                  <label className="text-[11px] font-medium uppercase text-text-tertiary">Product Context</label>
                   <textarea
-                    className="w-full min-h-[100px] p-3 border border-[#E2E8F0] rounded-lg text-[13px] outline-none focus:border-[#1F57F5] focus:ring-1 focus:ring-[#1F57F5] placeholder:text-gray-400"
-                    placeholder="Describe the product, key benefits, and offer details..."
+                    className="input min-h-[100px] py-2"
+                    placeholder="Describe your product, offer, and target audience..."
                     value={genForm.productDescription}
                     onChange={e => setGenForm({ ...genForm, productDescription: e.target.value })}
                   />
                 </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-medium uppercase text-text-tertiary">Tone</label>
+                    <select
+                      className="input"
+                      value={genForm.tone}
+                      onChange={e => setGenForm({ ...genForm, tone: e.target.value })}
+                    >
+                      <option>Direct</option>
+                      <option>Professional</option>
+                      <option>Urgent</option>
+                      <option>Friendly</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-medium uppercase text-text-tertiary">Style</label>
+                    <select
+                      className="input"
+                      value={genForm.style}
+                      onChange={e => setGenForm({ ...genForm, style: e.target.value })}
+                    >
+                      <option>Lifestyle</option>
+                      <option>Minimalist</option>
+                      <option>Product Focus</option>
+                      <option>UGC Style</option>
+                    </select>
+                  </div>
+                </div>
               </div>
 
-              <div className="p-6 border-t border-[#E2E8F0] bg-[#F8FAFC]">
+              <div className="p-6 border-t border-border bg-gray-50/50">
                 <button
                   onClick={handleGenerate}
                   disabled={isGenerating}
-                  className={cn(
-                    "w-full h-12 rounded-lg font-bold text-[14px] flex items-center justify-center gap-2 transition-all shadow-sm",
-                    isGenerating ? "bg-[#CBD5E1] text-white cursor-not-allowed" : "bg-[#1F57F5] text-white hover:bg-[#1A4AD1] hover:shadow-md"
-                  )}
+                  className="btn btn-primary w-full h-10 flex items-center justify-center gap-2"
                 >
-                  {isGenerating ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Generating Creative...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-4 h-4" />
-                      Generate with AI
-                    </>
-                  )}
+                  {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                  {isGenerating ? 'Generating...' : 'Generate Assets'}
                 </button>
               </div>
             </div>

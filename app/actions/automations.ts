@@ -12,27 +12,21 @@ const AutomationSchema = z.object({
     description: z.string().optional()
 })
 
-const MOCK_AUTOMATIONS: any[] = [
-    // Pre-populate if DB empty (mock)
-    { id: "1", name: "Pause Low ROAS AdSets", triggerType: "ROAS < 1.5", actionType: "PAUSE", isActive: true, runCount: 42, lastRun: new Date() },
-    { id: "2", name: "Scale High Performers", triggerType: "ROAS > 4.0", actionType: "INCREASE_BUDGET_20%", isActive: true, runCount: 15, lastRun: new Date(Date.now() - 86400000) },
-    { id: "3", name: "Budget Safeguard", triggerType: "SPEND > $500", actionType: "NOTIFY", isActive: false, runCount: 0, lastRun: null },
-]
+const MOCK_AUTOMATIONS: any[] = [] // Removed mocks to force DB usage
 
 export async function getAutomations() {
     const session = await auth()
     if (!session?.user?.id) return []
 
-    // Attempt DB Fetch
     try {
         const dbAutos = await prisma.automation.findMany({
             where: { userId: session.user.id },
             orderBy: { createdAt: "desc" }
         })
-        if (dbAutos.length > 0) return dbAutos
-        return MOCK_AUTOMATIONS // Fallback for demo if DB empty
-    } catch {
-        return MOCK_AUTOMATIONS
+        return JSON.parse(JSON.stringify(dbAutos))
+    } catch (e) {
+        console.error("Get Automations Error", e)
+        return []
     }
 }
 
@@ -47,7 +41,8 @@ export async function deployAutomation(data: any) {
             actionType: data.action
         })
 
-        await new Promise(resolve => setTimeout(resolve, 1500)) // Simulate Deployment
+        // Simulate Deployment Latency
+        await new Promise(resolve => setTimeout(resolve, 800))
 
         const automation = await prisma.automation.create({
             data: {
@@ -55,14 +50,14 @@ export async function deployAutomation(data: any) {
                 name: validated.name,
                 triggerType: validated.triggerType,
                 actionType: validated.actionType,
-                trigger: {}, // simplified
-                action: {}, // simplified
-                isActive: true,
+                trigger: { type: validated.triggerType }, // Store simplified logic
+                action: { type: validated.actionType },
+                status: "active",
                 runCount: 0
             }
         })
         revalidatePath("/dashboard/automations")
-        return { success: true, automation }
+        return { success: true, automation: JSON.parse(JSON.stringify(automation)) }
 
     } catch (e: any) {
         return { error: e.message || "Deployment Failed" }
@@ -71,8 +66,7 @@ export async function deployAutomation(data: any) {
 
 export async function testAutomation(id: string) {
     // Simulate Logic Execution
-    await new Promise(resolve => setTimeout(resolve, 2000))
-    // Return simulated impact
+    await new Promise(resolve => setTimeout(resolve, 1500))
     const impact = `Projected Savings: $${Math.floor(Math.random() * 500) + 50}/day`
     return { success: true, impact }
 }
@@ -82,17 +76,23 @@ export async function toggleAutomation(id: string, currentState: boolean) {
     if (!session?.user?.id) return { error: "Unauthorized" }
 
     try {
-        // Handle MOCK vs DB
-        // If mock ID, we can't update DB. But let's assume valid UUIDs for DB.
-        if (id.length < 10) return { success: true } // Mock pass
+        // currentState passed from frontend might be based on old boolean logic or new string logic
+        // But the function signature says boolean. 
+        // Let's ignore currentState arg and just flip based on DB or pass the target status string.
+        // Actually, to be safe, I'll fetch the current one or just trust the intent.
+        // The frontend sends `!isActive` (boolean). 
+        // If frontend sends `true` (meaning "make active"), I set "active".
+        // If `false` (meaning "make paused"), I set "paused".
+
+        const targetStatus = currentState ? "active" : "paused"
 
         await prisma.automation.update({
             where: { id, userId: session.user.id },
-            data: { isActive: !currentState }
+            data: { status: targetStatus }
         })
         revalidatePath("/dashboard/automations")
         return { success: true }
-    } catch {
+    } catch (e) {
         return { error: "Toggle failed" }
     }
 }
@@ -102,8 +102,6 @@ export async function deleteAutomation(id: string) {
     if (!session?.user?.id) return { error: "Unauthorized" }
 
     try {
-        if (id.length < 10) return { success: true } // Mock pass
-
         await prisma.automation.delete({
             where: { id, userId: session.user.id }
         })

@@ -18,13 +18,15 @@ import {
   Bell,
   Menu,
   X,
-  Shield,
   Activity,
   Command,
   Home,
-  RefreshCw
+  RefreshCw,
+  Search,
+  Plus
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+// import { useSession, signOut } from "next-auth/react" // Uncomment when Auth is ready
 
 interface NavItem {
   title: string
@@ -34,7 +36,7 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { title: "Home", href: "/dashboard", icon: Home },
+  { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { title: "Command Hub", href: "/dashboard/command", icon: Command },
   { title: "AI Ad Creatives", href: "/dashboard/creatives", icon: Sparkles },
   { title: "Content Studio", href: "/dashboard/content", icon: Wand2 },
@@ -50,7 +52,6 @@ const navItems: NavItem[] = [
       { title: "Efficiency Matrix", href: "/dashboard/analytics/efficiency" },
     ]
   },
-  { title: "AI Assistant", href: "/dashboard/copilot", icon: Bot },
   { title: "Automation", href: "/dashboard/automations", icon: Zap },
   { title: "Reports", href: "/dashboard/reports", icon: FileBarChart },
   { title: "Settings", href: "/dashboard/settings", icon: Settings },
@@ -59,10 +60,9 @@ const navItems: NavItem[] = [
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
   const [expandedItems, setExpandedItems] = useState<string[]>(['Intelligence'])
-  const [notificationsOpen, setNotificationsOpen] = useState(false)
-  const [quickActionOpen, setQuickActionOpen] = useState(false)
   const router = useRouter()
   const pathname = usePathname()
+  // const { data: session } = useSession() 
 
   const isActive = (href: string) => {
     if (href === "/dashboard") return pathname === href
@@ -76,30 +76,28 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   const SidebarContent = () => (
-    <div className="flex flex-col h-full bg-sidebar border-r border-[#E2E8F0] font-satoshi">
+    <div className="flex flex-col h-full bg-white border-r border-border font-satoshi">
       {/* Brand Header */}
-      <div className="h-16 flex items-center gap-3 px-6 border-b border-[#E2E8F0]">
-        <div className="w-8 h-8 bg-[#1F57F5] rounded-md flex items-center justify-center text-white shadow-sm">
-          <Command className="w-4 h-4" />
+      <div className="h-14 flex items-center gap-3 px-4 border-b border-border">
+        <div className="w-6 h-6 bg-primary rounded-[4px] flex items-center justify-center text-white shadow-xs">
+          <Command className="w-3.5 h-3.5" />
         </div>
         <div className="flex flex-col">
-          <h2 className="text-[16px] font-bold tracking-tight text-[#0F172A] leading-none">GROWZZY <span className="text-[#1F57F5]">OS</span></h2>
-          <span className="text-[10px] font-medium text-[#64748B] uppercase tracking-wider mt-1">Enterprise</span>
+          <h2 className="text-[14px] font-bold tracking-tight text-text-primary leading-none">GROWZZY</h2>
+        </div>
+        <div className="ml-auto px-1.5 py-0.5 bg-gray-100 rounded text-[10px] font-medium text-text-secondary border border-border">
+          PRO
         </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto scrollbar-hide">
+      <nav className="flex-1 px-2 py-4 space-y-0.5 overflow-y-auto">
         {navItems.map((item) => {
           const active = isActive(item.href)
           const isExpanded = expandedItems.includes(item.title)
 
-          // Enterprise Sidebar Item Style
-          // Active: Light blue bg + Blue text + Blue Left Border (optional)
-          // Inactive: Gray text + Hover light gray
-
           return (
-            <div key={item.title} className="space-y-0.5">
+            <div key={item.title}>
               <button
                 onClick={() => {
                   if (item.children) {
@@ -109,30 +107,30 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   }
                 }}
                 className={cn(
-                  "w-full flex items-center justify-between px-3 py-2 rounded-md text-[13px] font-medium transition-all group",
+                  "w-full flex items-center justify-between px-3 py-1.5 rounded-[6px] text-[13px] font-medium transition-all group",
                   active
-                    ? "bg-[#EFF6FF] text-[#1F57F5]"
-                    : "text-[#475569] hover:bg-[#F8FAFC] hover:text-[#0F172A]"
+                    ? "bg-primary/10 text-primary"
+                    : "text-text-secondary hover:bg-gray-50 hover:text-text-primary"
                 )}
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2.5">
                   <item.icon className={cn(
-                    "w-4 h-4 transition-colors",
-                    active ? "text-[#1F57F5]" : "text-[#94A3B8] group-hover:text-[#64748B]"
+                    "w-4 h-4",
+                    active ? "text-primary" : "text-text-tertiary group-hover:text-text-secondary"
                   )} />
-                  <span className="tracking-tight">{item.title}</span>
+                  <span>{item.title}</span>
                 </div>
                 {item.children && (
                   <ChevronDown className={cn(
-                    "w-3.5 h-3.5 transition-transform duration-200 opacity-50",
+                    "w-3.5 h-3.5 transition-transform duration-200",
                     isExpanded ? 'rotate-180' : '',
-                    active ? 'text-[#1F57F5]' : 'text-[#94A3B8]'
+                    active ? 'text-primary' : 'text-text-tertiary'
                   )} />
                 )}
               </button>
 
               {item.children && isExpanded && (
-                <div className="ml-4 pl-3 border-l border-[#E2E8F0] space-y-0.5 my-1">
+                <div className="ml-9 space-y-0.5 my-0.5">
                   {item.children.map(child => {
                     const childActive = pathname === child.href;
                     return (
@@ -140,10 +138,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         key={child.href}
                         onClick={() => router.push(child.href)}
                         className={cn(
-                          "w-full text-left py-1.5 px-3 rounded-md text-[12px] transition-all font-medium block",
+                          "w-full text-left py-1 px-2 rounded-[4px] text-[12px] transition-all font-medium block border-l-2",
                           childActive
-                            ? 'text-[#1F57F5] bg-[#EFF6FF]'
-                            : 'text-[#64748B] hover:text-[#0F172A] hover:bg-[#F8FAFC]'
+                            ? 'border-primary text-primary bg-gray-50'
+                            : 'border-transparent text-text-secondary hover:text-text-primary hover:bg-gray-50'
                         )}
                       >
                         {child.title}
@@ -157,135 +155,80 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         })}
       </nav>
 
-      {/* User Session Staging Area */}
-      <div className="p-4 border-t border-[#E2E8F0] bg-white">
-        <div className="p-2 rounded-md border border-[#E2E8F0] shadow-sm flex items-center gap-3 hover:bg-[#F8FAFC] transition-colors cursor-pointer group">
-          <div className="w-8 h-8 rounded-full bg-[#1F57F5]/10 flex items-center justify-center text-[#1F57F5] font-bold text-xs">
-            MR
+      {/* User Footer */}
+      <div className="p-3 border-t border-border">
+        <div className="p-2 rounded-[6px] hover:bg-gray-50 transition-colors cursor-pointer flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
+            JD
           </div>
-          <div className="flex-1 min-w-0 text-left">
-            <p className="text-[12px] font-semibold text-[#0F172A] truncate">Max Reynolds</p>
-            <p className="text-[10px] text-[#64748B] truncate">Admin Workspace</p>
+          <div className="flex-1 min-w-0">
+            <p className="text-[13px] font-medium text-text-primary truncate">John Doe</p>
+            <p className="text-[11px] text-text-tertiary truncate">john@growzzy.com</p>
           </div>
-          <LogOut className="w-3.5 h-3.5 text-[#94A3B8] group-hover:text-[#EF4444] transition-colors" />
+          <LogOut className="w-4 h-4 text-text-tertiary hover:text-danger transition-colors" />
         </div>
       </div>
     </div>
   )
 
   return (
-    <div className="flex h-screen bg-[#F8FAFC] font-satoshi selection:bg-[#1F57F5]/20 selection:text-[#1F57F5]">
+    <div className="flex h-screen bg-gray-50 font-satoshi">
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex w-[240px] flex-col flex-shrink-0 z-20 h-full fixed left-0 top-0 bottom-0">
+      <aside className="hidden lg:flex w-[220px] flex-col flex-shrink-0 z-20 h-full fixed left-0 top-0 bottom-0 shadow-xs">
         <SidebarContent />
       </aside>
 
-      {/* Main Execution Layer */}
-      <div className="flex-1 flex flex-col min-w-0 relative lg:pl-[240px]">
-
-        {/* Superior Operational Header */}
-        <header className="h-16 bg-white border-b border-[#E2E8F0] flex items-center justify-between px-6 sticky top-0 z-30 shadow-sm">
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col min-w-0 relative lg:pl-[220px]">
+        {/* Top Header */}
+        <header className="h-14 bg-white border-b border-border flex items-center justify-between px-6 sticky top-0 z-30">
           <div className="flex items-center gap-4">
             <button
               onClick={() => setMobileSidebarOpen(true)}
-              className="lg:hidden p-2 hover:bg-[#F1F5F9] rounded-md transition-all text-[#64748B]"
+              className="lg:hidden p-1.5 hover:bg-gray-100 rounded-md text-text-secondary"
             >
               <Menu className="w-5 h-5" />
             </button>
-            <div className="hidden md:flex items-center gap-2 px-2.5 py-1 bg-[#F8FAFC] border border-[#E2E8F0] rounded-md">
-              <span className="text-[12px] font-medium text-[#64748B]">Project:</span>
-              <span className="text-[12px] font-semibold text-[#0F172A]">Growzzy MVP</span>
+
+            {/* Breadcrumb / Search */}
+            <div className="hidden md:flex items-center gap-2">
+              <span className="text-text-tertiary">/</span>
+              <span className="text-[13px] font-medium text-text-secondary">Dashboard</span>
+            </div>
+
+            <div className="hidden md:flex relative ml-4">
+              <Search className="absolute left-2.5 top-1.5 w-4 h-4 text-text-tertiary" />
+              <input
+                type="text"
+                placeholder="Search or jump to..."
+                className="h-8 pl-9 pr-4 bg-gray-50 border border-border rounded-[6px] text-[13px] w-64 focus:bg-white focus:border-primary focus:ring-1 focus:ring-primary transition-all outline-none"
+              />
+              <span className="absolute right-2 top-1.5 text-[10px] text-text-tertiary border border-border px-1.5 rounded-[4px]">⌘K</span>
             </div>
           </div>
 
-          <div className="flex items-center gap-6">
-            <div className="hidden md:flex items-center gap-6 border-r border-[#E2E8F0] pr-6">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-[#10B981]"></div>
-                <span className="text-[12px] font-mono font-medium text-[#0F172A]">System Operational</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Activity className="w-3.5 h-3.5 text-[#64748B]" />
-                <span className="text-[12px] font-mono text-[#64748B]">12ms</span>
-              </div>
+          <div className="flex items-center gap-4">
+            {/* Uptime Indicator */}
+            <div className="hidden md:flex items-center gap-2 px-3 py-1 bg-success-bg/50 rounded-full border border-success-bg">
+              <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse"></div>
+              <span className="text-[11px] font-medium text-success-700">Systems Normal</span>
             </div>
 
-            <div className="flex items-center gap-3 relative">
-              <div className="relative">
-                <button
-                  onClick={() => setNotificationsOpen(!notificationsOpen)}
-                  className={cn(
-                    "relative p-2 bg-white hover:bg-[#F8FAFC] border rounded-md text-[#64748B] transition-all",
-                    notificationsOpen ? "border-[#1F57F5] bg-[#EFF6FF]" : "border-transparent hover:border-[#E2E8F0]"
-                  )}
-                >
-                  <Bell className="w-5 h-5" />
-                  <span className="absolute top-2 right-2.5 w-1.5 h-1.5 bg-[#F43F5E] rounded-full ring-2 ring-white" />
-                </button>
+            <div className="h-4 w-[1px] bg-border mx-1"></div>
 
-                {notificationsOpen && (
-                  <div className="absolute right-0 top-12 w-80 bg-white border border-[#E2E8F0] shadow-2xl rounded-xl z-[100] animate-in fade-in slide-in-from-top-2">
-                    <div className="p-4 border-b border-[#E2E8F0] flex justify-between items-center bg-[#F8FAFC]">
-                      <span className="text-[12px] font-bold text-[#1F2937] uppercase tracking-wider">System Alerts</span>
-                      <button className="text-[10px] text-[#1F57F5] font-bold hover:underline">Clear Matrix</button>
-                    </div>
-                    <div className="max-h-80 overflow-y-auto">
-                      {[
-                        { title: "Anomaly Detected", desc: "TikTok ROAS drop in Southeast region.", time: "2m ago", type: "warning" },
-                        { title: "Sync Complete", desc: "Meta Ads platform data synchronized.", time: "1h ago", type: "success" },
-                        { title: "Budget Warning", desc: "Daily limit approaching for Campaign X.", time: "3h ago", type: "error" },
-                      ].map((n, i) => (
-                        <div key={i} className="p-4 hover:bg-[#F8FAFC] border-b border-[#F1F5F9] last:border-0 cursor-pointer group">
-                          <div className="flex justify-between items-start mb-1">
-                            <span className="text-[13px] font-bold text-[#1F2937] group-hover:text-[#1F57F5] transition-colors">{n.title}</span>
-                            <span className="text-[10px] text-[#94A3B8] font-medium">{n.time}</span>
-                          </div>
-                          <p className="text-[11px] text-[#64748B] leading-tight font-medium">{n.desc}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
+            <button className="text-text-tertiary hover:text-text-primary transition-colors relative">
+              <Bell className="w-5 h-5" />
+              <span className="absolute top-0 right-0 w-2 h-2 bg-danger rounded-full border-2 border-white"></span>
+            </button>
 
-              <div className="relative">
-                <button
-                  onClick={() => setQuickActionOpen(!quickActionOpen)}
-                  className="h-10 px-4 bg-[#1F57F5] hover:bg-[#1A4AD1] text-white text-[12px] font-bold uppercase tracking-wider rounded-md shadow-md shadow-[#1F57F5]/20 transition-all flex items-center gap-2"
-                >
-                  Quick Action <ChevronDown className={cn("w-3.5 h-3.5 transition-transform", quickActionOpen ? "rotate-180" : "")} />
-                </button>
-
-                {quickActionOpen && (
-                  <div className="absolute right-0 top-12 w-56 bg-white border border-[#E2E8F0] shadow-2xl rounded-xl z-[100] overflow-hidden animate-in fade-in slide-in-from-top-2">
-                    {[
-                      { label: "New Campaign", icon: Megaphone, href: "/dashboard/campaigns" },
-                      { label: "AI Creative", icon: Sparkles, href: "/dashboard/creatives" },
-                      { label: "Sync Intelligence", icon: RefreshCw, action: () => { toast.success("Data re-indexed") } },
-                      { label: "Health Audit", icon: Activity, href: "/dashboard/command" },
-                    ].map((item, i) => (
-                      <button
-                        key={i}
-                        onClick={() => {
-                          if (item.href) router.push(item.href)
-                          if (item.action) item.action()
-                          setQuickActionOpen(false)
-                        }}
-                        className="w-full flex items-center gap-3 px-4 py-3 text-[12px] font-bold text-[#475569] hover:bg-[#F8FAFC] hover:text-[#1F57F5] transition-all border-b border-[#F1F5F9] last:border-0"
-                      >
-                        <item.icon className="w-4 h-4" />
-                        {item.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
+            <button className="btn btn-primary h-8 px-3 text-[12px] shadow-sm">
+              <Plus className="w-4 h-4 mr-1.5" /> Create
+            </button>
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto bg-[#F8FAFC] p-6 lg:p-8 scroll-smooth">
-          <div className="max-w-[1600px] mx-auto space-y-6 animate-in fade-in duration-500">
+        <main className="flex-1 overflow-y-auto p-6 scroll-smooth">
+          <div className="max-w-[1400px] mx-auto space-y-6 animate-in fade-in duration-300">
             {children}
           </div>
         </main>
@@ -294,14 +237,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Mobile Sidebar Overlay */}
       {mobileSidebarOpen && (
         <div className="fixed inset-0 z-[1000] lg:hidden">
-          <div className="absolute inset-0 bg-[#0F172A]/50 backdrop-blur-sm transition-all" onClick={() => setMobileSidebarOpen(false)} />
-          <div className="absolute left-0 top-0 bottom-0 w-[240px] bg-white animate-in slide-in-from-left duration-200 shadow-2xl flex flex-col">
+          <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm transition-all" onClick={() => setMobileSidebarOpen(false)} />
+          <div className="absolute left-0 top-0 bottom-0 w-[240px] bg-white animate-in slide-in-from-left duration-200 shadow-xl flex flex-col">
             <SidebarContent />
             <button
               onClick={() => setMobileSidebarOpen(false)}
-              className="absolute top-4 right-[-32px] w-8 h-8 bg-white rounded-full shadow-md flex items-center justify-center text-[#0F172A]"
+              className="absolute top-2 right-[-40px] w-10 h-10 flex items-center justify-center text-white"
             >
-              <X className="w-4 h-4" />
+              <X className="w-6 h-6" />
             </button>
           </div>
         </div>

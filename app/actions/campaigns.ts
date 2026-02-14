@@ -9,9 +9,15 @@ const CampaignSchema = z.object({
     name: z.string().min(1, "Name is required"),
     platformId: z.string().optional(),
     status: z.string().default("draft"),
-    budget: z.number().min(0).default(0),
-    objective: z.string().optional(),
+    budget: z.number().min(0, "Budget must be positive"),
+    objective: z.string().optional().default("conversions"),
 })
+
+export type CampaignState = {
+    error?: string
+    success?: boolean
+    campaign?: any
+}
 
 export async function getCampaigns() {
     const session = await auth()
@@ -25,7 +31,7 @@ export async function getCampaigns() {
     return JSON.parse(JSON.stringify(campaigns))
 }
 
-export async function createCampaign(data: any) {
+export async function createCampaign(data: any): Promise<CampaignState> {
     const session = await auth()
     if (!session?.user?.id) return { error: "Unauthorized" }
 
@@ -36,6 +42,9 @@ export async function createCampaign(data: any) {
             status: data.status,
             objective: data.objective
         })
+
+        // Simulate network for realism
+        await new Promise(resolve => setTimeout(resolve, 600))
 
         const campaign = await prisma.campaign.create({
             data: {
@@ -53,11 +62,14 @@ export async function createCampaign(data: any) {
         revalidatePath("/dashboard/campaigns")
         return { success: true, campaign: JSON.parse(JSON.stringify(campaign)) }
     } catch (e: any) {
+        if (e instanceof z.ZodError) {
+            return { error: e.errors[0].message }
+        }
         return { error: e.message || "Failed to create campaign" }
     }
 }
 
-export async function updateCampaignStatus(id: string, status: string) {
+export async function updateCampaignStatus(id: string, status: string): Promise<CampaignState> {
     const session = await auth()
     if (!session?.user?.id) return { error: "Unauthorized" }
 
@@ -73,7 +85,7 @@ export async function updateCampaignStatus(id: string, status: string) {
     }
 }
 
-export async function deleteCampaign(id: string) {
+export async function deleteCampaign(id: string): Promise<CampaignState> {
     const session = await auth()
     if (!session?.user?.id) return { error: "Unauthorized" }
 

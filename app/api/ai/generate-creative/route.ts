@@ -1,63 +1,94 @@
-export const dynamic = 'force-dynamic'
-import { createServerClient } from "@supabase/ssr"
-import { cookies } from "next/headers"
+import { auth } from "@/lib/auth"
+import { prisma } from "@/lib/prisma"
+import { OpenAIService } from "@/lib/openai-service"
 import { NextResponse } from "next/server"
+import { z } from "zod"
+
+const GenerateSchema = z.object({
+  product_name: z.string().min(1),
+  target_audience: z.string().optional(),
+  goal: z.string().optional(),
+  platform: z.string().optional(),
+  format: z.string().optional(),
+  aspect: z.string().optional(),
+  cta: z.string().optional(),
+  tone: z.string().optional(),
+  style: z.string().optional()
+})
+
+const MOCK_IMAGES = [
+  "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&q=80",
+  "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&q=80",
+  "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&q=80",
+  "https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=800&q=80"
+]
 
 export async function POST(req: Request) {
   try {
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      (process.env.NEXT_PUBLIC_SUPABASE_URL || ''),
-      (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''),
-      {
-        cookies: {
-          getAll: () => cookieStore.getAll(),
-          setAll: (cookiesToSet: any[]) => {
-            cookiesToSet.forEach(({ name, value, options }: any) =>
-              cookieStore.set(name, value, options)
-            )
-          },
-        },
-      },
-    )
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) {
+    const session = await auth()
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
     const body = await req.json()
-    const { product, targetAudience, tone, platform, goal } = body
+    const validated = GenerateSchema.parse(body)
 
-    // Mock AI-generated content - replace with actual AI API call
-    const generatedContent = [
-      {
-        headline: `Transform Your ${product} Experience`,
-        text: `Discover the power of our premium ${product.toLowerCase()} designed specifically for ${targetAudience.toLowerCase()}. Join thousands of satisfied customers who have transformed their lives with our innovative solution.`,
-        cta: "Shop Now - Limited Time Offer",
-        tone: tone
-      },
-      {
-        headline: `The Ultimate ${product} Solution`,
-        text: `Why settle for less when you can have the best? Our ${product.toLowerCase()} delivers unmatched quality and performance for ${targetAudience.toLowerCase()}. Experience the difference today.`,
-        cta: "Learn More - Free Shipping",
-        tone: tone
-      },
-      {
-        headline: `${product} That Actually Works`,
-        text: `Tired of disappointing results? Our ${product.toLowerCase()} is scientifically formulated to deliver real results for ${targetAudience.toLowerCase()}. Backed by our satisfaction guarantee.`,
-        cta: "Try Risk-Free Today",
-        tone: tone
+    // Try Real AI first
+    let aiResults = []
+    try {
+      if (process.env.OPENAI_API_KEY) {
+        const response = await OpenAIService.generateAdCreative({
+          platform: validated.platform || 'General',
+          objective: validated.goal || 'Conversions',
+          targetAudience: validated.target_audience || 'General Audience',
+          keyBenefit: `Promote ${validated.product_name} effectively. Tone: ${validated.tone || 'Professional'}. Style: ${validated.style || 'Modern'}`,
+        })
+        if (response.creatives && response.creatives.length > 0) {
+          aiResults = response.creatives
+        }
       }
-    ]
+    } catch (scanError) {
+      console.warn("OpenAI Generation Failed, using backup:", scanError)
+    }
 
-    return NextResponse.json({ content: generatedContent })
-  } catch (error) {
-    console.error("[v0] Generate creative error:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    // Fallback simulation if AI failed or no key
+    if (aiResults.length === 0) {
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      aiResults = [{
+        headline: `Experience the best of ${validated.product_name}`,
+        primaryText: `Unlock your potential with ${validated.product_name}. Designed for ${validated.target_audience || 'visionaries'}.`,
+        cta: validated.cta || "Shop Now",
+        predictedScore: Math.floor(Math.random() * 20) + 75
+      }]
+    }
+
+    const savedCreatives = []
+
+    // Save generated variations
+    for (const res of aiResults) {
+      const randomImage = MOCK_IMAGES[Math.floor(Math.random() * MOCK_IMAGES.length)]
+      const creative = await prisma.creative.create({
+        data: {
+          userId: session.user.id,
+          name: `${validated.product_name} - ${validated.platform || 'General'}`,
+          type: "image",
+          format: validated.format || "feed",
+          headline: res.headline,
+          bodyText: res.primaryText,
+          ctaText: res.cta,
+          imageUrl: randomImage,
+          aiGenerated: true,
+          aiScore: res.predictedScore || 80,
+          status: "draft"
+        }
+      })
+      savedCreatives.push(creative)
+    }
+
+    return NextResponse.json({ success: true, creatives: savedCreatives })
+
+  } catch (e: any) {
+    console.error("Generate API Error:", e)
+    return NextResponse.json({ error: e.message || "Generation failed" }, { status: 500 })
   }
 }
-

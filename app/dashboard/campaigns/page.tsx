@@ -15,7 +15,9 @@ import {
   Trash2,
   Loader2,
   Search,
-  Filter
+  Filter,
+  Monitor,
+  Smartphone
 } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
@@ -24,10 +26,11 @@ import { getCampaigns, createCampaign, updateCampaignStatus, deleteCampaign } fr
 export default function CampaignsPage() {
   const [campaigns, setCampaigns] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState("all")
+
+  // Modal State
   const [isNewModalOpen, setIsNewModalOpen] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
-
-  // New Campaign Form
   const [newCampaign, setNewCampaign] = useState({
     name: "",
     objective: "conversions",
@@ -52,7 +55,7 @@ export default function CampaignsPage() {
 
   const handleCreate = async () => {
     if (!newCampaign.name || !newCampaign.budget) {
-      toast.error("Missing required fields")
+      toast.error("Name and Budget are required")
       return
     }
 
@@ -62,19 +65,19 @@ export default function CampaignsPage() {
         name: newCampaign.name,
         objective: newCampaign.objective,
         budget: parseFloat(newCampaign.budget),
-        status: "active" // active by default for demo flow
+        status: "active"
       })
 
       if (res.success) {
-        toast.success("Campaign launched successfully")
+        toast.success("Campaign created successfully")
         setIsNewModalOpen(false)
         setNewCampaign({ name: "", objective: "conversions", budget: "", status: "draft" })
         loadData()
       } else {
-        toast.error(res.error)
+        toast.error(res.error || "Creation failed")
       }
     } catch (e) {
-      toast.error("Creation failed")
+      toast.error("Network error")
     } finally {
       setIsCreating(false)
     }
@@ -82,7 +85,7 @@ export default function CampaignsPage() {
 
   const toggleStatus = async (id: string, currentStatus: string) => {
     const newStatus = currentStatus === "active" ? "paused" : "active"
-    // Optimistic update
+    // Optimistic Update
     setCampaigns(prev => prev.map(c => c.id === id ? { ...c, status: newStatus } : c))
 
     const res = await updateCampaignStatus(id, newStatus)
@@ -90,12 +93,12 @@ export default function CampaignsPage() {
       toast.error("Status update failed")
       loadData() // Revert
     } else {
-      toast.success(newStatus === "active" ? "Campaign Resumed" : "Campaign Paused")
+      toast.success(newStatus === "active" ? "Campaign Active" : "Campaign Paused")
     }
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this campaign?")) return
+    if (!confirm("Delete this campaign permanently?")) return
 
     setCampaigns(prev => prev.filter(c => c.id !== id))
     const res = await deleteCampaign(id)
@@ -108,110 +111,178 @@ export default function CampaignsPage() {
     }
   }
 
+  const filteredCampaigns = activeTab === "all"
+    ? campaigns
+    : campaigns.filter(c => c.status === activeTab)
+
   return (
     <DashboardLayout>
-      <div className="space-y-6 font-satoshi">
+      <div className="space-y-6">
+
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-          <div className="space-y-1">
-            <h1 className="text-[24px] font-bold text-[#1F2937] tracking-tight">Campaign Matrix</h1>
-            <div className="flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-              <p className="text-[11px] font-medium text-[#64748B] uppercase tracking-wider">Multi-Channel Orchestration</p>
-            </div>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-[20px] font-semibold text-text-primary">Campaign Matrix</h1>
+            <p className="text-[13px] text-text-secondary">Orchestrate multi-channel acquisition campaigns.</p>
           </div>
-          <button onClick={() => setIsNewModalOpen(true)} className="btn-primary h-9 text-[12px] flex items-center gap-2">
-            <Plus className="w-4 h-4" /> Create Campaign
+          <button
+            onClick={() => setIsNewModalOpen(true)}
+            className="btn btn-primary"
+          >
+            <Plus className="w-3.5 h-3.5" /> New Campaign
           </button>
         </div>
 
-        {/* KPI Row (Compact) */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[
-            { label: "Active Campaigns", value: campaigns.filter(c => c.status === 'active').length, icon: Megaphone },
-            { label: "Total Spend", value: "$42,105", icon: DollarSign },
-            { label: "Avg ROAS", value: "3.2x", icon: TrendingUp, color: "text-emerald-600" },
-            { label: "Conversions", value: "842", icon: Target }
-          ].map((k, i) => (
-            <div key={i} className="bg-white border border-[#E2E8F0] p-4 rounded-lg shadow-sm flex items-center justify-between">
-              <div>
-                <p className="text-[11px] font-medium text-[#64748B] uppercase tracking-wide">{k.label}</p>
-                <p className={cn("text-[18px] font-bold text-[#1F2937]", k.color)}>{k.value}</p>
-              </div>
-              <k.icon className="w-5 h-5 text-[#94A3B8]" />
+        {/* KPI Cards */}
+        <div className="grid grid-cols-4 gap-4">
+          <div className="card p-4 flex flex-col justify-between h-[100px]">
+            <div className="flex justify-between items-start">
+              <span className="text-[11px] font-medium uppercase text-text-secondary">Active Spend</span>
+              <DollarSign className="w-4 h-4 text-text-tertiary" />
             </div>
-          ))}
-        </div>
-
-        {/* Controls */}
-        <div className="flex items-center justify-between gap-4">
-          <div className="relative flex-1 md:w-80">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input type="text" placeholder="Search campaigns..." className="w-full pl-9 pr-4 h-9 text-[13px] border border-[#E2E8F0] rounded-md focus:border-[#1F57F5] outline-none" />
+            <div>
+              <span className="text-[20px] font-semibold text-text-primary">$12,450</span>
+              <span className="text-[11px] text-success ml-2 font-medium">+12%</span>
+            </div>
           </div>
-          <button className="h-9 px-3 border border-[#E2E8F0] rounded-md bg-white text-[#64748B] hover:text-[#1F2937] flex items-center gap-2 text-[13px] font-medium">
-            <Filter className="w-3.5 h-3.5" /> Filter
-          </button>
+          <div className="card p-4 flex flex-col justify-between h-[100px]">
+            <div className="flex justify-between items-start">
+              <span className="text-[11px] font-medium uppercase text-text-secondary">Avg ROAS</span>
+              <TrendingUp className="w-4 h-4 text-text-tertiary" />
+            </div>
+            <div>
+              <span className="text-[20px] font-semibold text-text-primary">3.42x</span>
+              <span className="text-[11px] text-success ml-2 font-medium">+0.4</span>
+            </div>
+          </div>
+          <div className="card p-4 flex flex-col justify-between h-[100px]">
+            <div className="flex justify-between items-start">
+              <span className="text-[11px] font-medium uppercase text-text-secondary">Conversions</span>
+              <Target className="w-4 h-4 text-text-tertiary" />
+            </div>
+            <div>
+              <span className="text-[20px] font-semibold text-text-primary">842</span>
+              <span className="text-[11px] text-text-secondary ml-2 font-medium">Last 30d</span>
+            </div>
+          </div>
+          <div className="card p-4 flex flex-col justify-between h-[100px]">
+            <div className="flex justify-between items-start">
+              <span className="text-[11px] font-medium uppercase text-text-secondary">Active Campaigns</span>
+              <Megaphone className="w-4 h-4 text-text-tertiary" />
+            </div>
+            <div>
+              <span className="text-[20px] font-semibold text-text-primary">{campaigns.filter(c => c.status === 'active').length}</span>
+              <span className="text-[11px] text-text-secondary ml-2 font-medium">/ {campaigns.length} total</span>
+            </div>
+          </div>
         </div>
 
-        {/* Data Table */}
-        <div className="bg-white border border-[#E2E8F0] rounded-lg shadow-sm overflow-hidden">
-          <table className="w-full text-left">
+        {/* View Controls */}
+        <div className="flex items-center justify-between border-b border-border pb-4">
+          <div className="flex gap-4 text-[13px] font-medium text-text-secondary">
+            <button
+              onClick={() => setActiveTab("all")}
+              className={cn("pb-4 -mb-4 border-b-2 transition-colors", activeTab === "all" ? "text-primary border-primary" : "border-transparent hover:text-text-primary")}
+            >
+              All Campaigns
+            </button>
+            <button
+              onClick={() => setActiveTab("active")}
+              className={cn("pb-4 -mb-4 border-b-2 transition-colors", activeTab === "active" ? "text-primary border-primary" : "border-transparent hover:text-text-primary")}
+            >
+              Active
+            </button>
+            <button
+              onClick={() => setActiveTab("draft")}
+              className={cn("pb-4 -mb-4 border-b-2 transition-colors", activeTab === "draft" ? "text-primary border-primary" : "border-transparent hover:text-text-primary")}
+            >
+              Drafts
+            </button>
+          </div>
+          <div className="flex gap-2">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1.5 w-4 h-4 text-text-tertiary" />
+              <input className="input h-8 pl-9 w-64" placeholder="Filter campaigns..." />
+            </div>
+            <button className="btn btn-secondary h-8"><Filter className="w-3.5 h-3.5" /> Filter</button>
+          </div>
+        </div>
+
+        {/* Table */}
+        <div className="table-container">
+          <table className="data-table">
             <thead>
-              <tr className="bg-[#F8FAFC] border-b border-[#E2E8F0]">
-                <th className="px-6 py-3 text-[11px] font-semibold text-[#64748B] uppercase tracking-wider w-[40px]"></th>
-                <th className="px-6 py-3 text-[11px] font-semibold text-[#64748B] uppercase tracking-wider">Campaign Name</th>
-                <th className="px-6 py-3 text-[11px] font-semibold text-[#64748B] uppercase tracking-wider text-center">Status</th>
-                <th className="px-6 py-3 text-[11px] font-semibold text-[#64748B] uppercase tracking-wider text-right">Budget</th>
-                <th className="px-6 py-3 text-[11px] font-semibold text-[#64748B] uppercase tracking-wider text-right">Spent</th>
-                <th className="px-6 py-3 text-[11px] font-semibold text-[#64748B] uppercase tracking-wider text-right">ROAS</th>
-                <th className="px-6 py-3 text-[11px] font-semibold text-[#64748B] uppercase tracking-wider text-right">Actions</th>
+              <tr>
+                <th className="w-[40px] px-2"><input type="checkbox" className="rounded border-gray-300" /></th>
+                <th>Campaign</th>
+                <th className="text-center">Status</th>
+                <th className="text-right">Budget</th>
+                <th className="text-right">Spend</th>
+                <th className="text-right">ROAS</th>
+                <th className="w-[100px] text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#F1F5F9]">
+            <tbody>
               {isLoading ? (
-                <tr><td colSpan={7} className="p-8 text-center text-[13px] text-[#64748B]">Loading Data...</td></tr>
-              ) : campaigns.length === 0 ? (
-                <tr><td colSpan={7} className="p-12 text-center text-[13px] text-[#64748B]">No campaigns found. Launch your first campaign.</td></tr>
+                <tr><td colSpan={7} className="p-12 text-center text-text-tertiary"><Loader2 className="w-5 h-5 animate-spin mx-auto mb-2" />Loading matrices...</td></tr>
+              ) : filteredCampaigns.length === 0 ? (
+                <tr><td colSpan={7} className="p-12 text-center text-text-tertiary">No campaigns found.</td></tr>
               ) : (
-                campaigns.map(c => (
-                  <tr key={c.id} className="hover:bg-[#F9FAFB] group transition-colors">
-                    <td className="px-6 py-3">
-                      <div className={cn("w-2 h-2 rounded-full", c.status === 'active' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'bg-gray-300')} />
+                filteredCampaigns.map(c => (
+                  <tr key={c.id} className="group hover:bg-gray-50/50">
+                    <td className="px-2"><input type="checkbox" className="rounded border-gray-300" /></td>
+                    <td className="py-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-[6px] bg-gray-100 flex items-center justify-center text-text-tertiary border border-border">
+                          <Monitor className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-text-primary text-[13px]">{c.name}</p>
+                          <p className="text-[11px] text-text-tertiary uppercase tracking-wide">{c.objective}</p>
+                        </div>
+                      </div>
                     </td>
-                    <td className="px-6 py-3">
-                      <p className="text-[13px] font-medium text-[#111827]">{c.name}</p>
-                      <p className="text-[11px] text-[#64748B] uppercase tracking-wider font-medium">{c.objective || "Conversions"}</p>
-                    </td>
-                    <td className="px-6 py-3 text-center">
-                      <button
-                        onClick={() => toggleStatus(c.id, c.status)}
-                        className={cn(
-                          "px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide border transition-all hover:opacity-80",
-                          c.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-gray-50 text-gray-600 border-gray-200'
-                        )}>
+                    <td className="text-center">
+                      <span className={cn(
+                        "badge capitalize",
+                        c.status === 'active' ? 'badge-success' : 'badge-neutral'
+                      )}>
                         {c.status}
-                      </button>
+                      </span>
                     </td>
-                    <td className="px-6 py-3 text-right text-[13px] font-medium text-[#111827]">
+                    <td className="text-right font-medium text-text-primary">
                       ${c.dailyBudget?.toLocaleString()}
+                      <span className="text-[10px] text-text-tertiary ml-1">/d</span>
                     </td>
-                    <td className="px-6 py-3 text-right text-[13px] text-[#64748B]">
+                    <td className="text-right text-text-secondary">
                       ${(c.totalSpend || 0).toLocaleString()}
                     </td>
-                    <td className="px-6 py-3 text-right">
+                    <td className="text-right">
                       <span className={cn(
-                        "text-[13px] font-bold",
-                        (c.roas || 0) > 2 ? 'text-emerald-600' : 'text-amber-600'
-                      )}>{(c.roas || 0).toFixed(2)}x</span>
+                        "font-medium",
+                        (c.roas || 0) >= 3 ? "text-success" :
+                          (c.roas || 0) >= 1 ? "text-warning" : "text-text-secondary"
+                      )}>
+                        {(c.roas || 0).toFixed(2)}x
+                      </span>
                     </td>
-                    <td className="px-6 py-3 text-right flex items-center justify-end gap-2">
-                      <button onClick={() => toggleStatus(c.id, c.status)} className="p-1.5 hover:bg-gray-100 rounded text-gray-500 hover:text-[#1F2937]">
-                        {c.status === 'active' ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-                      </button>
-                      <button onClick={() => handleDelete(c.id)} className="p-1.5 hover:bg-red-50 rounded text-gray-400 hover:text-red-500 transition-colors">
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                    <td className="text-right">
+                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => toggleStatus(c.id, c.status)}
+                          className="btn btn-ghost h-7 w-7 p-0"
+                          title={c.status === 'active' ? "Pause" : "Resume"}
+                        >
+                          {c.status === 'active' ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                        </button>
+                        <button
+                          onClick={() => handleDelete(c.id)}
+                          className="btn btn-ghost h-7 w-7 p-0 text-text-tertiary hover:text-danger"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -222,38 +293,73 @@ export default function CampaignsPage() {
 
         {/* Create Modal */}
         {isNewModalOpen && (
-          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-md border border-[#E2E8F0]">
-              <div className="p-4 border-b border-[#E2E8F0] flex justify-between items-center bg-[#F8FAFC]">
-                <h3 className="text-[14px] font-bold text-[#1F2937]">New Campaign</h3>
-                <button onClick={() => setIsNewModalOpen(false)}><span className="text-gray-400 hover:text-gray-600">✕</span></button>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[1px]">
+            <div className="bg-white rounded-[8px] shadow-lg w-[440px] border border-border overflow-hidden animate-in zoom-in-95 duration-200">
+              <div className="px-5 py-4 border-b border-border bg-gray-50/50">
+                <h3 className="font-semibold text-[14px]">Create New Campaign</h3>
               </div>
               <div className="p-6 space-y-4">
-                <div className="space-y-1.5">
-                  <label>Campaign Name</label>
-                  <input type="text" className="input-field h-9" placeholder="e.g. Summer Sale Q3" value={newCampaign.name} onChange={e => setNewCampaign({ ...newCampaign, name: e.target.value })} />
+                <div className="space-y-1">
+                  <label className="text-[11px] font-medium uppercase text-text-tertiary">Campaign Name</label>
+                  <input
+                    className="input"
+                    placeholder="e.g. Q4 Black Friday Scale"
+                    value={newCampaign.name}
+                    onChange={e => setNewCampaign({ ...newCampaign, name: e.target.value })}
+                    autoFocus
+                  />
                 </div>
-                <div className="space-y-1.5">
-                  <label>Objective</label>
-                  <select className="input-field h-9" value={newCampaign.objective} onChange={e => setNewCampaign({ ...newCampaign, objective: e.target.value })}>
-                    <option value="conversions">Conversions</option>
-                    <option value="traffic">Traffic</option>
-                    <option value="awareness">Awareness</option>
-                  </select>
-                </div>
-                <div className="space-y-1.5">
-                  <label>Daily Budget ($)</label>
-                  <input type="number" className="input-field h-9" placeholder="50.00" value={newCampaign.budget} onChange={e => setNewCampaign({ ...newCampaign, budget: e.target.value })} />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-medium uppercase text-text-tertiary">Objective</label>
+                    <select
+                      className="input"
+                      value={newCampaign.objective}
+                      onChange={e => setNewCampaign({ ...newCampaign, objective: e.target.value })}
+                    >
+                      <option value="conversions">Conversions</option>
+                      <option value="traffic">Traffic</option>
+                      <option value="leads">Leads</option>
+                      <option value="awareness">Awareness</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-medium uppercase text-text-tertiary">Daily Budget</label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-2 text-text-tertiary text-[13px]">$</span>
+                      <input
+                        className="input pl-7"
+                        placeholder="0.00"
+                        type="number"
+                        value={newCampaign.budget}
+                        onChange={e => setNewCampaign({ ...newCampaign, budget: e.target.value })}
+                      />
+                    </div>
+                  </div>
                 </div>
                 <div className="pt-2">
-                  <button onClick={handleCreate} disabled={isCreating} className="btn-primary w-full h-9 justify-center">
-                    {isCreating ? <Loader2 className="w-4 h-4 animate-spin" /> : "Launch Campaign"}
+                  <button
+                    onClick={handleCreate}
+                    disabled={isCreating}
+                    className="btn btn-primary w-full"
+                  >
+                    {isCreating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                    {isCreating ? 'Provisioning...' : 'Launch Campaign'}
                   </button>
                 </div>
+              </div>
+              <div className="px-5 py-3 bg-gray-50 border-t border-border flex justify-end">
+                <button
+                  onClick={() => setIsNewModalOpen(false)}
+                  className="text-[12px] text-text-secondary hover:text-text-primary px-3 py-1.5 font-medium"
+                >
+                  Cancel
+                </button>
               </div>
             </div>
           </div>
         )}
+
       </div>
     </DashboardLayout>
   )

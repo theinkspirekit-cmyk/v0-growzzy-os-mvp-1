@@ -348,7 +348,7 @@ model Automation {
   actionType  String   // "PAUSE_CAMPAIGN", "INCREASE_BUDGET", "NOTIFY_SLACK", "GENERATE_REPORT"
   action      Json
 
-  isActive    Boolean  @default(false)
+  status      String   @default("active") // "active", "paused", "draft"
   lastRun     DateTime?
   runCount    Int      @default(0)
 
@@ -357,7 +357,7 @@ model Automation {
 
   logs        AutomationLog[]
 
-  @@index([userId, isActive])
+  @@index([userId, status])
 }
 
 model AutomationLog {

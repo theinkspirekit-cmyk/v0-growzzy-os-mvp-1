@@ -20,11 +20,25 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           credentials?.email === "admin@growzzy.com" &&
           credentials?.password === "admin"
         ) {
-          console.log("[auth] ⚠️ USING MOCK AUTH BYPASS");
+          console.log("[auth] ⚠️ USING ADMIN BYPASS - UPSERTING USER");
+
+          // Upsert the admin user to ensure they exist for FK constraints
+          const adminUser = await prisma.user.upsert({
+            where: { email: "admin@growzzy.com" },
+            update: {},
+            create: {
+              email: "admin@growzzy.com",
+              name: "Admin User",
+              password: await bcrypt.hash("admin", 10),
+              // id will be auto-generated (cuid), but we return it
+            }
+          });
+
           return {
-            id: "mock-admin-id",
-            email: "admin@growzzy.com",
-            name: "Admin User",
+            id: adminUser.id,
+            email: adminUser.email,
+            name: adminUser.name,
+            image: adminUser.image
           };
         }
 
@@ -56,6 +70,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             id: user.id,
             email: user.email,
             name: user.name,
+            image: user.image
           };
         } catch (error: any) {
           console.error("[auth] Authorize error:", error.message);
