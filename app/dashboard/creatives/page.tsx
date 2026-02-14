@@ -86,6 +86,12 @@ export default function CreativesPage() {
 
       if (response.ok && data.success) {
         toast.success("Assets generated successfully", { id: toastId })
+
+        // Immediate UI update
+        if (data.creatives && Array.isArray(data.creatives)) {
+          setCreatives(prev => [...data.creatives, ...prev])
+        }
+
         setIsGenerateModalOpen(false)
         setGenForm({
           name: "",
@@ -98,7 +104,7 @@ export default function CreativesPage() {
           tone: "Direct",
           style: "Lifestyle",
         })
-        load() // Reload list
+        // load() // Optional: We just updated state manually
       } else {
         throw new Error(data.error || "Generation failed")
       }

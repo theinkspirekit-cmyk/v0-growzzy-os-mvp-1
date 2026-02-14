@@ -68,11 +68,15 @@ export default function CampaignsPage() {
         status: "active"
       })
 
-      if (res.success) {
+      if (res.success && res.campaign) {
         toast.success("Campaign created successfully")
+
+        // Immediate UI Update
+        setCampaigns(prev => [res.campaign, ...prev])
+
         setIsNewModalOpen(false)
         setNewCampaign({ name: "", objective: "conversions", budget: "", status: "draft" })
-        loadData()
+        // loadData() // Optional: We just updated state manually
       } else {
         toast.error(res.error || "Creation failed")
       }

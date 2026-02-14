@@ -79,9 +79,23 @@ export class OpenAIService {
      */
     static async chat(messages: { role: string; content: string }[], context?: any) {
         try {
+            const systemMessage = {
+                role: "system",
+                content: `You are an expert marketing AI assistant for GrowzzyOS.
+                
+Current Context & Data:
+${context ? JSON.stringify(context, null, 2) : "No specific data provided."}
+
+Your Goal:
+Provide actionable, data-driven answers based ONLY on the context provided.
+If the user asks about campaign performance, look at the data.
+If the user asks to "optimize", suggest specific changes based on ROAS/CPA.
+Keep answers concise and professional.`
+            }
+
             const response = await openai.chat.completions.create({
                 model: "gpt-4-turbo-preview",
-                messages: messages as any,
+                messages: [systemMessage, ...messages] as any,
                 tools: TOOLS,
                 tool_choice: "auto",
                 temperature: 0.7,

@@ -31,11 +31,11 @@
 }
 
 :root {
-  /* Enterprise Data Platform Tokens */
-
   /* Brand Colors - Professional Blue (Stripe-like) */
-  --primary: #2563EB;
-  --primary-hover: #1D4ED8;
+  --primary: #1F57F5;
+  --primary-hover: #1640D6;
+  --secondary: #2BAFF2;
+  --accent: #00DDFF;
   --primary-light: #EFF6FF;
 
   /* Functional Status Colors */
@@ -48,17 +48,22 @@
 
   /* Neutrals & Surfaces */
   --background: #FFFFFF;
+  --bg: #FFFFFF;
   --surface: #FFFFFF;
   --surface-hover: #F9FAFB;
-  --foreground: #0F172A;
+  --foreground: #05090E;
+  --muted-100: #F7FAFC;
+  --muted-200: #EEF2F7;
+  --muted-600: #94A3B8;
 
   /* Text Colors */
-  --text-primary: #0F172A;
-  /* Slate 900 */
+  --text-primary: #05090E;
+  /* Dark text */
   --text-secondary: #475569;
   /* Slate 600 */
   --text-tertiary: #94A3B8;
   /* Slate 400 */
+  --text: #05090E;
 
   /* Borders */
   --border: #E2E8F0;
@@ -81,10 +86,9 @@
   }
 
   body {
-    @apply bg-gray-50 text-text-primary antialiased;
+    @apply bg-background text-text-primary antialiased;
     font-family: var(--font-satoshi);
     font-size: 14px;
-    /* Enterprise default is often 13-14px */
     line-height: 1.5;
   }
 
@@ -98,18 +102,21 @@
   }
 
   h1 {
-    font-size: 24px;
-    line-height: 32px;
+    font-size: 32px;
+    line-height: 40px;
+    font-weight: 700;
   }
 
   h2 {
-    font-size: 20px;
-    line-height: 28px;
+    font-size: 24px;
+    line-height: 32px;
+    font-weight: 600;
   }
 
   h3 {
-    font-size: 16px;
-    line-height: 24px;
+    font-size: 18px;
+    line-height: 28px;
+    font-weight: 600;
   }
 }
 
@@ -117,33 +124,52 @@
 
   /* Enterprise Buttons */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 px-4 h-9 rounded-[6px] text-[13px] font-medium transition-all duration-200 outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center gap-2 px-4 h-10 rounded-full text-[14px] font-medium transition-all duration-200 outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   .btn-primary {
-    @apply bg-primary text-white hover:bg-primary-hover shadow-xs border border-transparent;
+    background: linear-gradient(90deg, var(--primary), var(--secondary));
+    @apply text-white shadow-md border border-transparent;
+    box-shadow: 0 8px 22px rgba(5, 9, 14, 0.07);
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 30px rgba(5, 9, 14, 0.09);
+  }
+
+  .btn-primary:active {
+    transform: translateY(0);
+    box-shadow: 0 6px 18px rgba(5, 9, 14, 0.06);
   }
 
   .btn-secondary {
-    @apply bg-white text-text-secondary border border-border hover:bg-gray-50 hover:text-text-primary hover:border-gray-300 shadow-xs;
-  }
-
-  .btn-danger {
-    @apply bg-danger text-white hover:bg-red-600 shadow-xs;
+    @apply bg-white text-text-secondary border border-border hover:bg-muted-100 hover:text-text-primary hover:border-border-hover shadow-sm;
   }
 
   .btn-ghost {
-    @apply bg-transparent text-text-secondary hover:bg-gray-100 hover:text-text-primary;
+    @apply bg-transparent text-text-secondary hover:bg-muted-100 hover:text-text-primary;
   }
 
   /* Enterprise Cards */
   .card {
-    @apply bg-white border border-border rounded-[8px] shadow-xs;
+    @apply bg-white border border-border rounded-[14px] p-6 shadow-sm;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(6px);
+    box-shadow: 0 8px 30px rgba(5, 9, 14, 0.04);
+  }
+
+  .glass-card {
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(12px);
+    border-radius: 18px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.6);
   }
 
   /* Enterprise Inputs */
   .input {
-    @apply h-9 px-3 bg-white border border-border rounded-[6px] text-[13px] text-text-primary placeholder:text-text-tertiary transition-colors focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none w-full;
+    @apply h-10 px-4 bg-muted-100 border border-transparent rounded-[8px] text-[14px] text-text-primary placeholder:text-text-tertiary transition-colors focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none w-full;
   }
 
   /* Data Tables */
@@ -156,7 +182,7 @@
   }
 
   .data-table th {
-    @apply h-10 px-4 bg-gray-50 border-b border-border font-medium text-text-secondary select-none;
+    @apply h-10 px-4 bg-muted-100 border-b border-border font-medium text-text-secondary select-none;
   }
 
   .data-table td {
@@ -189,7 +215,7 @@
   }
 
   .badge-neutral {
-    @apply bg-gray-100 text-text-secondary;
+    @apply bg-muted-100 text-text-secondary;
   }
 }
 

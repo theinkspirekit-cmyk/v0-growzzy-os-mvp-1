@@ -2,7 +2,7 @@ import type React from "react"
 import type { Metadata } from "next"
 import { Inter, Instrument_Serif } from "next/font/google"
 import "./globals.css"
-import { ToastContainer } from "@/components/Toast"
+import { Toaster } from "sonner"
 
 const inter = Inter({
   subsets: ["latin"],
@@ -43,7 +43,7 @@ export default function RootLayout({
       <body className="font-sans antialiased">
         <Providers>
           {children}
-          <ToastContainer />
+          <Toaster position="top-right" richColors />
         </Providers>
       </body>
     </html>

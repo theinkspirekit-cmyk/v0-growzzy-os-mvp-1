@@ -23,6 +23,7 @@ model User {
   resetTokenExp DateTime?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  onboardingCompleted Boolean @default(false)
 
   // Relations
   platforms      Platform[]

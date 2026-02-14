@@ -63,11 +63,15 @@ export default function LeadsPage() {
         status: "new"
       })
 
-      if (result.success) {
+      if (result.success && result.lead) {
         toast.success("Lead created successfully")
+
+        // Immediate UI Update
+        setLeads(prev => [result.lead, ...prev])
+
         setNewLead({ name: "", email: "", company: "", value: "", phone: "" })
         setIsAddModalOpen(false)
-        refreshLeads()
+        // refreshLeads() // Optional: We just updated state manually
       } else {
         toast.error(result.error || "Failed to create lead")
       }

@@ -56,11 +56,15 @@ export default function AutomationsPage() {
     setIsDeploying(true)
     try {
       const res = await deployAutomation(newAuto)
-      if (res.success) {
+      if (res.success && res.automation) {
         toast.success("Automation Deployed")
+
+        // Immediate UI Update
+        setAutomations(prev => [res.automation, ...prev])
+
         setIsDeployModalOpen(false)
         setNewAuto({ name: "", trigger: "ROAS_DROP", action: "NOTIFY_SLACK", threshold: "1.5" })
-        load()
+        // load() // Optional: We just updated state manually
       } else {
         toast.error(res.error || "Deployment failed")
       }
