@@ -87,6 +87,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           };
         } catch (error: any) {
           console.error("[auth] Authorize error:", error.message);
+          if (error.message.includes("reaching") || error.message.includes("connection") || error.message.includes("reach")) {
+            throw new Error("Unable to reach the database center. Please verify your .env.local credentials or check if your Supabase instance is active.");
+          }
           throw new Error(error.message || 'Authentication failed');
         }
       },
