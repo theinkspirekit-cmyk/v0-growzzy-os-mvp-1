@@ -4,322 +4,261 @@ import DashboardLayout from "@/components/dashboard-layout"
 import { useState, useEffect } from "react"
 import {
   Sparkles,
-  Wand2,
-  Loader2,
-  LayoutTemplate,
-  Download,
-  Copy,
-  Image as ImageIcon,
-  ChevronRight,
-  Zap,
-  ArrowRight,
-  X,
   Plus,
-  Rocket,
-  Palette,
-  Layers,
-  ShieldCheck,
-  Trash2
+  Trash2,
+  Image as ImageIcon,
+  Copy,
+  Share2,
+  Download,
+  Search,
+  Loader2
 } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
-
-const MOCK_IMAGES = [
-  "https://images.unsplash.com/photo-1611162617474-5b21e879e113?auto=format&fit=crop&q=80&w=800",
-  "https://images.unsplash.com/photo-1626785774573-4b799315345d?auto=format&fit=crop&q=80&w=800",
-  "https://images.unsplash.com/photo-1542744173-8e7e53415bb0?auto=format&fit=crop&q=80&w=800",
-  "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80&w=800",
-]
+// Import Server Actions
+import { generateCreative, getCreatives, deleteCreative } from "@/app/actions/creatives"
 
 export default function CreativesPage() {
+  const [creatives, setCreatives] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
-  const [generationStep, setGenerationStep] = useState(0)
-  const [savedCreatives, setSavedCreatives] = useState<any[]>([])
 
-  // Form State
-  const [platform, setPlatform] = useState("Meta")
-  const [format, setFormat] = useState("SINGLE_IMAGE_ENTITY")
-  const [sellingPoint, setSellingPoint] = useState("")
-  const [tone, setTone] = useState("PRO")
+  // Generation Form
+  const [genForm, setGenForm] = useState({
+    product: "",
+    audience: "",
+    goal: "conversions",
+    platform: "facebook"
+  })
 
   useEffect(() => {
-    // Initial load
-    setSavedCreatives([
-      { id: 101, type: "Meta Feed", headline: "Scale Agency ROI with AI", copy: "Stop manually managing bids. Let our neural engine optimize your 24/7 client performance.", image: MOCK_IMAGES[0], score: 94 },
-      { id: 102, type: "LinkedIn Post", headline: "Enterprise Marketing OS", copy: "The unified operational layer for modern CMOs. Real-time multi-platform attribution.", image: MOCK_IMAGES[1], score: 88 },
-    ])
+    load()
   }, [])
 
-  const startGeneration = () => {
-    if (!sellingPoint.trim()) {
-      toast.error("Brief initialization required")
-      return
+  const load = async () => {
+    try {
+      const data = await getCreatives()
+      setCreatives(data || [])
+    } catch {
+      toast.error("Failed to load creative assets")
+    } finally {
+      setIsLoading(false)
     }
-
-    setIsGenerating(true)
-    setGenerationStep(1)
-
-    // Simulate cognitive steps
-    const timers = [
-      setTimeout(() => setGenerationStep(2), 1200),
-      setTimeout(() => setGenerationStep(3), 2400),
-      setTimeout(() => setGenerationStep(4), 3600),
-      setTimeout(() => {
-        setIsGenerating(false)
-        setGenerationStep(0)
-        const newCreative = {
-          id: Date.now(),
-          type: `${platform} ${format.replace(/_/g, ' ')}`,
-          headline: `Optimized ${platform} Solution`,
-          copy: sellingPoint.length > 50 ? sellingPoint.substring(0, 100) + "..." : "High-performance creative synthesized from behavioral audit.",
-          image: MOCK_IMAGES[Math.floor(Math.random() * MOCK_IMAGES.length)],
-          score: Math.floor(Math.random() * 15) + 80
-        }
-        setSavedCreatives(prev => [newCreative, ...prev])
-        toast.success("Intelligence Engine synthesized 3 new variations")
-      }, 4800)
-    ]
-
-    return () => timers.forEach(clearTimeout)
   }
 
-  const renderProgress = () => {
-    const steps = [
-      "Analyzing Brand DNA & Market Positioning",
-      "Auditing Competitor Attribution Hooks",
-      "Synthesizing Neural-Network Copy Options",
-      "Finalizing Visual Alignment Layers"
-    ]
-    const current = steps[generationStep - 1] || "Initializing Cognitive Brain"
+  const handleGenerate = async () => {
+    if (!genForm.product) {
+      toast.error("Product name is required")
+      return
+    }
+    setIsGenerating(true)
+    try {
+      const res = await generateCreative({
+        product_name: genForm.product,
+        target_audience: genForm.audience,
+        goal: genForm.goal,
+        platform: genForm.platform
+      })
 
-    return (
-      <div className="h-full min-h-[600px] bg-[#05090E] rounded-[3rem] text-white flex flex-col items-center justify-center space-y-12 animate-in fade-in duration-700 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-[#1F57F5]/20 rounded-full -mr-48 -mt-48 blur-[100px]" />
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-[#00DDFF]/10 rounded-full -ml-48 -mb-48 blur-[100px]" />
+      if (res.success) {
+        toast.success("Creative Asset Generated")
+        setIsGenerateModalOpen(false)
+        setGenForm({ product: "", audience: "", goal: "conversions", platform: "facebook" })
+        load()
+      } else {
+        toast.error(res.error)
+      }
+    } catch {
+      toast.error("Generation failed")
+    } finally {
+      setIsGenerating(false)
+    }
+  }
 
-        <div className="relative z-10">
-          <div className="w-40 h-40 border-2 border-white/5 rounded-[2.5rem] flex items-center justify-center relative bg-white/5 backdrop-blur-3xl">
-            <Sparkles className="w-12 h-12 text-[#1F57F5] animate-pulse" />
-            <div className="absolute inset-x-[-10px] inset-y-[-10px] border-t-2 border-[#1F57F5] rounded-[3rem] animate-spin duration-[3000ms]" />
-            <div className="absolute inset-x-2 inset-y-2 border-r-2 border-[#00DDFF]/30 rounded-[2rem] animate-reverse-spin duration-[5000ms]" />
-          </div>
-        </div>
-
-        <div className="text-center space-y-4 relative z-10 px-12">
-          <p className="text-[12px] font-bold text-[#1F57F5] uppercase tracking-[0.4em] mb-4">Neural Architecture v9.2</p>
-          <h3 className="text-[32px] font-bold tracking-tight">Synthesizing Creative Matrix</h3>
-          <p className="text-[14px] font-medium text-white/40 uppercase tracking-widest animate-pulse h-6">{current}</p>
-        </div>
-
-        <div className="w-80 h-1.5 bg-white/5 rounded-full overflow-hidden relative z-10">
-          <div
-            className="h-full bg-[#1F57F5] transition-all duration-[1200ms] ease-out shadow-[0_0_20px_rgba(31,87,245,0.5)]"
-            style={{ width: `${(generationStep / 4) * 100}%` }}
-          />
-        </div>
-      </div>
-    )
+  const handleDelete = async (id: string) => {
+    if (!confirm("Delete this asset permanently?")) return
+    setCreatives(prev => prev.filter(c => c.id !== id))
+    try {
+      await deleteCreative(id)
+      toast.success("Asset deleted")
+    } catch {
+      toast.error("Deletion failed")
+      load()
+    }
   }
 
   return (
     <DashboardLayout>
-      <div className="p-8 lg:p-12 bg-white min-h-[calc(100vh-64px)] space-y-12 pb-32 font-satoshi">
+      <div className="space-y-6 font-satoshi">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-[#F1F5F9] pb-10 gap-6">
-          <div className="space-y-1 text-left">
-            <h1 className="text-[32px] font-bold text-[#05090E] tracking-tight">Creative Laboratory</h1>
-            <p className="text-[12px] font-medium text-[#64748B] uppercase tracking-[0.2em] flex items-center gap-2">
-              <Palette className="w-4 h-4 text-[#1F57F5]" />
-              HIGH-FIDELITY ASSET SYNTHESIS
-            </p>
-          </div>
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-3 px-6 py-2.5 bg-[#F8FAFC] border border-[#F1F5F9] rounded-xl text-[12px] font-bold uppercase tracking-widest text-[#05090E] shadow-sm">
-              <Zap className="w-4 h-4 text-[#FFB800]" /> 1,240 COGNITIVE CREDITS
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <div className="space-y-1">
+            <h1 className="text-[24px] font-bold text-[#1F2937] tracking-tight">Creative Laboratory</h1>
+            <div className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-violet-500 animate-pulse" />
+              <p className="text-[11px] font-medium text-[#64748B] uppercase tracking-wider">Generative Asset Engine</p>
             </div>
-            <button className="h-12 px-8 border border-[#F1F5F9] text-[12px] font-bold text-[#64748B] uppercase tracking-wider rounded-xl hover:text-[#05090E] hover:border-[#1F57F5] transition-all flex items-center gap-3">
-              <Layers className="w-5 h-5" /> Library
+          </div>
+          <button
+            onClick={() => setIsGenerateModalOpen(true)}
+            className="btn-primary"
+          >
+            <Sparkles className="w-4 h-4 mr-2" />
+            Generate New Asset
+          </button>
+        </div>
+
+        {/* Filter Bar */}
+        <div className="flex items-center justify-between gap-4">
+          <div className="relative flex-1 md:w-80">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input type="text" placeholder="Search assets..." className="w-full h-9 pl-9 pr-4 rounded-md border border-[#E2E8F0] focus:border-[#1F57F5] outline-none text-[13px]" />
+          </div>
+          <div className="flex gap-2">
+            <button className="px-3 py-1.5 text-[12px] font-medium text-[#64748B] bg-white border border-[#E2E8F0] rounded-md hover:text-[#1F2937]">Images</button>
+            <button className="px-3 py-1.5 text-[12px] font-medium text-[#64748B] bg-white border border-[#E2E8F0] rounded-md hover:text-[#1F2937]">Copy</button>
+          </div>
+        </div>
+
+        {/* Gallery Grid */}
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className="h-64 bg-gray-100 rounded-lg animate-pulse" />
+            ))}
+          </div>
+        ) : creatives.length === 0 ? (
+          <div className="py-24 text-center border-2 border-dashed border-gray-200 rounded-lg">
+            <ImageIcon className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-[16px] font-semibold text-[#1F2937]">No assets generated yet</h3>
+            <p className="text-[13px] text-[#64748B] mt-2 mb-6">Start by generating your first AI creative.</p>
+            <button onClick={() => setIsGenerateModalOpen(true)} className="btn-primary mx-auto">
+              <Plus className="w-4 h-4 mr-2" /> Generate Now
             </button>
           </div>
-        </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {creatives.map(c => (
+              <div key={c.id} className="group bg-white border border-[#E2E8F0] rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all relative">
+                {/* Image Preview */}
+                <div className="aspect-[4/3] bg-gray-100 relative overflow-hidden">
+                  {c.imageUrl ? (
+                    <img src={c.imageUrl} alt={c.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-gray-400">
+                      <ImageIcon className="w-8 h-8" />
+                    </div>
+                  )}
 
-        <div className="flex flex-col xl:flex-row gap-16 items-start">
-          {/* Generation Workspace */}
-          <div className="w-full xl:w-[460px] shrink-0 space-y-10 group">
-            <div className="bg-white p-12 space-y-10 rounded-[2.5rem] border-2 border-[#F1F5F9] hover:border-[#1F57F5] transition-all duration-300 shadow-sm hover:shadow-xl relative overflow-hidden">
-              <div className="flex items-center gap-6">
-                <div className="w-14 h-14 bg-[#05090E] rounded-2xl flex items-center justify-center shadow-xl shadow-[#05090E]/10">
-                  <Wand2 className="w-7 h-7 text-[#1F57F5]" />
+                  {/* Overlay Actions */}
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                    <button className="p-2 bg-white rounded-full hover:bg-gray-100 text-gray-700" title="Download">
+                      <Download className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => handleDelete(c.id)} className="p-2 bg-white rounded-full hover:bg-red-50 text-red-500" title="Delete">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {c.aiScore && (
+                    <div className="absolute top-2 right-2 px-2 py-0.5 bg-black/60 backdrop-blur-sm rounded text-white text-[10px] font-bold flex items-center gap-1">
+                      <Sparkles className="w-3 h-3 text-yellow-400" /> {c.aiScore}
+                    </div>
+                  )}
                 </div>
-                <div className="text-left space-y-1">
-                  <h3 className="text-[18px] font-bold text-[#05090E]">Brief Architect</h3>
-                  <p className="text-[12px] text-[#64748B] font-bold uppercase tracking-widest">Cognitive Configuration</p>
+
+                {/* Details */}
+                <div className="p-4 space-y-3">
+                  <div>
+                    <h3 className="text-[14px] font-semibold text-[#1F2937] truncate" title={c.headline}>{c.headline || c.name}</h3>
+                    <p className="text-[11px] text-[#64748B] line-clamp-2 mt-1">{c.bodyText}</p>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-3 border-t border-[#F1F5F9]">
+                    <span className="text-[10px] font-medium uppercase text-[#94A3B8] bg-gray-50 px-2 py-0.5 rounded border border-gray-100">
+                      {c.format || 'Feed'}
+                    </span>
+                    <button className="text-[11px] font-medium text-[#1F57F5] hover:underline flex items-center gap-1">
+                      <Copy className="w-3 h-3" /> Copy
+                    </button>
+                  </div>
                 </div>
               </div>
+            ))}
+          </div>
+        )}
 
-              <div className="space-y-10">
-                <div className="space-y-4 text-left">
-                  <label className="text-[12px] font-bold text-[#64748B] uppercase tracking-[0.2em]">Deployment Channel</label>
-                  <div className="grid grid-cols-3 gap-3">
-                    {["Meta", "Google", "LinkedIn"].map((p) => (
-                      <button
-                        key={p}
-                        onClick={() => setPlatform(p)}
-                        className={cn(
-                          "h-12 text-[11px] font-bold uppercase tracking-widest transition-all rounded-xl border-2",
-                          platform === p
-                            ? "bg-[#05090E] text-white border-[#05090E] shadow-lg shadow-[#05090E]/10"
-                            : "bg-white text-[#64748B] border-[#F1F5F9] hover:border-[#2BAFF2] hover:text-[#05090E]"
-                        )}
-                      >
-                        {p}
-                      </button>
-                    ))}
-                  </div>
+        {/* Generate Modal */}
+        {isGenerateModalOpen && (
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-lg border border-[#E2E8F0]">
+              <div className="p-5 border-b border-[#E2E8F0] flex justify-between items-center bg-[#F8FAFC]">
+                <div>
+                  <h3 className="text-[16px] font-bold text-[#1F2937]">Generate Creative Asset</h3>
+                  <p className="text-[11px] text-[#64748B] uppercase tracking-wide">Powered by Generative Engine v2</p>
                 </div>
-
-                <div className="space-y-4 text-left">
-                  <label className="text-[12px] font-bold text-[#64748B] uppercase tracking-[0.2em]">Asset Geometry</label>
-                  <select
-                    value={format}
-                    onChange={(e) => setFormat(e.target.value)}
-                    className="w-full h-14 px-6 bg-[#F8FAFC] border-2 border-[#F1F5F9] text-[13px] font-bold rounded-2xl focus:border-[#1F57F5] outline-none transition-all appearance-none cursor-pointer"
-                  >
-                    <option value="SINGLE_IMAGE_ENTITY">SINGLE IMAGE ENTITY</option>
-                    <option value="MOTION_VIDEO_VECTOR">MOTION VIDEO VECTOR</option>
-                    <option value="CAROUSEL_HIERARCHY">CAROUSEL HIERARCHY</option>
-                  </select>
-                </div>
-
-                <div className="space-y-4 text-left">
-                  <label className="text-[12px] font-bold text-[#64748B] uppercase tracking-[0.2em]">Synthesis Tone</label>
-                  <div className="flex flex-wrap gap-2">
-                    {["PRO", "DISRUPTIVE", "DIRECT", "URGENT"].map(t => (
-                      <button
-                        key={t}
-                        onClick={() => setTone(t)}
-                        className={cn(
-                          "px-6 py-2.5 text-[10px] font-bold transition-all rounded-lg border-2 uppercase tracking-wider",
-                          tone === t
-                            ? "bg-[#1F57F5] text-white border-[#1F57F5] shadow-lg shadow-[#1F57F5]/20"
-                            : "bg-white text-[#64748B] border-[#F1F5F9] hover:border-[#1F57F5] hover:text-[#1F57F5]"
-                        )}
-                      >
-                        {t}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-4 text-left">
-                  <label className="text-[12px] font-bold text-[#64748B] uppercase tracking-[0.2em]">Market DNA (Brief)</label>
-                  <textarea
-                    value={sellingPoint}
-                    onChange={(e) => setSellingPoint(e.target.value)}
-                    placeholder="DEFINE THE PRODUCT DNA AND MARKET VALUE PROPOSITION..."
-                    className="w-full min-h-[160px] p-6 bg-[#F8FAFC] border-2 border-[#F1F5F9] text-[14px] font-medium leading-relaxed rounded-2xl focus:border-[#1F57F5] outline-none transition-all resize-none placeholder:text-[#A3A3A3]"
+                <button onClick={() => setIsGenerateModalOpen(false)}><X className="w-5 h-5 text-gray-400 hover:text-gray-600" /></button>
+              </div>
+              <div className="p-6 space-y-4">
+                <div className="space-y-1.5">
+                  <label>Product / Service Name *</label>
+                  <input
+                    type="text"
+                    className="input-field h-10"
+                    placeholder="e.g. Lumina Smart Watch"
+                    value={genForm.product}
+                    onChange={e => setGenForm({ ...genForm, product: e.target.value })}
                   />
                 </div>
-
-                <button
-                  onClick={startGeneration}
-                  disabled={isGenerating}
-                  className="w-full h-16 bg-[#1F57F5] text-white text-[14px] font-bold uppercase tracking-[0.3em] rounded-2xl hover:bg-[#1A4AD1] transition-all flex items-center justify-center gap-4 shadow-xl shadow-[#1F57F5]/20 active:scale-[0.98] disabled:opacity-50"
-                >
-                  {isGenerating ? <Loader2 className="w-6 h-6 animate-spin" /> : <Sparkles className="w-6 h-6" />}
-                  Finalize Synthesis
-                </button>
-              </div>
-            </div>
-
-            <div className="p-10 border-2 border-[#F1F5F9] rounded-[2.5rem] text-left bg-[#F8FAFC]/50 flex items-start gap-4">
-              <ShieldCheck className="w-6 h-6 text-[#00DDFF] shrink-0" />
-              <div className="space-y-1">
-                <p className="text-[11px] font-bold text-[#A3A3A3] uppercase tracking-widest">Operational Compliance</p>
-                <p className="text-[13px] text-[#64748B] font-medium leading-relaxed">Assets are pre-audited against platform protocols for 99.8% approval probability.</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Results Gallery */}
-          <div className="flex-1 space-y-12 min-w-0">
-            {isGenerating ? (
-              renderProgress()
-            ) : (
-              <div className="space-y-12">
-                <div className="flex items-center justify-between border-b border-[#F1F5F9] pb-8 px-4">
-                  <div className="flex items-center gap-4">
-                    <LayoutTemplate className="w-6 h-6 text-[#A3A3A3]" />
-                    <h3 className="text-[14px] font-bold uppercase tracking-[0.2em] text-[#05090E]">Audited Asset Stream</h3>
+                <div className="space-y-1.5">
+                  <label>Target Audience Context</label>
+                  <textarea
+                    className="w-full p-3 border border-[#E2E8F0] rounded-md text-[13px] focus:border-[#1F57F5] outline-none min-h-[80px]"
+                    placeholder="e.g. Tech enthusiasts aged 25-40 looking for premium wearables..."
+                    value={genForm.audience}
+                    onChange={e => setGenForm({ ...genForm, audience: e.target.value })}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label>Campaign Objective</label>
+                    <select className="input-field h-10" value={genForm.goal} onChange={e => setGenForm({ ...genForm, goal: e.target.value })}>
+                      <option value="conversions">Conversions</option>
+                      <option value="awareness">Brand Awareness</option>
+                      <option value="engagement">Engagement</option>
+                    </select>
                   </div>
-                  <div className="flex items-center gap-4 text-[11px] font-bold uppercase tracking-widest text-[#A3A3A3]">
-                    <span className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-[#00DDFF] animate-pulse" />
-                      Intelligence Sync: Online
-                    </span>
+                  <div className="space-y-1.5">
+                    <label>Platform Format</label>
+                    <select className="input-field h-10" value={genForm.platform} onChange={e => setGenForm({ ...genForm, platform: e.target.value })}>
+                      <option value="facebook">Meta Feed</option>
+                      <option value="instagram">Instagram Story</option>
+                      <option value="linkedin">LinkedIn Post</option>
+                    </select>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-                  {savedCreatives.map((creative) => (
-                    <div key={creative.id} className="bg-white rounded-[2.5rem] border-2 border-[#F1F5F9] hover:border-[#1F57F5] overflow-hidden transition-all duration-500 shadow-sm hover:shadow-2xl group">
-                      <div className="aspect-video relative bg-[#F8FAFC] overflow-hidden">
-                        <img
-                          src={creative.image}
-                          alt="AI Generated"
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-[#05090E]/60 to-transparent" />
-                        <div className="absolute top-6 right-6 flex items-center gap-2.5 px-4 py-2 bg-[#05090E]/80 backdrop-blur-xl border border-white/10 rounded-xl text-[11px] font-bold text-white uppercase tracking-widest shadow-2xl">
-                          <Sparkles className="w-4 h-4 text-[#1F57F5]" />
-                          {creative.score} Performance Index
-                        </div>
+                <div className="pt-4">
+                  <button onClick={handleGenerate} disabled={isGenerating} className="btn-primary w-full h-11 justify-center text-[14px]">
+                    {isGenerating ? (
+                      <div className="flex items-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Synthesizing Visuals...</span>
                       </div>
-
-                      <div className="p-10 space-y-8 text-left">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-[0.2em] px-4 py-1.5 bg-[#F8FAFC] rounded-full border border-[#F1F5F9]">{creative.type}</span>
-                          <button className="p-2.5 text-[#A3A3A3] hover:text-[#F43F5E] hover:bg-[#F43F5E]/5 rounded-xl transition-all"><Trash2 className="w-5 h-5" /></button>
-                        </div>
-
-                        <div className="space-y-3">
-                          <h4 className="text-[22px] font-bold text-[#05090E] leading-tight tracking-tight group-hover:text-[#1F57F5] transition-colors">{creative.headline}</h4>
-                          <p className="text-[14px] text-[#64748B] leading-relaxed font-medium">{creative.copy}</p>
-                        </div>
-
-                        <div className="pt-8 flex items-center gap-4 border-t border-[#F1F5F9]">
-                          <button
-                            onClick={() => {
-                              navigator.clipboard.writeText(creative.copy)
-                              toast.success("Cognitive copy synchronized")
-                            }}
-                            className="flex-1 h-14 bg-[#F8FAFC] border border-[#F1F5F9] text-[#05090E] text-[11px] font-bold uppercase tracking-widest rounded-xl hover:bg-[#1F57F5] hover:text-white hover:border-[#1F57F5] transition-all flex items-center justify-center gap-3 active:scale-95"
-                          >
-                            <Copy className="w-4 h-4" /> Transmit Data
-                          </button>
-                          <button className="h-14 w-14 bg-[#05090E] text-white rounded-xl hover:bg-neutral-800 transition-all shadow-xl shadow-[#05090E]/10 flex items-center justify-center active:scale-95">
-                            <Rocket className="w-5 h-5" />
-                          </button>
-                        </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="w-4 h-4" />
+                        <span>Execute Generation</span>
                       </div>
-                    </div>
-                  ))}
-
-                  {/* Empty Slot */}
-                  <div className="lg:col-span-2 p-12 border-2 border-dashed border-[#F1F5F9] rounded-[3rem] bg-[#F8FAFC]/30 flex flex-col items-center justify-center text-center group hover:border-[#2BAFF2] transition-all cursor-pointer">
-                    <div className="w-16 h-16 bg-white border border-[#F1F5F9] rounded-[1.5rem] flex items-center justify-center mb-6 group-hover:bg-[#1F57F5] group-hover:text-white group-hover:border-[#1F57F5] transition-all shadow-sm">
-                      <Plus className="w-8 h-8 text-[#A3A3A3] group-hover:text-white" />
-                    </div>
-                    <div className="space-y-2">
-                      <p className="text-[12px] font-bold text-[#64748B] uppercase tracking-[0.2em] group-hover:text-[#05090E] transition-all">Initialize New Synthesis</p>
-                      <p className="text-[13px] text-[#A3A3A3] font-medium">Execute the Brief Architect to expand your high-fidelity library.</p>
-                    </div>
-                  </div>
+                    )}
+                  </button>
+                  <p className="text-center text-[10px] text-[#94A3B8] mt-3">Estimated time: 3-5 seconds • 1 Credit</p>
                 </div>
               </div>
-            )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </DashboardLayout>
   )

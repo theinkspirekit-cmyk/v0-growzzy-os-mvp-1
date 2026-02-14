@@ -8,24 +8,19 @@ import {
   Filter,
   Plus,
   Upload,
-  Star,
-  Mail,
-  Phone,
-  MoreHorizontal,
-  Sparkles,
-  ArrowUpDown,
-  ChevronRight,
-  X,
-  Loader2,
   TrendingUp,
   Target,
   Zap,
-  ShieldCheck,
   Building2,
-  DollarSign
+  Sparkles,
+  ShieldCheck,
+  X,
+  Loader2
 } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+// Import Server Actions
+import { createLead, getLeads, importLeads, syncLeadsToHub } from "@/app/actions/leads"
 
 export default function LeadsPage() {
   const [view, setView] = useState<"table" | "pipeline">("table")
@@ -36,26 +31,21 @@ export default function LeadsPage() {
   const [newLead, setNewLead] = useState({ name: "", email: "", company: "", value: "", phone: "" })
   const [isCreating, setIsCreating] = useState(false)
 
-  const fetchLeads = async () => {
-    setIsLoading(true)
+  // Fetch Leads on Mount
+  const refreshLeads = async () => {
     try {
-      const res = await fetch("/api/leads")
-      const json = await res.json()
-      if (json.ok) {
-        setLeads(json.data.leads)
-      } else {
-        toast.error(json.error?.message || "Failed to fetch leads")
-      }
+      const data = await getLeads()
+      if (data) setLeads(data)
     } catch (error) {
-      console.error("Leads Fetch Error:", error)
-      toast.error("Network connection failure")
+      console.error("Failed to fetch leads:", error)
+      toast.error("Failed to load leads from database")
     } finally {
       setIsLoading(false)
     }
   }
 
   useEffect(() => {
-    fetchLeads()
+    refreshLeads()
   }, [])
 
   const handleCreateLead = async () => {
@@ -66,27 +56,38 @@ export default function LeadsPage() {
 
     setIsCreating(true)
     try {
-      const res = await fetch("/api/leads", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...newLead,
-          estimatedValue: newLead.value ? parseFloat(newLead.value.replace(/[$,]/g, "")) : 0
-        })
+      const result = await createLead({
+        name: newLead.name,
+        email: newLead.email,
+        company: newLead.company,
+        phone: newLead.phone,
+        estimatedValue: newLead.value ? parseFloat(newLead.value.replace(/[^0-9.]/g, "")) : 0,
+        source: "Manual",
+        status: "new"
       })
-      const json = await res.json()
-      if (json.ok) {
-        toast.success(`Entity ${newLead.name} synchronized to CRM`)
+
+      if (result.success) {
+        toast.success(`Lead ${newLead.name} created successfully`)
         setNewLead({ name: "", email: "", company: "", value: "", phone: "" })
         setIsAddModalOpen(false)
-        fetchLeads()
+        refreshLeads()
       } else {
-        toast.error(json.error?.message || "Persistence failure")
+        toast.error(result.error || "Failed to create lead")
       }
     } catch (error) {
-      toast.error("Network bridge error")
+      toast.error("Network error")
     } finally {
       setIsCreating(false)
+    }
+  }
+
+  const handleSyncHub = async () => {
+    const toastId = toast.loading("Executing Hub Synchronization...")
+    try {
+      await syncLeadsToHub()
+      toast.success("Hub Synchronization Complete", { id: toastId })
+    } catch (e) {
+      toast.error("Sync Failed", { id: toastId })
     }
   }
 
@@ -94,99 +95,93 @@ export default function LeadsPage() {
     const file = e.target.files?.[0]
     if (!file) return
 
-    toast.info("Ingesting data stream...")
+    const toastId = toast.loading("Ingesting data stream...")
     const reader = new FileReader()
     reader.onload = async (event) => {
       const csvData = event.target?.result as string
       try {
-        const res = await fetch("/api/leads/import", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "execute", csvData })
-        })
-        const json = await res.json()
-        if (json.ok) {
-          toast.success(`Success: ${json.data.results.imported} leads integrated`)
-          fetchLeads()
+        const result = await importLeads(csvData)
+        if (result.success) {
+          toast.success(result.message || "Import success", { id: toastId })
+          refreshLeads()
           setIsImportModalOpen(false)
         } else {
-          toast.error(json.error?.message || "Import synthesis failed")
+          toast.error(result.error || "Import failed", { id: toastId })
         }
       } catch (err) {
-        toast.error("Data ingestion error")
+        toast.error("Data ingestion error", { id: toastId })
       }
     }
     reader.readAsText(file)
   }
 
-  const getStatusStyle = (s: string) => {
-    switch (s.toLowerCase()) {
-      case 'hot': return 'bg-[#05090E] text-white shadow-lg'
-      case 'warm': return 'bg-[#2BAFF2]/10 text-[#2BAFF2] ring-1 ring-[#2BAFF2]/20'
-      case 'won': return 'bg-[#1F57F5] text-white shadow-lg shadow-[#1F57F5]/20'
-      case 'new': return 'bg-[#00DDFF]/10 text-[#00DDFF] ring-1 ring-[#00DDFF]/20'
-      default: return 'bg-[#F8FAFC] text-[#64748B] border border-[#F1F5F9]'
-    }
-  }
-
   return (
     <DashboardLayout>
-      <div className="p-8 lg:p-12 bg-white min-h-[calc(100vh-64px)] space-y-12 pb-32 font-satoshi">
+      <div className="space-y-6 font-satoshi">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-[#F1F5F9] pb-10 gap-6">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div className="space-y-1 text-left">
-            <h1 className="text-[32px] font-bold text-[#05090E] tracking-tight">Lead Intelligence</h1>
-            <p className="text-[12px] font-medium text-[#64748B] uppercase tracking-[0.2em]">Operational Entity Directory</p>
+            <h1 className="text-[24px] font-bold text-[#1F2937] tracking-tight">Lead Intelligence</h1>
+            <div className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <p className="text-[11px] font-medium text-[#64748B] uppercase tracking-wider">Operational Entity Directory</p>
+            </div>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleSyncHub}
+              className="px-3 py-2 bg-white border border-[#E2E8F0] shadow-sm rounded-md text-[13px] font-medium text-[#1F2937] hover:bg-[#F8FAFC] flex items-center gap-2"
+            >
+              <Zap className="w-3.5 h-3.5 text-amber-500" /> Sync Hub
+            </button>
             <button
               onClick={() => setIsImportModalOpen(true)}
-              className="h-12 px-8 border-2 border-[#F1F5F9] text-[12px] font-bold text-[#64748B] uppercase tracking-wider rounded-xl hover:text-[#05090E] hover:border-[#1F57F5] transition-all flex items-center gap-3 bg-white shadow-sm"
+              className="px-3 py-2 bg-white border border-[#E2E8F0] shadow-sm rounded-md text-[13px] font-medium text-[#1F2937] hover:bg-[#F8FAFC] flex items-center gap-2"
             >
-              <Upload className="w-4 h-4" /> Ingest Data
+              <Upload className="w-3.5 h-3.5" /> Import CSV
             </button>
             <button
               onClick={() => setIsAddModalOpen(true)}
-              className="h-12 px-10 bg-[#1F57F5] text-white text-[12px] font-bold uppercase tracking-widest rounded-xl shadow-lg shadow-[#1F57F5]/20 hover:bg-[#1A4AD1] transition-all flex items-center gap-3"
+              className="px-3 py-2 bg-[#1F57F5] text-white rounded-md text-[13px] font-medium hover:bg-[#1A4AD1] shadow-sm flex items-center gap-2"
             >
-              <Plus className="w-5 h-5" /> Synthesize Entry
+              <Plus className="w-4 h-4" /> Add Lead
             </button>
           </div>
         </div>
 
         {/* Analytics Summary */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { label: 'Total Entities', value: leads.length, change: '+12.4%', icon: Users, color: '#1F57F5' },
-            { label: 'Conversion Index', value: '4.2%', change: '+0.5%', icon: TrendingUp, color: '#00DDFF' },
-            { label: 'Target Velocity', value: 'High', change: 'Stable', icon: Target, color: '#2BAFF2' },
-            { label: 'Pipeline Yield', value: `$${leads.reduce((acc, l) => acc + (l.estimatedValue || 0), 0).toLocaleString()}`, change: '+8%', icon: Zap, color: '#FFB800' },
+            { label: 'Total Entities', value: leads.length, change: '+12.4%', icon: Users, color: 'text-[#1F57F5]' },
+            { label: 'Conversion Index', value: '4.2%', change: '+0.5%', icon: TrendingUp, color: 'text-[#00DDFF]' },
+            { label: 'Target Velocity', value: 'High', change: 'Stable', icon: Target, color: 'text-[#2BAFF2]' },
+            { label: 'Pipeline Yield', value: `$${leads.reduce((acc, l) => acc + (l.estimatedValue || 0), 0).toLocaleString()}`, change: '+8%', icon: Zap, color: 'text-[#F59E0B]' },
           ].map(stat => (
-            <div key={stat.label} className="bg-white p-8 border-2 border-[#F1F5F9] rounded-[2rem] hover:border-[#1F57F5] transition-all duration-300 shadow-sm hover:shadow-xl group">
-              <div className="flex items-center justify-between mb-6">
-                <div className="w-12 h-12 bg-[#F8FAFC] rounded-2xl flex items-center justify-center transition-all group-hover:scale-110" style={{ color: stat.color }}>
-                  <stat.icon className="w-6 h-6" />
+            <div key={stat.label} className="bg-white border border-[#E2E8F0] shadow-sm rounded-lg p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className={cn("w-8 h-8 bg-[#F8FAFC] rounded-lg flex items-center justify-center", stat.color)}>
+                  <stat.icon className="w-4 h-4" />
                 </div>
-                <div className="px-3 py-1 bg-[#F8FAFC] rounded-full">
-                  <span className="text-[11px] font-bold text-[#05090E]">{stat.change}</span>
+                <div className="px-2 py-0.5 bg-[#F8FAFC] rounded-md border border-slate-100">
+                  <span className="text-[10px] font-semibold text-[#05090E]">{stat.change}</span>
                 </div>
               </div>
-              <div className="space-y-1 text-left">
-                <p className="text-[28px] font-bold text-[#05090E] tracking-tight">{stat.value}</p>
-                <p className="text-[11px] font-bold text-[#64748B] uppercase tracking-[0.15em]">{stat.label}</p>
+              <div className="space-y-0.5 text-left">
+                <p className="text-[20px] font-bold text-[#1F2937] tracking-tight">{stat.value}</p>
+                <p className="text-[11px] font-medium text-[#64748B]">{stat.label}</p>
               </div>
             </div>
           ))}
         </div>
 
         {/* Filters & Navigation */}
-        <div className="flex flex-col md:flex-row items-center justify-between gap-8 pb-4 border-b border-[#F1F5F9]">
-          <div className="flex bg-[#F8FAFC] p-1.5 rounded-2xl border border-[#F1F5F9]">
+        <div className="bg-white border border-[#E2E8F0] shadow-sm rounded-lg p-2 flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex bg-[#F1F5F9] p-1 rounded-md">
             <button
               onClick={() => setView("table")}
               className={cn(
-                "px-8 py-3 text-[11px] font-bold uppercase tracking-wider rounded-xl transition-all",
-                view === "table" ? "bg-white text-[#05090E] shadow-sm ring-1 ring-[#F1F5F9]" : "text-[#64748B] hover:text-[#05090E]"
+                "px-4 py-1.5 text-[11px] font-bold uppercase tracking-wider rounded-md transition-all",
+                view === "table" ? "bg-white text-[#1F57F5] shadow-sm" : "text-[#64748B] hover:text-[#05090E]"
               )}
             >
               Index Grid
@@ -194,235 +189,224 @@ export default function LeadsPage() {
             <button
               onClick={() => setView("pipeline")}
               className={cn(
-                "px-8 py-3 text-[11px] font-bold uppercase tracking-wider rounded-xl transition-all",
-                view === "pipeline" ? "bg-white text-[#05090E] shadow-sm ring-1 ring-[#F1F5F9]" : "text-[#64748B] hover:text-[#05090E]"
+                "px-4 py-1.5 text-[11px] font-bold uppercase tracking-wider rounded-md transition-all",
+                view === "pipeline" ? "bg-white text-[#1F57F5] shadow-sm" : "text-[#64748B] hover:text-[#05090E]"
               )}
             >
               Pipe Engine
             </button>
           </div>
-          <div className="flex gap-4 w-full md:w-auto">
-            <div className="relative flex-1 md:w-80">
-              <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-[#A3A3A3]" />
+          {/* Search & Filter */}
+          <div className="flex items-center gap-3 w-full md:w-auto">
+            <div className="relative flex-1 md:w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search leads database..."
-                className="w-full h-12 pl-12 pr-6 bg-[#F8FAFC] border-2 border-[#F1F5F9] text-[13px] font-medium rounded-xl focus:border-[#1F57F5] outline-none transition-all placeholder:text-[#A3A3A3]"
+                placeholder="Search leads..."
+                className="w-full h-9 pl-9 pr-4 bg-white border border-[#E2E8F0] rounded-md text-[13px] placeholder:text-gray-400 focus:border-[#1F57F5] focus:ring-1 focus:ring-[#1F57F5] outline-none"
               />
             </div>
-            <button className="h-12 w-12 flex items-center justify-center border-2 border-[#F1F5F9] rounded-xl hover:bg-[#F8FAFC] transition-all">
-              <Filter className="w-5 h-5 text-[#64748B]" />
+            <button className="h-9 w-9 flex items-center justify-center bg-white border border-[#E2E8F0] rounded-md text-gray-500 hover:bg-gray-50">
+              <Filter className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
 
         {/* Main Content */}
         {isLoading ? (
-          <div className="h-96 flex flex-col items-center justify-center space-y-6 bg-[#F8FAFC]/50 rounded-[3rem] border-2 border-dashed border-[#F1F5F9]">
-            <Loader2 className="w-12 h-12 animate-spin text-[#1F57F5] opacity-20" />
-            <p className="text-[12px] font-bold text-[#64748B] uppercase tracking-[0.2em]">Synchronizing Entity Streams...</p>
+          <div className="h-64 flex flex-col items-center justify-center space-y-4 border border-dashed border-gray-200 rounded-lg bg-gray-50/50">
+            <Loader2 className="w-6 h-6 animate-spin text-[#1F57F5] opacity-50" />
+            <p className="text-[12px] font-medium text-[#64748B]">Loading Data...</p>
           </div>
         ) : view === "table" ? (
-          <div className="overflow-hidden bg-white rounded-[2.5rem] border-2 border-[#F1F5F9] shadow-sm">
+          <div className="bg-white border border-[#E2E8F0] shadow-sm overflow-hidden rounded-lg">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-[#F8FAFC]">
-                  <th className="px-10 py-6 text-[11px] font-bold text-[#05090E] uppercase tracking-widest">Entity Metadata</th>
-                  <th className="px-10 py-6 text-[11px] font-bold text-[#05090E] uppercase tracking-widest text-center">Protocol Source</th>
-                  <th className="px-10 py-6 text-[11px] font-bold text-[#05090E] uppercase tracking-widest text-center">Score</th>
-                  <th className="px-10 py-6 text-[11px] font-bold text-[#05090E] uppercase tracking-widest text-right">Yield Estimate</th>
-                  <th className="px-10 py-6 text-[11px] font-bold text-[#05090E] uppercase tracking-widest text-right">Operational Status</th>
+                <tr className="bg-[#F8FAFC] border-b border-[#E2E8F0]">
+                  <th className="px-6 py-3 text-[11px] font-semibold text-[#64748B] uppercase tracking-wider">Lead Name</th>
+                  <th className="px-6 py-3 text-[11px] font-semibold text-[#64748B] uppercase tracking-wider">Company</th>
+                  <th className="px-6 py-3 text-[11px] font-semibold text-[#64748B] uppercase tracking-wider text-center">Source</th>
+                  <th className="px-6 py-3 text-[11px] font-semibold text-[#64748B] uppercase tracking-wider text-center">Score</th>
+                  <th className="px-6 py-3 text-[11px] font-semibold text-[#64748B] uppercase tracking-wider text-right">Value</th>
+                  <th className="px-6 py-3 text-[11px] font-semibold text-[#64748B] uppercase tracking-wider text-right">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#F1F5F9]">
                 {leads.map(lead => (
-                  <tr key={lead.id} className="hover:bg-[#F8FAFC]/50 transition-all group">
-                    <td className="px-10 py-8">
-                      <div className="flex items-center gap-6">
-                        <div className="w-14 h-14 bg-[#05090E] rounded-2xl flex items-center justify-center text-white text-[14px] font-bold shadow-xl shadow-[#05090E]/10 group-hover:scale-105 transition-transform">
-                          {lead.name.split(' ').map((n: string) => n[0]).join('')}
+                  <tr key={lead.id} className="hover:bg-[#F8FAFC]/50 transition-colors group">
+                    <td className="px-6 py-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-[#F1F5F9] border border-[#E2E8F0] flex items-center justify-center text-[11px] font-bold text-[#64748B]">
+                          {lead.name.charAt(0)}
                         </div>
-                        <div className="space-y-1">
-                          <p className="text-[16px] font-bold text-[#05090E] group-hover:text-[#1F57F5] transition-colors">{lead.name}</p>
-                          <div className="flex items-center gap-3 text-[13px] text-[#64748B] font-medium">
-                            <Building2 className="w-3.5 h-3.5" /> {lead.company || 'G-GLOBAL'}
-                          </div>
+                        <div>
+                          <p className="text-[13px] font-medium text-[#111827]">{lead.name}</p>
+                          <p className="text-[11px] text-[#64748B]">{lead.email}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-10 py-8 text-center">
-                      <span className="text-[11px] font-bold text-[#64748B] uppercase tracking-widest px-4 py-1.5 bg-[#F8FAFC] border border-[#F1F5F9] rounded-full">
-                        {lead.source || 'Neural Direct'}
+                    <td className="px-6 py-3 text-[13px] text-[#4B5563]">
+                      {lead.company || '-'}
+                    </td>
+                    <td className="px-6 py-3 text-center">
+                      <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-[10px] font-medium border border-gray-200">
+                        {lead.source || 'Manual'}
                       </span>
                     </td>
-                    <td className="px-10 py-8 text-center">
-                      <div className="inline-flex items-center gap-2.5 px-4 py-2 bg-[#F8FAFC] rounded-xl border border-[#F1F5F9] group-hover:border-[#1F57F5] transition-all">
-                        <Sparkles className="w-4 h-4 text-[#FFB800]" />
-                        <span className="text-[14px] font-bold text-[#05090E]">{lead.aiScore || '84'}</span>
+                    <td className="px-6 py-3 text-center">
+                      <div className="inline-flex items-center gap-1">
+                        <span className={cn(
+                          "text-[12px] font-bold",
+                          (lead.aiScore || 0) > 80 ? 'text-emerald-600' : 'text-amber-600'
+                        )}>{lead.aiScore || '-'}</span>
                       </div>
                     </td>
-                    <td className="px-10 py-8 text-right">
-                      <span className="text-[15px] font-bold text-[#05090E] tracking-tight">
-                        ${(lead.estimatedValue || 0).toLocaleString()}
-                      </span>
+                    <td className="px-6 py-3 text-right">
+                      <span className="font-medium text-[13px] text-[#111827]">${(lead.estimatedValue || 0).toLocaleString()}</span>
                     </td>
-                    <td className="px-10 py-8 text-right">
-                      <button className={cn(
-                        "px-6 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all hover:scale-105",
-                        getStatusStyle(lead.status)
+                    <td className="px-6 py-3 text-right">
+                      <span className={cn(
+                        "inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium border uppercase tracking-wide",
+                        lead.status === 'new' ? 'bg-blue-50 text-blue-700 border-blue-100' :
+                          lead.status === 'won' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                            'bg-gray-50 text-gray-600 border-gray-100'
                       )}>
                         {lead.status}
-                      </button>
+                      </span>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
             {leads.length === 0 && (
-              <div className="py-24 text-center">
-                <div className="flex flex-col items-center space-y-4 opacity-10">
-                  <Users className="w-16 h-16" />
-                  <p className="text-[12px] font-bold uppercase tracking-[0.3em]">No active entity records</p>
-                </div>
+              <div className="py-12 text-center">
+                <p className="text-[13px] text-[#64748B]">No leads found. Add or import to get started.</p>
               </div>
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-8 items-start">
-            {["NEW", "QUALIFIED", "PROPOSAL", "NEGOTIATION", "WON"].map(stage => (
-              <div key={stage} className="space-y-8 bg-[#F8FAFC]/30 p-6 rounded-[2.5rem] border border-[#F1F5F9] min-h-[600px]">
-                <div className="flex items-center justify-between px-4 pb-2">
-                  <span className="text-[11px] font-bold text-[#64748B] uppercase tracking-widest">{stage}</span>
-                  <div className="w-6 h-6 bg-white border border-[#F1F5F9] rounded-lg flex items-center justify-center text-[11px] font-bold text-[#05090E] shadow-sm">
-                    {leads.filter(l => l.status.toUpperCase() === stage || (stage === "NEW" && l.status === "new")).length}
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-start h-full overflow-x-auto pb-4">
+            {["NEW", "QUALIFIED", "PROPOSAL", "NEGOTIATION", "WON"].map(stage => {
+              const stageLeads = leads.filter(l => l.status.toUpperCase() === stage || (stage === "NEW" && l.status === "new"))
+              return (
+                <div key={stage} className="space-y-3 bg-[#F8FAFC] p-3 rounded-lg border border-[#E2E8F0] min-h-[400px]">
+                  <div className="flex items-center justify-between px-1">
+                    <span className="text-[10px] font-semibold text-[#64748B] uppercase tracking-wider">{stage}</span>
+                    <span className="text-[10px] font-medium text-gray-400">
+                      {stageLeads.length}
+                    </span>
                   </div>
-                </div>
-                <div className="space-y-4">
-                  {leads.filter(l => l.status.toUpperCase() === stage || (stage === "NEW" && l.status === "new")).map(lead => (
-                    <div key={lead.id} className="bg-white p-6 rounded-2xl border-2 border-[#F1F5F9] hover:border-[#1F57F5] transition-all shadow-sm group cursor-move active:scale-95">
-                      <div className="space-y-4">
-                        <div className="space-y-1 text-left">
-                          <p className="text-[14px] font-bold text-[#05090E] group-hover:text-[#1F57F5]">{lead.name}</p>
-                          <p className="text-[10px] text-[#A3A3A3] font-bold uppercase tracking-tight">{lead.company}</p>
+                  <div className="space-y-2">
+                    {stageLeads.map(lead => (
+                      <div key={lead.id} className="bg-white p-3 rounded-md shadow-sm hover:shadow-md transition-all cursor-move border border-[#E2E8F0]">
+                        <div className="flex justify-between items-start mb-2">
+                          <span className="text-[10px] font-medium text-[#64748B] uppercase">{lead.company}</span>
+                          <span className="text-[10px] font-bold text-emerald-600">${(lead.estimatedValue / 1000).toFixed(1)}k</span>
                         </div>
-                        <div className="flex items-center justify-between pt-4 border-t border-[#F1F5F9]">
-                          <div className="flex items-center gap-1.5 px-2 py-1 bg-[#F8FAFC] rounded-lg">
-                            <Sparkles className="w-3 h-3 text-[#FFB800]" />
-                            <span className="text-[11px] font-bold text-[#05090E]">{lead.aiScore || '82'}</span>
-                          </div>
-                          <span className="text-[11px] font-bold text-[#05090E] tracking-tight">${(lead.estimatedValue || 0).toLocaleString()}</span>
+                        <p className="text-[13px] font-medium text-[#111827] mb-1">{lead.name}</p>
+                        <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-50">
+                          <span className="text-[10px] text-gray-400">Score {lead.aiScore}</span>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                  <button className="w-full py-4 border-2 border-dashed border-[#F1F5F9] rounded-2xl text-[#A3A3A3] hover:text-[#1F57F5] hover:border-[#1F57F5] hover:bg-white transition-all text-[11px] font-bold uppercase tracking-wider flex items-center justify-center gap-2">
-                    <Plus className="w-4 h-4" /> Add Lead
-                  </button>
+                    ))}
+                    <button onClick={() => setIsAddModalOpen(true)} className="w-full py-2 border border-dashed border-[#CBD5E1] rounded-lg text-[#94A3B8] hover:text-[#1F57F5] hover:border-[#1F57F5]/30 hover:bg-white transition-all text-[10px] font-medium uppercase tracking-wide">
+                      + Add
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
 
         {/* Create Modal */}
         {isAddModalOpen && (
-          <div className="fixed inset-0 z-[100] bg-[#05090E]/80 backdrop-blur-xl flex items-center justify-center p-6">
-            <div className="bg-white w-full max-w-xl rounded-[3rem] overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-300 border border-white/20">
-              <div className="p-10 border-b border-[#F1F5F9] flex items-center justify-between bg-[#F8FAFC]/50">
-                <div className="space-y-1 text-left">
-                  <h3 className="text-[18px] font-bold text-[#05090E]">Entity Synthesis</h3>
-                  <p className="text-[12px] font-medium text-[#64748B] uppercase tracking-widest">New Matrix Entry</p>
-                </div>
-                <button onClick={() => setIsAddModalOpen(false)} className="p-3 hover:bg-white rounded-2xl text-[#64748B] shadow-sm transition-all">
-                  <X className="w-5 h-5" />
+          <div className="fixed inset-0 z-[100] bg-[#0F172A]/40 backdrop-blur-sm flex items-center justify-center p-6 transition-all duration-300">
+            <div className="bg-white w-full max-w-lg rounded-lg overflow-hidden shadow-2xl border border-[#E2E8F0]">
+              <div className="px-6 py-4 border-b border-[#E2E8F0] flex items-center justify-between bg-[#F8FAFC]">
+                <h3 className="text-[15px] font-semibold text-[#111827]">Add New Lead</h3>
+                <button onClick={() => setIsAddModalOpen(false)} className="text-[#64748B] hover:text-[#111827]">
+                  <X className="w-4 h-4" />
                 </button>
               </div>
-              <div className="p-12 space-y-8">
-                <div className="space-y-2 text-left">
-                  <label className="text-[12px] font-bold text-[#64748B] uppercase tracking-[0.15em]">Legal Signature (Name)</label>
+              <div className="p-6 space-y-4">
+                <div className="space-y-1.5">
+                  <label>Full Name *</label>
                   <input
                     type="text"
-                    placeholder="e.g. MARCUS AURELIUS"
-                    className="w-full h-14 px-6 bg-[#F8FAFC] border-2 border-[#F1F5F9] text-[15px] font-bold rounded-2xl focus:border-[#1F57F5] outline-none transition-all placeholder:text-[#A3A3A3]"
+                    className="input-field h-9"
                     value={newLead.name}
                     onChange={(e) => setNewLead({ ...newLead, name: e.target.value })}
                   />
                 </div>
-                <div className="space-y-2 text-left">
-                  <label className="text-[12px] font-bold text-[#64748B] uppercase tracking-[0.15em]">Neural Link (Email)</label>
+                <div className="space-y-1.5">
+                  <label>Email Address *</label>
                   <input
                     type="email"
-                    placeholder="SIGNATURE@NODE.COM"
-                    className="w-full h-14 px-6 bg-[#F8FAFC] border-2 border-[#F1F5F9] text-[15px] font-bold rounded-2xl focus:border-[#1F57F5] outline-none transition-all placeholder:text-[#A3A3A3]"
+                    className="input-field h-9"
                     value={newLead.email}
                     onChange={(e) => setNewLead({ ...newLead, email: e.target.value })}
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-8">
-                  <div className="space-y-2 text-left">
-                    <label className="text-[12px] font-bold text-[#64748B] uppercase tracking-[0.15em]">Organization</label>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label>Company</label>
                     <input
                       type="text"
-                      placeholder="AXON INC"
-                      className="w-full h-14 px-6 bg-[#F8FAFC] border-2 border-[#F1F5F9] text-[15px] font-bold rounded-2xl focus:border-[#1F57F5] outline-none transition-all placeholder:text-[#A3A3A3]"
+                      className="input-field h-9"
                       value={newLead.company}
                       onChange={(e) => setNewLead({ ...newLead, company: e.target.value })}
                     />
                   </div>
-                  <div className="space-y-2 text-left">
-                    <label className="text-[12px] font-bold text-[#64748B] uppercase tracking-[0.15em]">Yield Projection</label>
+                  <div className="space-y-1.5">
+                    <label>Value ($)</label>
                     <input
                       type="text"
-                      placeholder="$12,000"
-                      className="w-full h-14 px-6 bg-[#F8FAFC] border-2 border-[#F1F5F9] text-[15px] font-bold rounded-2xl focus:border-[#1F57F5] outline-none transition-all placeholder:text-[#A3A3A3]"
+                      className="input-field h-9"
                       value={newLead.value}
                       onChange={(e) => setNewLead({ ...newLead, value: e.target.value })}
                     />
                   </div>
                 </div>
-                <button
-                  disabled={isCreating}
-                  onClick={handleCreateLead}
-                  className="w-full h-16 bg-[#1F57F5] text-white text-[14px] font-bold uppercase tracking-[0.25em] rounded-2xl hover:bg-[#1A4AD1] transition-all shadow-xl shadow-[#1F57F5]/30 active:scale-[0.98] flex items-center justify-center gap-3"
-                >
-                  {isCreating ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Execute Hub Synchronization'}
-                </button>
+                <div className="pt-2">
+                  <button
+                    disabled={isCreating}
+                    onClick={handleCreateLead}
+                    className="w-full h-9 bg-[#1F57F5] text-white font-medium rounded-md hover:bg-[#1A4AD1] active:scale-[0.99] transition-all flex items-center justify-center gap-2 text-[13px] shadow-sm"
+                  >
+                    {isCreating ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Lead'}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         )}
 
         {isImportModalOpen && (
-          <div className="fixed inset-0 z-[100] bg-[#05090E]/80 backdrop-blur-xl flex items-center justify-center p-6">
-            <div className="bg-white w-full max-w-xl rounded-[3rem] overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-300 border border-white/20">
-              <div className="p-10 border-b border-[#F1F5F9] flex items-center justify-between bg-[#F8FAFC]/50">
-                <div className="space-y-1 text-left">
-                  <h3 className="text-[18px] font-bold text-[#05090E]">Bulk Ingestion</h3>
-                  <p className="text-[12px] font-medium text-[#64748B] uppercase tracking-widest">High-Volume Data Stream</p>
-                </div>
-                <button onClick={() => setIsImportModalOpen(false)} className="p-3 hover:bg-white rounded-2xl text-[#64748B] shadow-sm transition-all">
-                  <X className="w-5 h-5" />
+          <div className="fixed inset-0 z-[100] bg-[#0F172A]/40 backdrop-blur-sm flex items-center justify-center p-6">
+            <div className="bg-white w-full max-w-lg rounded-lg overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-200">
+              <div className="px-6 py-4 border-b border-[#E2E8F0] flex items-center justify-between bg-[#F8FAFC]">
+                <h3 className="text-[15px] font-semibold text-[#111827]">Import Leads</h3>
+                <button onClick={() => setIsImportModalOpen(false)} className="text-[#64748B] hover:text-[#111827]">
+                  <X className="w-4 h-4" />
                 </button>
               </div>
-              <div className="p-16 flex flex-col items-center space-y-10">
-                <div className="w-24 h-24 bg-[#F8FAFC] rounded-[2rem] border-2 border-[#F1F5F9] flex items-center justify-center relative shadow-sm">
-                  <Upload className="w-10 h-10 text-[#1F57F5]" />
-                  <div className="absolute inset-0 border-2 border-[#1F57F5]/20 rounded-[2rem] animate-pulse" />
+              <div className="p-8 flex flex-col items-center space-y-6">
+                <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center">
+                  <Upload className="w-6 h-6 text-[#1F57F5]" />
                 </div>
-                <div className="text-center space-y-3">
-                  <p className="text-[20px] font-bold text-[#05090E]">Ready for Transmission</p>
-                  <p className="text-[13px] font-medium text-[#64748B] uppercase tracking-[0.15em]">Supports CSV | XLSX | JSON Payloads</p>
+                <div className="text-center space-y-1">
+                  <p className="text-[14px] font-bold text-[#111827]">Upload CSV File</p>
+                  <p className="text-[12px] text-[#64748B]">Drag and drop or click to browse</p>
                 </div>
                 <input type="file" id="fileInlet" className="hidden" accept=".csv" onChange={handleImport} />
                 <button
                   onClick={() => document.getElementById('fileInlet')?.click()}
-                  className="h-16 px-12 bg-[#05090E] text-white text-[13px] font-bold uppercase tracking-[0.25em] rounded-2xl hover:bg-neutral-800 transition-all shadow-xl shadow-[#05090E]/20"
+                  className="h-9 px-4 bg-white text-[#1E293B] font-medium rounded-md border border-[#E2E8F0] hover:bg-[#F8FAFC] hover:border-[#CBD5E1] active:scale-[0.99] transition-all flex items-center justify-center gap-2 text-[13px] shadow-sm w-full"
                 >
-                  Mount External Inlet
+                  Browse Files
                 </button>
-                <div className="flex items-center gap-2 text-[11px] font-bold text-[#A3A3A3] uppercase tracking-widest">
-                  <ShieldCheck className="w-4 h-4 text-[#00DDFF]" /> Secure AES-256 Protocol
-                </div>
+                <p className="text-[10px] text-[#94A3B8]">Supported: CSV, XLSX • Max 5MB</p>
               </div>
             </div>
           </div>

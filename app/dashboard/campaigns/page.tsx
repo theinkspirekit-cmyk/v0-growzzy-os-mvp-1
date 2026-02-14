@@ -4,282 +4,256 @@ import DashboardLayout from "@/components/dashboard-layout"
 import { useState, useEffect } from "react"
 import {
   Megaphone,
+  Plus,
   Play,
   Pause,
-  AlertTriangle,
-  TrendingUp,
-  Sliders,
   MoreHorizontal,
-  Plus,
-  ArrowRight,
-  Loader2,
-  CheckCircle2,
-  Filter,
-  BarChart2,
-  Zap,
-  ShieldCheck,
+  TrendingUp,
+  DollarSign,
   Target,
-  Globe,
-  MoreVertical,
+  BarChart2,
+  Trash2,
+  Loader2,
+  Search,
+  Filter
 } from "lucide-react"
-import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
-
-interface Campaign {
-  id: string
-  name: string
-  platform: string
-  status: "ACTIVE" | "PAUSED" | "COMPLETED"
-  budget: number
-  spend: number
-  revenue: number
-  roas: number
-  ctr: number
-  cpc: number
-  health: "Good" | "Fair" | "Critical"
-}
+import { getCampaigns, createCampaign, updateCampaignStatus, deleteCampaign } from "@/app/actions/campaigns"
 
 export default function CampaignsPage() {
-  const [campaigns, setCampaigns] = useState<Campaign[]>([])
+  const [campaigns, setCampaigns] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [filter, setFilter] = useState("ALL")
-  const [aiAlerts, setAiAlerts] = useState<any[]>([])
+  const [isNewModalOpen, setIsNewModalOpen] = useState(false)
+  const [isCreating, setIsCreating] = useState(false)
 
-  const router = useRouter()
+  // New Campaign Form
+  const [newCampaign, setNewCampaign] = useState({
+    name: "",
+    objective: "conversions",
+    budget: "",
+    status: "draft"
+  })
 
-  useEffect(() => {
-    fetchCampaigns()
-  }, [])
-
-  const fetchCampaigns = async () => {
-    setIsLoading(true)
+  const loadData = async () => {
     try {
-      const res = await fetch("/api/campaigns")
-      const data = await res.json()
-      if (res.ok) {
-        setCampaigns(data.campaigns || [])
-        generateAIAlerts(data.campaigns || [])
-      } else {
-        const mock: Campaign[] = [
-          { id: "1", name: "Summer Pro Launch", platform: "Meta", status: "ACTIVE", budget: 5000, spend: 1200, revenue: 4200, roas: 3.5, ctr: 2.1, cpc: 1.2, health: "Good" },
-          { id: "2", name: "Enterprise B2B Search", platform: "Google", status: "ACTIVE", budget: 10000, spend: 4500, revenue: 9000, roas: 2.0, ctr: 1.8, cpc: 4.5, health: "Fair" },
-          { id: "3", name: "Talent Acquisition Hub", platform: "LinkedIn", status: "PAUSED", budget: 2000, spend: 1900, revenue: 0, roas: 0, ctr: 0.5, cpc: 12.0, health: "Critical" },
-        ]
-        setCampaigns(mock)
-        generateAIAlerts(mock)
-      }
-    } catch (error) {
-      console.error("Failed to fetch campaigns", error)
+      const data = await getCampaigns()
+      setCampaigns(data || [])
+    } catch (e) {
+      toast.error("Failed to load campaigns")
     } finally {
       setIsLoading(false)
     }
   }
 
-  const generateAIAlerts = (campaigns: Campaign[]) => {
-    const alerts = []
-    const criticalCampaigns = campaigns.filter(c => (c.roas < 1 && c.spend > 100) || c.health === "Critical")
-    if (criticalCampaigns.length > 0) {
-      alerts.push({
-        id: "alert-1",
-        type: "critical",
-        title: "Capital Drainage Detected",
-        message: `${criticalCampaigns.length} campaigns are operating below target ROI. Automated pause recommended to preserve liquidity.`,
-        action: "Pause Underperformers"
-      })
+  useEffect(() => {
+    loadData()
+  }, [])
+
+  const handleCreate = async () => {
+    if (!newCampaign.name || !newCampaign.budget) {
+      toast.error("Missing required fields")
+      return
     }
 
-    const opportunityCampaigns = campaigns.filter(c => c.roas > 3.0)
-    if (opportunityCampaigns.length > 0) {
-      alerts.push({
-        id: "alert-2",
-        type: "opportunity",
-        title: "Scaling Potential Identified",
-        message: `High ROAS detected in '${opportunityCampaigns[0].name}'. Increase daily budget by 15% for optimum yield.`,
-        action: "Apply Budget Scale"
+    setIsCreating(true)
+    try {
+      const res = await createCampaign({
+        name: newCampaign.name,
+        objective: newCampaign.objective,
+        budget: parseFloat(newCampaign.budget),
+        status: "active" // active by default for demo flow
       })
+
+      if (res.success) {
+        toast.success("Campaign launched successfully")
+        setIsNewModalOpen(false)
+        setNewCampaign({ name: "", objective: "conversions", budget: "", status: "draft" })
+        loadData()
+      } else {
+        toast.error(res.error)
+      }
+    } catch (e) {
+      toast.error("Creation failed")
+    } finally {
+      setIsCreating(false)
     }
-    setAiAlerts(alerts)
   }
 
-  const toggleStatus = (id: string, current: string) => {
-    const newStatus = current === "ACTIVE" ? "PAUSED" : "ACTIVE"
-    setCampaigns(prev => prev.map(c => c.id === id ? { ...c, status: newStatus as any } : c))
-    toast.success(`Campaign ${newStatus.toLowerCase()} successfully synchronized`)
+  const toggleStatus = async (id: string, currentStatus: string) => {
+    const newStatus = currentStatus === "active" ? "paused" : "active"
+    // Optimistic update
+    setCampaigns(prev => prev.map(c => c.id === id ? { ...c, status: newStatus } : c))
+
+    const res = await updateCampaignStatus(id, newStatus)
+    if (!res.success) {
+      toast.error("Status update failed")
+      loadData() // Revert
+    } else {
+      toast.success(newStatus === "active" ? "Campaign Resumed" : "Campaign Paused")
+    }
   }
 
-  const filteredCampaigns = campaigns.filter(c => filter === "ALL" || c.status === filter)
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this campaign?")) return
+
+    setCampaigns(prev => prev.filter(c => c.id !== id))
+    const res = await deleteCampaign(id)
+
+    if (!res.success) {
+      toast.error("Failed to delete")
+      loadData()
+    } else {
+      toast.success("Campaign deleted")
+    }
+  }
 
   return (
     <DashboardLayout>
-      <div className="p-8 lg:p-12 space-y-12 bg-white min-h-[calc(100vh-64px)] overflow-y-auto pb-40 font-satoshi">
+      <div className="space-y-6 font-satoshi">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-[#F1F5F9] pb-10 gap-6">
-          <div className="space-y-1 text-left">
-            <h1 className="text-[32px] font-bold text-[#05090E] tracking-tight">Campaign Matrix</h1>
-            <p className="text-[12px] font-medium text-[#64748B] uppercase tracking-[0.2em]">Cross-Channel Deployment Orchestrator</p>
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <div className="space-y-1">
+            <h1 className="text-[24px] font-bold text-[#1F2937] tracking-tight">Campaign Matrix</h1>
+            <div className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+              <p className="text-[11px] font-medium text-[#64748B] uppercase tracking-wider">Multi-Channel Orchestration</p>
+            </div>
           </div>
-          <button
-            onClick={() => router.push("/dashboard/campaign-launcher")}
-            className="h-12 px-10 bg-[#1F57F5] text-white text-[12px] font-bold uppercase tracking-widest rounded-xl shadow-lg shadow-[#1F57F5]/20 hover:bg-[#1A4AD1] transition-all flex items-center gap-3 active:scale-95"
-          >
-            <Plus className="w-5 h-5" />
-            Launch New Mission
+          <button onClick={() => setIsNewModalOpen(true)} className="btn-primary h-9 text-[12px] flex items-center gap-2">
+            <Plus className="w-4 h-4" /> Create Campaign
           </button>
         </div>
 
-        {/* AI Orchestrator Alerts (Staging Area) */}
-        {aiAlerts.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {aiAlerts.map(alert => (
-              <div key={alert.id} className={cn(
-                "p-10 rounded-[2.5rem] border-2 flex items-start gap-8 transition-all duration-500 relative overflow-hidden",
-                alert.type === "critical"
-                  ? "bg-white border-[#F1F5F9] border-l-[#F43F5E] shadow-sm"
-                  : "bg-[#05090E] border-[#05090E] shadow-2xl"
-              )}>
-                {alert.type !== "critical" && (
-                  <div className="absolute top-0 right-0 w-48 h-48 bg-[#1F57F5]/10 rounded-full -mr-24 -mt-24 blur-3xl opacity-50 transition-all group-hover:bg-[#1F57F5]/20" />
-                )}
-                <div className={cn(
-                  "w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 relative z-10 shadow-sm",
-                  alert.type === "critical" ? "bg-[#F43F5E]/5 text-[#F43F5E]" : "bg-white/10 text-[#00DDFF]"
-                )}>
-                  {alert.type === "critical" ? <AlertTriangle className="w-8 h-8" /> : <Zap className="w-8 h-8" />}
+        {/* KPI Row (Compact) */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[
+            { label: "Active Campaigns", value: campaigns.filter(c => c.status === 'active').length, icon: Megaphone },
+            { label: "Total Spend", value: "$42,105", icon: DollarSign },
+            { label: "Avg ROAS", value: "3.2x", icon: TrendingUp, color: "text-emerald-600" },
+            { label: "Conversions", value: "842", icon: Target }
+          ].map((k, i) => (
+            <div key={i} className="bg-white border border-[#E2E8F0] p-4 rounded-lg shadow-sm flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-medium text-[#64748B] uppercase tracking-wide">{k.label}</p>
+                <p className={cn("text-[18px] font-bold text-[#1F2937]", k.color)}>{k.value}</p>
+              </div>
+              <k.icon className="w-5 h-5 text-[#94A3B8]" />
+            </div>
+          ))}
+        </div>
+
+        {/* Controls */}
+        <div className="flex items-center justify-between gap-4">
+          <div className="relative flex-1 md:w-80">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input type="text" placeholder="Search campaigns..." className="w-full pl-9 pr-4 h-9 text-[13px] border border-[#E2E8F0] rounded-md focus:border-[#1F57F5] outline-none" />
+          </div>
+          <button className="h-9 px-3 border border-[#E2E8F0] rounded-md bg-white text-[#64748B] hover:text-[#1F2937] flex items-center gap-2 text-[13px] font-medium">
+            <Filter className="w-3.5 h-3.5" /> Filter
+          </button>
+        </div>
+
+        {/* Data Table */}
+        <div className="bg-white border border-[#E2E8F0] rounded-lg shadow-sm overflow-hidden">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="bg-[#F8FAFC] border-b border-[#E2E8F0]">
+                <th className="px-6 py-3 text-[11px] font-semibold text-[#64748B] uppercase tracking-wider w-[40px]"></th>
+                <th className="px-6 py-3 text-[11px] font-semibold text-[#64748B] uppercase tracking-wider">Campaign Name</th>
+                <th className="px-6 py-3 text-[11px] font-semibold text-[#64748B] uppercase tracking-wider text-center">Status</th>
+                <th className="px-6 py-3 text-[11px] font-semibold text-[#64748B] uppercase tracking-wider text-right">Budget</th>
+                <th className="px-6 py-3 text-[11px] font-semibold text-[#64748B] uppercase tracking-wider text-right">Spent</th>
+                <th className="px-6 py-3 text-[11px] font-semibold text-[#64748B] uppercase tracking-wider text-right">ROAS</th>
+                <th className="px-6 py-3 text-[11px] font-semibold text-[#64748B] uppercase tracking-wider text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#F1F5F9]">
+              {isLoading ? (
+                <tr><td colSpan={7} className="p-8 text-center text-[13px] text-[#64748B]">Loading Data...</td></tr>
+              ) : campaigns.length === 0 ? (
+                <tr><td colSpan={7} className="p-12 text-center text-[13px] text-[#64748B]">No campaigns found. Launch your first campaign.</td></tr>
+              ) : (
+                campaigns.map(c => (
+                  <tr key={c.id} className="hover:bg-[#F9FAFB] group transition-colors">
+                    <td className="px-6 py-3">
+                      <div className={cn("w-2 h-2 rounded-full", c.status === 'active' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'bg-gray-300')} />
+                    </td>
+                    <td className="px-6 py-3">
+                      <p className="text-[13px] font-medium text-[#111827]">{c.name}</p>
+                      <p className="text-[11px] text-[#64748B] uppercase tracking-wider font-medium">{c.objective || "Conversions"}</p>
+                    </td>
+                    <td className="px-6 py-3 text-center">
+                      <button
+                        onClick={() => toggleStatus(c.id, c.status)}
+                        className={cn(
+                          "px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide border transition-all hover:opacity-80",
+                          c.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-gray-50 text-gray-600 border-gray-200'
+                        )}>
+                        {c.status}
+                      </button>
+                    </td>
+                    <td className="px-6 py-3 text-right text-[13px] font-medium text-[#111827]">
+                      ${c.dailyBudget?.toLocaleString()}
+                    </td>
+                    <td className="px-6 py-3 text-right text-[13px] text-[#64748B]">
+                      ${(c.totalSpend || 0).toLocaleString()}
+                    </td>
+                    <td className="px-6 py-3 text-right">
+                      <span className={cn(
+                        "text-[13px] font-bold",
+                        (c.roas || 0) > 2 ? 'text-emerald-600' : 'text-amber-600'
+                      )}>{(c.roas || 0).toFixed(2)}x</span>
+                    </td>
+                    <td className="px-6 py-3 text-right flex items-center justify-end gap-2">
+                      <button onClick={() => toggleStatus(c.id, c.status)} className="p-1.5 hover:bg-gray-100 rounded text-gray-500 hover:text-[#1F2937]">
+                        {c.status === 'active' ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                      </button>
+                      <button onClick={() => handleDelete(c.id)} className="p-1.5 hover:bg-red-50 rounded text-gray-400 hover:text-red-500 transition-colors">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Create Modal */}
+        {isNewModalOpen && (
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-md border border-[#E2E8F0]">
+              <div className="p-4 border-b border-[#E2E8F0] flex justify-between items-center bg-[#F8FAFC]">
+                <h3 className="text-[14px] font-bold text-[#1F2937]">New Campaign</h3>
+                <button onClick={() => setIsNewModalOpen(false)}><span className="text-gray-400 hover:text-gray-600">✕</span></button>
+              </div>
+              <div className="p-6 space-y-4">
+                <div className="space-y-1.5">
+                  <label>Campaign Name</label>
+                  <input type="text" className="input-field h-9" placeholder="e.g. Summer Sale Q3" value={newCampaign.name} onChange={e => setNewCampaign({ ...newCampaign, name: e.target.value })} />
                 </div>
-                <div className="flex-1 space-y-6 text-left relative z-10">
-                  <div className="space-y-2">
-                    <h4 className={cn("text-[16px] font-bold uppercase tracking-[0.1em]", alert.type === "critical" ? "text-[#05090E]" : "text-white")}>
-                      {alert.title}
-                    </h4>
-                    <p className={cn("text-[14px] leading-relaxed font-medium", alert.type === "critical" ? "text-[#64748B]" : "text-[#A3A3A3]")}>
-                      {alert.message}
-                    </p>
-                  </div>
-                  <button className={cn(
-                    "text-[12px] font-bold uppercase tracking-widest h-12 px-8 rounded-xl transition-all flex items-center gap-3 active:scale-95 shadow-lg",
-                    alert.type === "critical" ? "bg-[#05090E] text-white hover:bg-neutral-800" : "bg-[#1F57F5] text-white hover:bg-[#1A4AD1] shadow-[#1F57F5]/20"
-                  )}>
-                    {alert.action} <ArrowRight className="w-4 h-4" />
+                <div className="space-y-1.5">
+                  <label>Objective</label>
+                  <select className="input-field h-9" value={newCampaign.objective} onChange={e => setNewCampaign({ ...newCampaign, objective: e.target.value })}>
+                    <option value="conversions">Conversions</option>
+                    <option value="traffic">Traffic</option>
+                    <option value="awareness">Awareness</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label>Daily Budget ($)</label>
+                  <input type="number" className="input-field h-9" placeholder="50.00" value={newCampaign.budget} onChange={e => setNewCampaign({ ...newCampaign, budget: e.target.value })} />
+                </div>
+                <div className="pt-2">
+                  <button onClick={handleCreate} disabled={isCreating} className="btn-primary w-full h-9 justify-center">
+                    {isCreating ? <Loader2 className="w-4 h-4 animate-spin" /> : "Launch Campaign"}
                   </button>
                 </div>
               </div>
-            ))}
+            </div>
           </div>
         )}
-
-        {/* Intelligence Table Index */}
-        <div className="space-y-10">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-8 pb-4 border-b border-[#F1F5F9]">
-            <div className="flex bg-[#F8FAFC] p-1.5 rounded-2xl border border-[#F1F5F9]">
-              {["ALL", "ACTIVE", "PAUSED"].map((f) => (
-                <button
-                  key={f}
-                  onClick={() => setFilter(f)}
-                  className={cn(
-                    "px-10 py-3 text-[11px] font-bold uppercase tracking-wider rounded-xl transition-all",
-                    filter === f ? "bg-white text-[#05090E] shadow-sm ring-1 ring-[#F1F5F9]" : "text-[#64748B] hover:text-[#05090E]"
-                  )}
-                >
-                  {f}
-                </button>
-              ))}
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 px-4 py-2 bg-[#F8FAFC] border border-[#F1F5F9] rounded-xl">
-                <ShieldCheck className="w-4 h-4 text-[#00DDFF]" />
-                <span className="text-[11px] font-bold text-[#A3A3A3] uppercase tracking-widest">Global Protocol Sync: OK</span>
-              </div>
-              <button className="h-10 w-10 flex items-center justify-center rounded-xl border-2 border-[#F1F5F9] text-[#64748B] hover:text-[#1F57F5] hover:border-[#1F57F5] transition-all hover:bg-white bg-[#F8FAFC] shadow-sm">
-                <Filter className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-
-          {isLoading ? (
-            <div className="h-96 flex flex-col items-center justify-center space-y-6 bg-[#F8FAFC]/50 rounded-[3rem] border-2 border-dashed border-[#F1F5F9]">
-              <Loader2 className="w-12 h-12 animate-spin text-[#1F57F5] opacity-20" />
-              <p className="text-[12px] font-bold text-[#64748B] uppercase tracking-[0.2em]">Synthesizing Deployment Matrix...</p>
-            </div>
-          ) : (
-            <div className="bg-white rounded-[3rem] border-2 border-[#F1F5F9] shadow-sm overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left">
-                  <thead>
-                    <tr className="bg-[#F8FAFC]">
-                      <th className="px-12 py-8 text-[11px] font-bold text-[#64748B] uppercase tracking-[0.2em]">Campaign Identity</th>
-                      <th className="px-12 py-8 text-[11px] font-bold text-[#64748B] uppercase tracking-[0.2em] text-center">Protocol Node</th>
-                      <th className="px-12 py-8 text-[11px] font-bold text-[#64748B] uppercase tracking-[0.2em] text-right">Investment Sync</th>
-                      <th className="px-12 py-8 text-[11px] font-bold text-[#64748B] uppercase tracking-[0.2em] text-right">Yield Index (ROAS)</th>
-                      <th className="px-12 py-8 text-[11px] font-bold text-[#64748B] uppercase tracking-[0.2em] text-center">Matrix Health</th>
-                      <th className="px-12 py-8 text-[11px] font-bold text-[#64748B] uppercase tracking-[0.2em] text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#F1F5F9]">
-                    {filteredCampaigns.map((campaign) => (
-                      <tr key={campaign.id} className="group hover:bg-[#F8FAFC]/30 transition-all duration-300">
-                        <td className="px-12 py-10">
-                          <div className="flex items-center gap-6">
-                            <div className={cn(
-                              "w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-lg shadow-black/5 group-hover:scale-110 transition-transform",
-                              campaign.platform === 'Meta' ? 'bg-[#1877F2]' : campaign.platform === 'Google' ? 'bg-[#EA4335]' : 'bg-[#0A66C2]'
-                            )}>
-                              <Globe className="w-5 h-5" />
-                            </div>
-                            <div className="space-y-1 text-left">
-                              <p className="text-[17px] font-bold text-[#05090E] group-hover:text-[#1F57F5] transition-colors tracking-tight">{campaign.name}</p>
-                              <p className="text-[11px] font-bold text-[#A3A3A3] uppercase tracking-[0.1em]">{campaign.platform} Performance Engine</p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-12 py-10 text-center">
-                          <button
-                            onClick={() => toggleStatus(campaign.id, campaign.status)}
-                            className={cn(
-                              "px-6 py-2 rounded-xl text-[10px] font-bold uppercase tracking-[0.2em] flex items-center justify-center gap-2.5 mx-auto transition-all border-2",
-                              campaign.status === 'ACTIVE'
-                                ? "bg-[#1F57F5]/5 text-[#1F57F5] border-[#1F57F5]/20 hover:bg-[#1F57F5]/10 shadow-sm"
-                                : "bg-[#F8FAFC] text-[#A3A3A3] border-[#F1F5F9] opacity-60"
-                            )}
-                          >
-                            <div className={cn("w-2 h-2 rounded-full", campaign.status === 'ACTIVE' ? "bg-[#1F57F5] animate-pulse" : "bg-[#A3A3A3]")} />
-                            {campaign.status}
-                          </button>
-                        </td>
-                        <td className="px-12 py-10 text-right">
-                          <p className="text-[16px] font-bold text-[#05090E] tracking-tight">${campaign.spend.toLocaleString()}</p>
-                          <p className="text-[11px] text-[#A3A3A3] font-bold uppercase tracking-wider mt-0.5">ALLOCATION: ${campaign.budget.toLocaleString()}</p>
-                        </td>
-                        <td className="px-12 py-10 text-right">
-                          <div className={cn(
-                            "inline-flex items-center gap-2 px-4 py-1.5 rounded-xl text-[15px] font-bold tracking-tight shadow-sm ring-1",
-                            campaign.roas >= 3 ? "bg-[#00DDFF]/10 text-[#00DDFF] ring-[#00DDFF]/20" : campaign.roas >= 2 ? "bg-[#1F57F5]/10 text-[#1F57F5] ring-[#1F57F5]/20" : "bg-[#F43F5E]/10 text-[#F43F5E] ring-[#F43F5E]/20"
-                          )}>
-                            {campaign.roas.toFixed(2)}x <BarChart2 className="w-5 h-5" />
-                          </div>
-                        </td>
-                        <td className="px-12 py-10 text-center">
-                          <div className="flex justify-center items-center gap-3">
-                            <div className={cn(
-                              "w-3 h-3 rounded-full shadow-[0_0_12px_rgba(31,87,245,0.3)]",
-                              campaign.health === 'Good' ? 'bg-[#00DDFF]' : campaign.health === 'Fair' ? 'bg-[#1F57F5]' : 'bg-[#F43F5E]'
-                            )} />
-                            <span className="text-[11px] font-bold text-[#05090E] uppercase tracking-widest">{campaign.health}</span>
-                          </div>
-                        </td>
-                        <td className="px-12 py-10 text-right">
-                          <button className="h-12 w-12 flex items-center justify-center text-[#A3A3A3] hover:text-[#05090E] transition-all rounded-2xl hover:bg-[#F8FAFC] bg-white border border-[#F1F5F9] shadow-sm">
-                            <MoreVertical className="w-5 h-5" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-        </div>
       </div>
     </DashboardLayout>
   )
