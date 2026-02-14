@@ -19,17 +19,13 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
-// Import Server Actions
 import { generateCreative, getCreatives, deleteCreative } from "@/app/actions/creatives"
 
 export default function CreativesPage() {
   const [creatives, setCreatives] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false)
-
-  // Generation logic
   const [isGenerating, setIsGenerating] = useState(false)
-  const [generationStep, setGenerationStep] = useState<string>("")
 
   const [genForm, setGenForm] = useState({
     name: "",
@@ -65,16 +61,20 @@ export default function CreativesPage() {
     }
 
     setIsGenerating(true)
-    setGenerationStep("Analyzing Context...")
+    const toastId = toast.loading("Initializing AI Generation Protocol...")
 
-    // Simulate steps for UX
-    const timer1 = setTimeout(() => setGenerationStep("Synthesizing Visuals..."), 1500)
-    const timer2 = setTimeout(() => setGenerationStep("Optimizing Copy..."), 3000)
+    // Safety Timeout to prevent indefinite loading state
+    const timeoutId = setTimeout(() => {
+      if (isGenerating) {
+        setIsGenerating(false)
+        toast.error("Generation timed out. Please try again.", { id: toastId })
+      }
+    }, 15000) // 15s timeout
 
     try {
       const res = await generateCreative({
         product_name: genForm.name,
-        target_audience: "General", // Could be added to form
+        target_audience: "General",
         goal: genForm.objective,
         platform: genForm.platform,
         format: genForm.format,
@@ -82,11 +82,12 @@ export default function CreativesPage() {
         cta: genForm.cta,
         tone: genForm.tone,
         style: genForm.style,
-        // productDescription is mapped to keyBenefit in server action
       })
 
+      clearTimeout(timeoutId)
+
       if (res.success) {
-        toast.success("Creative Asset Generated Successfully")
+        toast.success("Creative Asset Generated Successfully", { id: toastId })
         setIsGenerateModalOpen(false)
         setGenForm({
           name: "",
@@ -101,22 +102,19 @@ export default function CreativesPage() {
         })
         load()
       } else {
-        toast.error(res.error || "Generation failed on server")
+        toast.error(res.error || "Generation failed on server", { id: toastId })
       }
     } catch (e: any) {
+      clearTimeout(timeoutId)
       console.error(e)
-      toast.error("Client-side error: " + e.message)
+      toast.error("Client-side error: " + e.message, { id: toastId })
     } finally {
-      clearTimeout(timer1)
-      clearTimeout(timer2)
       setIsGenerating(false)
-      setGenerationStep("")
     }
   }
 
   const handleDelete = async (id: string) => {
     if (!confirm("Permanently delete this asset?")) return
-    // Optimistic
     setCreatives(prev => prev.filter(c => c.id !== id))
     try {
       await deleteCreative(id)
@@ -158,8 +156,8 @@ export default function CreativesPage() {
         </div>
 
         <div className="flex flex-col lg:flex-row gap-8 items-start">
-          {/* Left Column: Filters */}
-          <div className="w-full lg:w-64 flex-shrink-0 space-y-6">
+          {/* Filters */}
+          <div className="w-full lg:w-64 flex-shrink-0 space-y-6 hidden lg:block">
             <div className="bg-white border border-[#E2E8F0] rounded-lg p-4 shadow-sm space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-[13px] font-bold text-[#1F2937] flex items-center gap-2">
@@ -167,7 +165,6 @@ export default function CreativesPage() {
                 </h3>
                 <button className="text-[10px] text-[#1F57F5] hover:underline">Reset</button>
               </div>
-
               <div className="space-y-3">
                 {['Platform', 'Format', 'Aspect Ratio', 'Style', 'Tags'].map(filter => (
                   <div key={filter} className="space-y-1.5">
@@ -179,30 +176,10 @@ export default function CreativesPage() {
                 ))}
               </div>
             </div>
-
-            <div className="bg-violet-50 border border-violet-100 rounded-lg p-4 space-y-2">
-              <div className="flex items-center gap-2 text-violet-700">
-                <Wand2 className="w-4 h-4" />
-                <h4 className="text-[12px] font-bold">Pro Tip</h4>
-              </div>
-              <p className="text-[11px] text-violet-800 leading-relaxed">
-                Lifestyle images perform 2.4x better on Meta feeds. Try setting style to "Lifestyle".
-              </p>
-            </div>
           </div>
 
           {/* Main Grid Area */}
           <div className="flex-1 w-full">
-            {/* Search Bar */}
-            <div className="mb-6 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search by name, tag, or copy..."
-                className="w-full h-10 pl-10 pr-4 bg-white border border-[#E2E8F0] rounded-lg text-[13px] focus:border-[#1F57F5] outline-none shadow-sm"
-              />
-            </div>
-
             {isLoading ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {[1, 2, 3, 4, 5, 6].map(i => (
@@ -215,8 +192,7 @@ export default function CreativesPage() {
                   <ImageIcon className="w-8 h-8 text-gray-300" />
                 </div>
                 <h3 className="text-[16px] font-bold text-[#1F2937]">Your studio is empty</h3>
-                <p className="text-[13px] text-[#64748B] mt-1 mb-6 max-w-sm text-center">Generate high-converting assets instantly with our AI engine.</p>
-                <button onClick={() => setIsGenerateModalOpen(true)} className="btn-primary">
+                <button onClick={() => setIsGenerateModalOpen(true)} className="mt-6 btn-primary">
                   <Sparkles className="w-4 h-4 mr-2" /> Generate First Asset
                 </button>
               </div>
@@ -224,8 +200,7 @@ export default function CreativesPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-12">
                 {creatives.map(c => (
                   <div key={c.id} className="group bg-white border border-[#E2E8F0] rounded-[8px] overflow-hidden shadow-sm hover:translate-y-[-4px] hover:shadow-lg transition-all duration-300 flex flex-col h-[380px]">
-                    {/* Thumbnail */}
-                    <div className="h-[200px] bg-gray-100 relative overflow-hidden flex-shrink-0">
+                    <div className="h-[200px] bg-gray-100 relative overflow-hidden flex-shrink-0 group">
                       {c.imageUrl ? (
                         <img src={c.imageUrl} alt={c.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
                       ) : (
@@ -233,44 +208,21 @@ export default function CreativesPage() {
                           <ImageIcon className="w-10 h-10" />
                         </div>
                       )}
-                      {/* Badges */}
-                      {c.aiScore && (
-                        <div className="absolute top-2 right-2 px-2 py-0.5 bg-black/70 backdrop-blur-md rounded text-white text-[10px] font-bold border border-white/10 flex items-center gap-1">
-                          <Sparkles className="w-3 h-3 text-yellow-400" /> {c.aiScore}
-                        </div>
-                      )}
-                      <div className="absolute top-2 left-2 px-2 py-0.5 bg-white/90 backdrop-blur-md rounded text-[#1F2937] text-[10px] font-bold uppercase tracking-wider border border-gray-200 shadow-sm">
-                        {c.platform || 'General'}
+                      <div className="absolute top-2 right-2 px-2 py-0.5 bg-black/70 backdrop-blur-md rounded text-white text-[10px] font-bold border border-white/10 flex items-center gap-1">
+                        <Sparkles className="w-3 h-3 text-yellow-400" /> {c.aiScore || 85}
                       </div>
                     </div>
-
-                    {/* Content */}
                     <div className="p-4 flex-1 flex flex-col">
                       <div className="flex items-start justify-between mb-2">
                         <h3 className="text-[14px] font-bold text-[#1F2937] line-clamp-1" title={c.name}>{c.name}</h3>
                         <button className="text-gray-400 hover:text-gray-600"><MoreHorizontal className="w-4 h-4" /></button>
                       </div>
-
-                      <div className="flex-1 space-y-2">
-                        <p className="text-[11px] text-[#64748B] line-clamp-3 leading-relaxed bg-gray-50 p-2 rounded border border-gray-100 italic">
-                          "{c.headline || c.bodyText}"
-                        </p>
-                        <div className="flex items-center gap-2 mt-auto">
-                          <span className="text-[10px] font-bold bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded uppercase">CTA: {c.ctaText}</span>
-                        </div>
-                      </div>
-
-                      {/* Actions Row */}
-                      <div className="flex items-center justify-between pt-4 mt-2 border-t border-[#F1F5F9] opacity-0 group-hover:opacity-100 transition-opacity">
-                        <div className="flex items-center gap-2">
-                          <button className="p-1.5 hover:bg-gray-100 rounded text-gray-500 hover:text-[#1F2937]" title="Copy Text">
-                            <Copy className="w-3.5 h-3.5" />
-                          </button>
-                          <button className="p-1.5 hover:bg-gray-100 rounded text-gray-500 hover:text-[#1F2937]" title="Download">
-                            <Download className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                        <button onClick={() => handleDelete(c.id)} className="p-1.5 hover:bg-red-50 rounded text-gray-400 hover:text-red-500 transition-colors" title="Delete">
+                      <p className="text-[11px] text-[#64748B] line-clamp-3 leading-relaxed bg-gray-50 p-2 rounded border border-gray-100 italic mb-auto">
+                        "{c.headline || c.bodyText}"
+                      </p>
+                      <div className="flex items-center justify-between pt-4 mt-2 border-t border-[#F1F5F9]">
+                        <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-[10px] font-bold uppercase">{c.platform || 'General'}</span>
+                        <button onClick={() => handleDelete(c.id)} className="text-gray-400 hover:text-red-500 transition-colors">
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
@@ -285,15 +237,11 @@ export default function CreativesPage() {
         {/* Slide-over Generator Panel */}
         {isGenerateModalOpen && (
           <div className="fixed inset-0 z-50 flex justify-end">
-            {/* Backdrop */}
             <div
               className="absolute inset-0 bg-[#0F172A]/30 backdrop-blur-[2px] transition-opacity"
               onClick={() => !isGenerating && setIsGenerateModalOpen(false)}
             />
-
-            {/* Panel */}
             <div className="relative w-full max-w-[520px] bg-white h-full shadow-2xl border-l border-[#E2E8F0] animate-in slide-in-from-right duration-300 flex flex-col">
-              {/* Panel Header */}
               <div className="px-6 py-5 border-b border-[#E2E8F0] flex items-center justify-between bg-[#F8FAFC]">
                 <div>
                   <h2 className="text-[18px] font-bold text-[#1F2937]">Asset Generator</h2>
@@ -310,7 +258,6 @@ export default function CreativesPage() {
                 </button>
               </div>
 
-              {/* Scrollable Form */}
               <div className="flex-1 overflow-y-auto p-6 space-y-6">
                 <div className="space-y-1.5">
                   <label className="text-[13px] font-bold text-[#1F2937]">Asset Name *</label>
@@ -352,34 +299,6 @@ export default function CreativesPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-5">
-                  <div className="space-y-1.5">
-                    <label className="text-[12px] font-semibold text-[#64748B]">Format</label>
-                    <select
-                      className="input-field h-10"
-                      value={genForm.format}
-                      onChange={e => setGenForm({ ...genForm, format: e.target.value })}
-                    >
-                      <option>Single Image</option>
-                      <option>Carousel</option>
-                      <option>Video Short</option>
-                    </select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[12px] font-semibold text-[#64748B]">Aspect Ratio</label>
-                    <select
-                      className="input-field h-10"
-                      value={genForm.aspect}
-                      onChange={e => setGenForm({ ...genForm, aspect: e.target.value })}
-                    >
-                      <option>1:1 (Square)</option>
-                      <option>4:5 (Portrait)</option>
-                      <option>9:16 (Story)</option>
-                      <option>16:9 (Landscape)</option>
-                    </select>
-                  </div>
-                </div>
-
                 <div className="space-y-1.5">
                   <label className="text-[13px] font-bold text-[#1F2937]">Product / Offer Description *</label>
                   <textarea
@@ -389,58 +308,8 @@ export default function CreativesPage() {
                     onChange={e => setGenForm({ ...genForm, productDescription: e.target.value })}
                   />
                 </div>
-
-                <div className="grid grid-cols-2 gap-5">
-                  <div className="space-y-1.5">
-                    <label className="text-[12px] font-semibold text-[#64748B]">Primary CTA</label>
-                    <select
-                      className="input-field h-10"
-                      value={genForm.cta}
-                      onChange={e => setGenForm({ ...genForm, cta: e.target.value })}
-                    >
-                      <option>Shop Now</option>
-                      <option>Learn More</option>
-                      <option>Sign Up</option>
-                      <option>Get Offer</option>
-                    </select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[12px] font-semibold text-[#64748B]">Tone of Voice</label>
-                    <select
-                      className="input-field h-10"
-                      value={genForm.tone}
-                      onChange={e => setGenForm({ ...genForm, tone: e.target.value })}
-                    >
-                      <option>Direct</option>
-                      <option>Conversational</option>
-                      <option>Playful</option>
-                      <option>Urgent</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-[12px] font-semibold text-[#64748B] block mb-2">Visual Style</label>
-                  <div className="flex flex-wrap gap-2">
-                    {['Lifestyle', 'Minimal', 'Bold', 'On-Brand', 'illustration'].map(style => (
-                      <button
-                        key={style}
-                        onClick={() => setGenForm({ ...genForm, style })}
-                        className={cn(
-                          "px-3 py-1.5 rounded-full text-[11px] font-medium border transition-all",
-                          genForm.style === style
-                            ? "bg-[#1F57F5] text-white border-[#1F57F5]"
-                            : "bg-white text-[#64748B] border-[#E2E8F0] hover:border-[#CBD5E1]"
-                        )}
-                      >
-                        {style}
-                      </button>
-                    ))}
-                  </div>
-                </div>
               </div>
 
-              {/* Panel Footer */}
               <div className="p-6 border-t border-[#E2E8F0] bg-[#F8FAFC]">
                 <button
                   onClick={handleGenerate}
@@ -453,7 +322,7 @@ export default function CreativesPage() {
                   {isGenerating ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>{generationStep}</span>
+                      <span>Generating Creative...</span>
                     </>
                   ) : (
                     <>

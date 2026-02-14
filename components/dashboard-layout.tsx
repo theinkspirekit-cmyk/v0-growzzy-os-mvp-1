@@ -49,6 +49,7 @@ const navItems: NavItem[] = [
       { title: "Efficiency Matrix", href: "/dashboard/analytics/efficiency" },
     ]
   },
+  { title: "AI Assistant", href: "/dashboard/copilot", icon: Bot },
   { title: "Automation", href: "/dashboard/automations", icon: Zap },
   { title: "Reports", href: "/dashboard/reports", icon: FileBarChart },
   { title: "Settings", href: "/dashboard/settings", icon: Settings },
