@@ -160,10 +160,10 @@ export default function AuthPage() {
                     <User className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-[#94A3B8] group-focus-within:text-[#1F57F5] transition-colors" />
                     <input
                       type="text"
-                      placeholder="MAX REYNOLDS"
+                      placeholder="Max Reynolds"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      className="input-premium pl-16 uppercase tracking-widest text-[13px]"
+                      className="input pl-16 tracking-widest text-[13px]"
                       required={!isLogin}
                     />
                   </div>
@@ -176,10 +176,10 @@ export default function AuthPage() {
                   <Mail className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-[#94A3B8] group-focus-within:text-[#1F57F5] transition-colors" />
                   <input
                     type="email"
-                    placeholder="OPERATOR@GROWZZY.GLOBAL"
+                    placeholder="operator@growzzy.global"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="input-premium pl-16 uppercase tracking-widest text-[13px]"
+                    onChange={(e) => setEmail(e.target.value.toLowerCase())}
+                    className="input pl-16 tracking-widest text-[13px]"
                     required
                   />
                 </div>
@@ -199,7 +199,7 @@ export default function AuthPage() {
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="input-premium pl-16"
+                    className="input pl-16"
                     required
                   />
                 </div>
@@ -243,12 +243,20 @@ export default function AuthPage() {
               </button>
               <button
                 onClick={async () => {
-                  setIsLoading(true)
-                  await signIn("credentials", {
-                    email: "admin@growzzy.com",
-                    password: "admin",
-                    callbackUrl: "/dashboard"
-                  })
+                  try {
+                    setIsLoading(true);
+                    setError("");
+                    const res = await signIn("credentials", {
+                      email: "admin@growzzy.com",
+                      password: "admin",
+                      redirect: false
+                    });
+                    if (res?.error) throw new Error("Handshake failed: Invalid credentials.");
+                    router.replace("/dashboard");
+                  } catch (err: any) {
+                    setError(err.message);
+                    setIsLoading(false);
+                  }
                 }}
                 className="h-14 bg-white border border-[#EEF2F7] text-dark-text rounded-[14px] font-bold text-[11px] uppercase tracking-[0.2em] hover:bg-[#F7FAFC] flex items-center justify-center gap-3 group"
               >

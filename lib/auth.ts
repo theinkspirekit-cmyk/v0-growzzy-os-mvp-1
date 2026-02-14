@@ -14,32 +14,45 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
-        console.log("[auth] Authorize call received for:", credentials?.email);
+        const inputEmail = (credentials?.email as string || '').toLowerCase().trim();
+        const inputPassword = credentials?.password as string || '';
+
+        console.log("[auth] Authorize call received for:", inputEmail);
 
         if (
-          credentials?.email === "admin@growzzy.com" &&
-          credentials?.password === "admin"
+          inputEmail === "admin@growzzy.com" &&
+          inputPassword === "admin"
         ) {
           console.log("[auth] ⚠️ USING ADMIN BYPASS - UPSERTING USER");
 
-          // Upsert the admin user to ensure they exist for FK constraints
-          const adminUser = await prisma.user.upsert({
-            where: { email: "admin@growzzy.com" },
-            update: {},
-            create: {
-              email: "admin@growzzy.com",
-              name: "Admin User",
-              password: await bcrypt.hash("admin", 10),
-              // id will be auto-generated (cuid), but we return it
-            }
-          });
+          try {
+            // Upsert the admin user to ensure they exist for FK constraints
+            const adminUser = await prisma.user.upsert({
+              where: { email: "admin@growzzy.com" },
+              update: {},
+              create: {
+                email: "admin@growzzy.com",
+                name: "Admin User",
+                password: await bcrypt.hash("admin", 10),
+              }
+            });
 
-          return {
-            id: adminUser.id,
-            email: adminUser.email,
-            name: adminUser.name,
-            image: adminUser.image
-          };
+            return {
+              id: adminUser.id,
+              email: adminUser.email,
+              name: adminUser.name,
+              image: adminUser.image
+            };
+          } catch (upsertError) {
+            console.error("[auth] Upsert failed, continuing with static admin:", upsertError);
+            // Even if DB fail, return static demo user to allow bypass in restricted envs
+            return {
+              id: "admin-bypass-id",
+              email: "admin@growzzy.com",
+              name: "Admin Demo",
+              image: null
+            };
+          }
         }
 
         if (!credentials?.email || !credentials?.password) {
