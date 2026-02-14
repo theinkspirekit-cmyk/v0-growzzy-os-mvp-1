@@ -163,7 +163,7 @@ export default function AuthPage() {
                       placeholder="Max Reynolds"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      className="input pl-16 tracking-widest text-[13px]"
+                      className="input h-14 pl-16 tracking-widest text-[13px]"
                       required={!isLogin}
                     />
                   </div>
@@ -179,7 +179,7 @@ export default function AuthPage() {
                     placeholder="operator@growzzy.global"
                     value={email}
                     onChange={(e) => setEmail(e.target.value.toLowerCase())}
-                    className="input pl-16 tracking-widest text-[13px]"
+                    className="input h-14 pl-16 tracking-widest text-[13px]"
                     required
                   />
                 </div>
@@ -199,7 +199,7 @@ export default function AuthPage() {
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="input pl-16"
+                    className="input h-14 pl-16"
                     required
                   />
                 </div>
@@ -209,7 +209,7 @@ export default function AuthPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="btn-premium w-full h-18 text-[15px]"
+              className="btn btn-primary w-full h-14 text-[15px] shadow-lg shadow-primary/20"
             >
               {isLoading ? (
                 <div className="flex items-center gap-4">
@@ -237,7 +237,7 @@ export default function AuthPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <button
                 onClick={() => setIsLogin(!isLogin)}
-                className="h-14 bg-white border border-[#EEF2F7] text-dark-text rounded-[14px] font-bold text-[11px] uppercase tracking-[0.2em] hover:border-[#1F57F5] transition-all"
+                className="btn btn-secondary h-14 rounded-[14px] font-bold text-[11px] uppercase tracking-[0.2em] hover:border-primary transition-all"
               >
                 {isLogin ? "Initialize New Node" : "Existing Identity Login"}
               </button>
@@ -258,9 +258,9 @@ export default function AuthPage() {
                     setIsLoading(false);
                   }
                 }}
-                className="h-14 bg-white border border-[#EEF2F7] text-dark-text rounded-[14px] font-bold text-[11px] uppercase tracking-[0.2em] hover:bg-[#F7FAFC] flex items-center justify-center gap-3 group"
+                className="btn btn-secondary h-14 rounded-[14px] font-bold text-[11px] uppercase tracking-[0.2em] flex items-center justify-center gap-3 group"
               >
-                Bypass to Live Demo Node <ChevronRight className="w-4 h-4 text-[#1F57F5] group-hover:translate-x-1 transition-transform" />
+                Bypass to Live Demo Node <ChevronRight className="w-4 h-4 text-primary group-hover:translate-x-1 transition-transform" />
               </button>
             </div>
           </div>
