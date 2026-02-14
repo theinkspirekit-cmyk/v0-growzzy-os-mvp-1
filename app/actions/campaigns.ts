@@ -17,11 +17,12 @@ export async function getCampaigns() {
     const session = await auth()
     if (!session?.user?.id) return []
 
-    return await prisma.campaign.findMany({
+    const campaigns = await prisma.campaign.findMany({
         where: { userId: session.user.id },
         orderBy: { createdAt: "desc" },
         include: { platform: true }
     })
+    return JSON.parse(JSON.stringify(campaigns))
 }
 
 export async function createCampaign(data: any) {

@@ -12,20 +12,30 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
-// Recharts
-import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  BarChart, Bar, Cell, PieChart, Pie, Legend
-} from 'recharts'
-// Actions
+// Recharts dynamic imports to prevent hydration/serialization crashes
+import dynamic from "next/dynamic"
 import { getAnalyticsOverview, RevenueTrend } from "@/app/actions/analytics"
+
+const AreaChart = dynamic(() => import("recharts").then(mod => mod.AreaChart), { ssr: false })
+const Area = dynamic(() => import("recharts").then(mod => mod.Area), { ssr: false })
+const XAxis = dynamic(() => import("recharts").then(mod => mod.XAxis), { ssr: false })
+const YAxis = dynamic(() => import("recharts").then(mod => mod.YAxis), { ssr: false })
+const CartesianGrid = dynamic(() => import("recharts").then(mod => mod.CartesianGrid), { ssr: false })
+const Tooltip = dynamic(() => import("recharts").then(mod => mod.Tooltip), { ssr: false })
+const PieChart = dynamic(() => import("recharts").then(mod => mod.PieChart), { ssr: false })
+const Pie = dynamic(() => import("recharts").then(mod => mod.Pie), { ssr: false })
+const Cell = dynamic(() => import("recharts").then(mod => mod.Cell), { ssr: false })
+const Legend = dynamic(() => import("recharts").then(mod => mod.Legend), { ssr: false })
+const ResponsiveContainer = dynamic(() => import("recharts").then(mod => mod.ResponsiveContainer), { ssr: false })
 
 export default function AnalyticsPage() {
   const [data, setData] = useState<any>(null)
   const [period, setPeriod] = useState("30d")
   const [isLoading, setIsLoading] = useState(true)
+  const [isMounted, setIsMounted] = useState(false)
 
   useEffect(() => {
+    setIsMounted(true)
     const fetch = async () => {
       try {
         const res = await getAnalyticsOverview()
@@ -54,12 +64,14 @@ export default function AnalyticsPage() {
     toast.success("Data exported to CSV")
   }
 
+  if (!isMounted) return <div className="min-h-screen bg-[#F8FAFC]" />
+
   return (
     <DashboardLayout>
       <div className="space-y-6 font-satoshi">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-          <div className="space-y-1">
+          <div className="space-y-1 text-left">
             <h1 className="text-[24px] font-bold text-[#1F2937] tracking-tight">Intelligence Engine</h1>
             <div className="flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
@@ -104,7 +116,7 @@ export default function AnalyticsPage() {
                 { label: "Conv. Rate", value: `${data.kpi.conversionRate.value}%`, change: `${data.kpi.conversionRate.change}%`, color: "#F59E0B" },
                 { label: "CPA", value: `$${data.kpi.cpa.value}`, change: `${data.kpi.cpa.change}%`, color: "#8B5CF6" },
               ].map((k, i) => (
-                <div key={i} className="bg-white p-4 border border-[#E2E8F0] rounded-lg shadow-sm">
+                <div key={i} className="bg-white p-4 border border-[#E2E8F0] rounded-lg shadow-sm text-left">
                   <p className="text-[11px] font-medium text-[#64748B] uppercase tracking-wide mb-1">{k.label}</p>
                   <p className="text-[18px] font-bold text-[#1F2937] tracking-tight">{k.value}</p>
                   <span className={cn("text-[10px] font-bold", k.change.startsWith('+') ? 'text-emerald-600' : 'text-rose-500')}>
@@ -119,7 +131,7 @@ export default function AnalyticsPage() {
               {/* Revenue vs Spend */}
               <div className="lg:col-span-2 bg-white p-6 rounded-lg border border-[#E2E8F0] shadow-sm">
                 <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-[14px] font-bold text-[#1F2937] flex items-center gap-2">
+                  <h3 className="text-[14px] font-bold text-[#1F2937] flex items-center gap-2 text-left">
                     <TrendingUp className="w-4 h-4 text-[#1F57F5]" /> Revenue Velocity
                   </h3>
                 </div>
@@ -138,11 +150,10 @@ export default function AnalyticsPage() {
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
                       <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748B' }} dy={10} minTickGap={30} />
-                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748B' }} tickFormatter={(value) => `$${value / 1000}k`} />
+                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748B' }} />
                       <Tooltip
-                        contentStyle={{ borderRadius: '8px', border: '1px solid #E2E8F0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
+                        contentStyle={{ borderRadius: '8px', border: '1px solid #E2E8F0' }}
                         itemStyle={{ fontSize: '12px', fontWeight: 600 }}
-                        labelStyle={{ fontSize: '11px', color: '#64748B', marginBottom: '5px' }}
                       />
                       <Area type="monotone" dataKey="revenue" stroke="#1F57F5" strokeWidth={2} fillOpacity={1} fill="url(#colorRev)" />
                       <Area type="monotone" dataKey="spend" stroke="#F43F5E" strokeWidth={2} fillOpacity={1} fill="url(#colorSpend)" />
@@ -153,7 +164,7 @@ export default function AnalyticsPage() {
 
               {/* Channel Breakdown */}
               <div className="bg-white p-6 rounded-lg border border-[#E2E8F0] shadow-sm">
-                <h3 className="text-[14px] font-bold text-[#1F2937] mb-6 flex items-center gap-2">
+                <h3 className="text-[14px] font-bold text-[#1F2937] mb-6 flex items-center gap-2 text-left">
                   <PieIcon className="w-4 h-4 text-[#2BAFF2]" /> Channel Distribution
                 </h3>
                 <div className="h-[250px] relative">
@@ -197,18 +208,17 @@ export default function AnalyticsPage() {
               </div>
             </div>
 
-            {/* Efficiency Matrix Table (Compact) */}
-            <div className="bg-white border border-[#E2E8F0] rounded-lg shadow-sm overflow-hidden">
-              <div className="p-4 border-b border-[#E2E8F0] flex justify-between items-center">
+            {/* Efficiency Matrix Table */}
+            <div className="bg-white border border-[#E2E8F0] rounded-lg shadow-sm overflow-hidden pb-40">
+              <div className="p-4 border-b border-[#E2E8F0] flex justify-between items-center bg-[#F8FAFC]">
                 <h3 className="text-[14px] font-bold text-[#1F2937]">Efficiency Matrix</h3>
                 <Filter className="w-4 h-4 text-[#94A3B8]" />
               </div>
               <table className="w-full text-left">
                 <thead>
                   <tr className="bg-[#F8FAFC]">
-                    <th className="px-6 py-3 text-[11px] font-semibold text-[#64748B] uppercase">Channel/Source</th>
+                    <th className="px-6 py-3 text-[11px] font-semibold text-[#64748B] uppercase">Channel</th>
                     <th className="px-6 py-3 text-[11px] font-semibold text-[#64748B] uppercase text-right">Spend</th>
-                    <th className="px-6 py-3 text-[11px] font-semibold text-[#64748B] uppercase text-right">Revenue</th>
                     <th className="px-6 py-3 text-[11px] font-semibold text-[#64748B] uppercase text-right">ROAS</th>
                     <th className="px-6 py-3 text-[11px] font-semibold text-[#64748B] uppercase text-right">Conv.</th>
                   </tr>
@@ -216,9 +226,8 @@ export default function AnalyticsPage() {
                 <tbody className="divide-y divide-[#F1F5F9]">
                   {data.channels.map((c: any, i: number) => (
                     <tr key={i} className="hover:bg-[#F9FAFB]">
-                      <td className="px-6 py-3 text-[13px] font-medium text-[#1F2937]">{c.channel}</td>
+                      <td className="px-6 py-3 text-[13px] font-bold text-[#1F2937] text-left">{c.channel}</td>
                       <td className="px-6 py-3 text-[13px] text-[#64748B] text-right">${c.spend.toLocaleString()}</td>
-                      <td className="px-6 py-3 text-[13px] text-[#64748B] text-right">${(c.spend * c.roas).toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
                       <td className="px-6 py-3 text-right">
                         <span className={cn(
                           "px-2 py-0.5 rounded text-[11px] font-bold",

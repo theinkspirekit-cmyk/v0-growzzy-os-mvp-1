@@ -70,10 +70,11 @@ export async function getLeads() {
     const session = await auth()
     if (!session?.user?.id) return []
 
-    return await prisma.lead.findMany({
+    const leads = await prisma.lead.findMany({
         where: { userId: session.user.id },
         orderBy: { createdAt: "desc" }
     })
+    return JSON.parse(JSON.stringify(leads))
 }
 
 export async function importLeads(csvData: string): Promise<LeadState> {

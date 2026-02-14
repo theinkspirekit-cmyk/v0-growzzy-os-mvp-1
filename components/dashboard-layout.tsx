@@ -209,7 +209,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
             <div className="flex items-center gap-3">
               <button className="relative p-2 bg-white hover:bg-[#F8FAFC] border border-transparent hover:border-[#E2E8F0] rounded-md text-[#64748B] transition-all">
-                <Bell className="w-4.5 h-4.5" />
+                <Bell className="w-5 h-5" />
                 <span className="absolute top-2 right-2.5 w-1.5 h-1.5 bg-[#F43F5E] rounded-full ring-2 ring-white" />
               </button>
               <button className="h-8 px-3 bg-[#1F57F5] hover:bg-[#1A4AD1] text-white text-[12px] font-medium rounded-md shadow-sm transition-all">
