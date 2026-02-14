@@ -15,8 +15,6 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
-import jsPDF from "jspdf"
-import autoTable from "jspdf-autotable"
 
 export default function ReportsPage() {
   const [isGenerating, setIsGenerating] = useState(false)
@@ -40,6 +38,10 @@ export default function ReportsPage() {
     try {
       // Simulate data fetch delay
       await new Promise(resolve => setTimeout(resolve, 2000))
+
+      // Dynamic Import to Fix SSR Error
+      const jsPDF = (await import("jspdf")).default
+      const autoTable = (await import("jspdf-autotable")).default
 
       const doc = new jsPDF()
 
