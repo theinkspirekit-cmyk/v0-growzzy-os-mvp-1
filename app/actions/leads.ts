@@ -58,7 +58,8 @@ export async function createLead(data: any): Promise<LeadState> {
         })
 
         revalidatePath("/dashboard/leads")
-        return { success: true, lead }
+        revalidatePath("/dashboard/leads")
+        return { success: true, lead: JSON.parse(JSON.stringify(lead)) }
     } catch (err: any) {
         console.error("Create Lead Error:", err)
         return { error: err.message || "Failed to create lead" }

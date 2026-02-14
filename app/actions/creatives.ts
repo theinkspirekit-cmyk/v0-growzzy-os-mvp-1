@@ -10,7 +10,12 @@ const GenerateSchema = z.object({
     product_name: z.string().min(1),
     target_audience: z.string().optional(),
     goal: z.string().optional(),
-    platform: z.string().optional()
+    platform: z.string().optional(),
+    format: z.string().optional(),
+    aspect: z.string().optional(),
+    cta: z.string().optional(),
+    tone: z.string().optional(),
+    style: z.string().optional()
 })
 
 const MOCK_IMAGES = [
@@ -45,7 +50,7 @@ export async function generateCreative(data: any) {
                     platform: validated.platform || 'General',
                     objective: validated.goal || 'Conversions',
                     targetAudience: validated.target_audience || 'General Audience',
-                    keyBenefit: `Promote ${validated.product_name} effectively`,
+                    keyBenefit: `Promote ${validated.product_name} effectively. Tone: ${validated.tone || 'Professional'}. Style: ${validated.style || 'Modern'}`,
                 })
                 if (response.creatives && response.creatives.length > 0) {
                     aiResult = response.creatives[0]
@@ -79,7 +84,8 @@ export async function generateCreative(data: any) {
         })
 
         revalidatePath("/dashboard/creatives")
-        return { success: true, creative }
+        // Serialize to prevent "Client-side exception" with Dates
+        return { success: true, creative: JSON.parse(JSON.stringify(creative)) }
 
     } catch (e: any) {
         return { error: e.message || "Generation failed" }

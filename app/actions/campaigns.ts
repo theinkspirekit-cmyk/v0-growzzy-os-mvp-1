@@ -50,7 +50,7 @@ export async function createCampaign(data: any) {
         })
 
         revalidatePath("/dashboard/campaigns")
-        return { success: true, campaign }
+        return { success: true, campaign: JSON.parse(JSON.stringify(campaign)) }
     } catch (e: any) {
         return { error: e.message || "Failed to create campaign" }
     }

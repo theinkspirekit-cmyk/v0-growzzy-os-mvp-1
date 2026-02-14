@@ -254,7 +254,7 @@ export default function DashboardPage() {
                   </div>
                   <p className="text-[14px] font-medium leading-relaxed text-[#F1F5F9]/90">The system has identified 3 cross-channel optimization vectors ready for autonomous execution.</p>
                   <button
-                    onClick={() => router.push('/dashboard/ai')}
+                    onClick={() => router.push('/dashboard/copilot')}
                     className="w-full h-12 bg-primary text-white rounded-xl text-[11px] font-bold uppercase tracking-[0.2em] hover:bg-[#2BAFF2] transition-all shadow-lg shadow-primary/20 active:scale-95 flex items-center justify-center gap-2.5"
                   >
                     Sync Core Brain <ArrowRight className="w-3.5 h-3.5" />
