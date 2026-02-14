@@ -61,6 +61,12 @@ export async function createLead(data: any): Promise<LeadState> {
         return { success: true, lead: JSON.parse(JSON.stringify(lead)) }
     } catch (err: any) {
         console.error("Create Lead Error:", err)
+        // If in demo mode or DB unreachable, we can simulate success for UX testing:
+        // return { success: true, lead: { ...data, id: "temp-id" }, message: "Simulated creation (DB Offline)" }
+
+        if (err.message?.includes("SASL") || err.message?.includes("connection")) {
+            return { error: "Database connection failed. Please check your credentials." }
+        }
         return { error: err.message || "Failed to create lead" }
     }
 }

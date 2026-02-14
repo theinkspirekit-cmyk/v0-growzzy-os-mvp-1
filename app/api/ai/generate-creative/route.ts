@@ -67,22 +67,37 @@ export async function POST(req: Request) {
     // Save generated variations
     for (const res of aiResults) {
       const randomImage = MOCK_IMAGES[Math.floor(Math.random() * MOCK_IMAGES.length)]
-      const creative = await prisma.creative.create({
-        data: {
-          userId: session.user.id,
-          name: `${validated.product_name} - ${validated.platform || 'General'}`,
-          type: "image",
-          format: validated.format || "feed",
+      try {
+        const creative = await prisma.creative.create({
+          data: {
+            userId: session.user.id,
+            name: `${validated.product_name} - ${validated.platform || 'General'}`,
+            type: "image",
+            format: validated.format || "feed",
+            headline: res.headline || "Headline",
+            bodyText: res.primaryText || "Body text",
+            ctaText: res.cta || "Learn More",
+            imageUrl: typeof res.imageUrl === 'string' ? res.imageUrl : randomImage,
+            aiGenerated: true,
+            aiScore: res.predictedScore || 80,
+            status: "draft"
+          }
+        })
+        savedCreatives.push(creative)
+      } catch (dbError) {
+        console.warn("Failed to save creative to DB, returning temporary object", dbError)
+        // Return temp object so UI still shows the result
+        savedCreatives.push({
+          id: `temp-${Date.now()}-${Math.random()}`,
+          name: validated.product_name,
           headline: res.headline,
           bodyText: res.primaryText,
-          ctaText: res.cta,
           imageUrl: randomImage,
-          aiGenerated: true,
-          aiScore: res.predictedScore || 80,
-          status: "draft"
-        }
-      })
-      savedCreatives.push(creative)
+          aiScore: res.predictedScore || 85,
+          status: "unsaved",
+          createdAt: new Date().toISOString()
+        })
+      }
     }
 
     return NextResponse.json({ success: true, creatives: savedCreatives })

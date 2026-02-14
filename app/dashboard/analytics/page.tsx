@@ -227,21 +227,24 @@ export default function AnalyticsPage() {
                     <th className="px-6 py-3 text-[11px] font-semibold text-[#64748B] uppercase text-right">Conv.</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#F1F5F9]">
+                <tbody className="divide-y divide-border">
                   {data.channels.map((c: any, i: number) => (
-                    <tr key={i} className="hover:bg-[#F9FAFB]">
-                      <td className="px-6 py-3 text-[13px] font-bold text-[#1F2937] text-left">{c.channel}</td>
-                      <td className="px-6 py-3 text-[13px] text-[#64748B] text-right">${c.spend.toLocaleString()}</td>
+                    <tr key={i} className="hover:bg-muted-100 transition-colors">
+                      <td className="px-6 py-3 text-[13px] font-bold text-text-primary text-left">{c.channel}</td>
+                      <td className="px-6 py-3 text-[13px] text-text-secondary text-right">${c.spend.toLocaleString()}</td>
                       <td className="px-6 py-3 text-right">
                         <span className={cn(
                           "px-2 py-0.5 rounded text-[11px] font-bold",
-                          c.roas > 3 ? "bg-emerald-50 text-emerald-600" : "bg-amber-50 text-amber-600"
+                          c.roas > 3
+                            ? "bg-green-50 text-green-700 border border-green-200"
+                            : "bg-amber-50 text-amber-700 border border-amber-200"
                         )}>{c.roas}x</span>
                       </td>
-                      <td className="px-6 py-3 text-[13px] text-[#1F2937] text-right">{c.conversions}</td>
+                      <td className="px-6 py-3 text-[13px] text-text-primary text-right">{c.conversions}</td>
                     </tr>
                   ))}
                 </tbody>
+
               </table>
             </div>
           </div>

@@ -63,7 +63,7 @@ export async function GET() {
 
         // If platforms connected but no real data (simulated state), usually we'd fetch from 3rd party.
         // Here we can return 0s or maybe "Simulated" data if we wanted to fake "sync"
-        // The user requirement: "dummy data should not be thee". So we return 0s.
+        // The user requirement: "dummy data should not be there". So we return 0s for real users.
 
         return NextResponse.json({
             kpi: [
@@ -78,6 +78,16 @@ export async function GET() {
 
     } catch (error) {
         console.error("Dashboard overview error:", error)
-        return NextResponse.json({ kpi: [], chart: [], error: "Failed to fetch data" }, { status: 500 })
+        // Return a 'safe' empty state so the frontend doesn't crash 
+        return NextResponse.json({
+            kpi: [
+                { label: "Total Revenue", value: "---", change: "---", trend: "neutral", metric: "revenue" },
+                { label: "Ad Spend", value: "---", change: "---", trend: "neutral", metric: "spend" },
+                { label: "Active Leads", value: "---", change: "---", trend: "neutral", metric: "leads" },
+                { label: "Return on Ad Spend", value: "---", change: "---", trend: "neutral", metric: "roas" },
+            ],
+            chart: [],
+            error: "Connectivity Interrupted"
+        })
     }
 }
