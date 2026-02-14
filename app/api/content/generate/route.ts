@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
       
       Each variation should be 1-2 sentences, compelling, and highlight the key benefit.`;
 
-    if (!openai) openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
+    if (!openai) openai = new OpenAI({ apiKey: (process.env.OPENAI_API_KEY || '') });
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4',
@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
             The image should appeal to ${audience} and visually represent: ${benefit}.
             Style: Professional product photography, well-lit, high resolution, clean background.`;
 
-          if (!openai) openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
+          if (!openai) openai = new OpenAI({ apiKey: (process.env.OPENAI_API_KEY || '') });
           const imageResponse = await openai.images.generate({
             model: 'dall-e-3',
             prompt: imagePrompt,

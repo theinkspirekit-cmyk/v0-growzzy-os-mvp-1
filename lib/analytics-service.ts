@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js"
 
-const supabaseAdmin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+const supabaseAdmin = createClient((process.env.NEXT_PUBLIC_SUPABASE_URL || ''), (process.env.SUPABASE_SERVICE_ROLE_KEY || ''))
 
 interface MetricData {
   spend: number
@@ -43,7 +43,7 @@ export async function fetchGoogleCampaignMetrics(accessToken: string, customerId
         method: "POST",
         headers: {
           Authorization: `Bearer ${accessToken}`,
-          "developer-token": process.env.GOOGLE_ADS_DEVELOPER_TOKEN!,
+          "developer-token": (process.env.GOOGLE_ADS_DEVELOPER_TOKEN || ''),
         },
         body: JSON.stringify({
           query: `

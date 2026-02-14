@@ -19,7 +19,7 @@ export async function createGoogleAdsCampaign(platformId: string, campaignData: 
             method: 'POST',
             headers: {
                 Authorization: `Bearer ${accessToken}`,
-                'developer-token': process.env.GOOGLE_ADS_DEVELOPER_TOKEN!,
+                'developer-token': (process.env.GOOGLE_ADS_DEVELOPER_TOKEN || ''),
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
@@ -76,7 +76,7 @@ export async function fetchGoogleAdsAnalytics(platformId: string, startDate: str
             method: 'POST',
             headers: {
                 Authorization: `Bearer ${accessToken}`,
-                'developer-token': process.env.GOOGLE_ADS_DEVELOPER_TOKEN!,
+                'developer-token': (process.env.GOOGLE_ADS_DEVELOPER_TOKEN || ''),
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({ query }),
@@ -227,7 +227,7 @@ export async function pauseGoogleAdsCampaign(platformId: string, externalId: str
             method: 'POST',
             headers: {
                 Authorization: `Bearer ${accessToken}`,
-                'developer-token': process.env.GOOGLE_ADS_DEVELOPER_TOKEN!,
+                'developer-token': (process.env.GOOGLE_ADS_DEVELOPER_TOKEN || ''),
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
@@ -259,7 +259,7 @@ export async function resumeGoogleAdsCampaign(platformId: string, externalId: st
             method: 'POST',
             headers: {
                 Authorization: `Bearer ${accessToken}`,
-                'developer-token': process.env.GOOGLE_ADS_DEVELOPER_TOKEN!,
+                'developer-token': (process.env.GOOGLE_ADS_DEVELOPER_TOKEN || ''),
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({

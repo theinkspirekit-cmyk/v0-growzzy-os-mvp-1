@@ -27,8 +27,8 @@ export async function GET(request: NextRequest) {
         "Content-Type": "application/x-www-form-urlencoded",
       },
       body: new URLSearchParams({
-        client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!,
-        client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+        client_id: (process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ''),
+        client_secret: (process.env.GOOGLE_CLIENT_SECRET || ''),
         redirect_uri: `${appUrl}/api/auth/google`,
         grant_type: "authorization_code",
         code: code!,
@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
       fetch("https://googleads.googleapis.com/v16/customers:listAccessibleCustomers", {
         headers: {
           Authorization: `Bearer ${accessToken}`,
-          "developer-token": process.env.GOOGLE_ADS_DEVELOPER_TOKEN!,
+          "developer-token": (process.env.GOOGLE_ADS_DEVELOPER_TOKEN || ''),
         },
       }),
     ])

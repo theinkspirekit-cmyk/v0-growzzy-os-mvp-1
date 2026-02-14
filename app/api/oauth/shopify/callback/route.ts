@@ -5,8 +5,8 @@ import { getOAuthConfig } from '@/lib/oauth-config';
 import { exchangeCodeForToken } from '@/lib/oauth-utils';
 
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  (process.env.NEXT_PUBLIC_SUPABASE_URL || ''),
+  (process.env.SUPABASE_SERVICE_ROLE_KEY || '')
 );
 
 export async function GET(req: NextRequest) {

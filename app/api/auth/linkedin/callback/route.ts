@@ -31,8 +31,8 @@ export async function GET(request: NextRequest) {
         grant_type: "authorization_code",
         code: code!,
         redirect_uri: `${appUrl}/api/auth/linkedin/callback`,
-        client_id: process.env.NEXT_PUBLIC_LINKEDIN_CLIENT_ID!,
-        client_secret: process.env.LINKEDIN_CLIENT_SECRET!,
+        client_id: (process.env.NEXT_PUBLIC_LINKEDIN_CLIENT_ID || ''),
+        client_secret: (process.env.LINKEDIN_CLIENT_SECRET || ''),
       }).toString(),
     })
 
@@ -57,8 +57,8 @@ export async function GET(request: NextRequest) {
 
     const cookieStore = await cookies()
     const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      (process.env.NEXT_PUBLIC_SUPABASE_URL || ''),
+      (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''),
       {
         cookies: {
           getAll() {

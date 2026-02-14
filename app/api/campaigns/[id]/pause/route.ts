@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import {
-    pauseGoogleAdsCampaign,
-    pauseMetaAdsCampaign,
-    pauseLinkedInAdsCampaign
-} from '@/lib/platforms'
+import { getPlatformConnector } from '@/lib/platform-connector'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,85 +11,57 @@ export const dynamic = 'force-dynamic'
  */
 export async function POST(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const session = await auth()
         if (!session?.user?.id) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+            return NextResponse.json({ ok: false, error: { code: 'UNAUTHORIZED', message: 'Authentication required' } }, { status: 401 })
         }
 
-        const campaignId = params.id
+        const { id: campaignId } = await params
 
-        // Get campaign with platform info
-        const campaign = await prisma.campaign.findUnique({
-            where: { id: campaignId },
-            include: { platform: true }
+        const campaign = await prisma.campaign.findFirst({
+            where: { id: campaignId, userId: session.user.id },
+            include: { platform: true },
         })
 
-        if (!campaign || campaign.userId !== session.user.id) {
-            return NextResponse.json({ error: 'Campaign not found' }, { status: 404 })
+        if (!campaign) {
+            return NextResponse.json({ ok: false, error: { code: 'NOT_FOUND', message: 'Campaign not found' } }, { status: 404 })
         }
 
         if (campaign.status === 'paused') {
-            return NextResponse.json({
-                success: true,
-                message: 'Campaign already paused',
-                campaign
-            })
+            return NextResponse.json({ ok: true, data: { campaign, message: 'Campaign already paused' } })
         }
 
-        // Pause on actual platform
-        let platformResult
-        if (campaign.platform && campaign.externalId) {
-            const platformType = campaign.platform.name.toLowerCase()
-
+        // Sync with platform connector
+        let platformResult: any = null
+        if (campaign.externalId) {
+            const platformKey = campaign.platformName || campaign.platform?.name || 'mock'
+            const connector = getPlatformConnector(platformKey)
             try {
-                if (platformType.includes('google')) {
-                    platformResult = await pauseGoogleAdsCampaign(
-                        campaign.platform.id,
-                        campaign.externalId
-                    )
-                } else if (platformType.includes('meta')) {
-                    platformResult = await pauseMetaAdsCampaign(
-                        campaign.platform.id,
-                        campaign.externalId
-                    )
-                } else if (platformType.includes('linkedin')) {
-                    platformResult = await pauseLinkedInAdsCampaign(
-                        campaign.platform.id,
-                        campaign.externalId
-                    )
-                }
-            } catch (platformError: any) {
-                console.error('[Pause Campaign] Platform error:', platformError)
-                // Continue with DB update even if platform fails
-                // Log the error for manual resolution
+                platformResult = await connector.pauseCampaign(campaign.externalId)
+            } catch (syncError: any) {
+                console.warn('[Pause Campaign] Platform sync warning:', syncError.message)
             }
         }
 
-        // Update in database
         const updatedCampaign = await prisma.campaign.update({
             where: { id: campaignId },
-            data: {
-                status: 'paused',
-                updatedAt: new Date()
-            },
-            include: {
-                platform: { select: { name: true, accountName: true } }
-            }
+            data: { status: 'paused' },
+            include: { platform: { select: { name: true, accountName: true } } },
         })
 
         return NextResponse.json({
-            success: true,
-            message: 'Campaign paused successfully',
-            campaign: updatedCampaign,
-            platformResult
+            ok: true,
+            data: {
+                campaign: updatedCampaign,
+                message: 'Campaign paused successfully',
+                platformResult,
+            },
         })
     } catch (error: any) {
         console.error('[Pause Campaign] Error:', error)
-        return NextResponse.json({
-            error: error.message || 'Failed to pause campaign'
-        }, { status: 500 })
+        return NextResponse.json({ ok: false, error: { code: 'INTERNAL', message: error.message } }, { status: 500 })
     }
 }

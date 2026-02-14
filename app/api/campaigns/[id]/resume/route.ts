@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import {
-    resumeGoogleAdsCampaign,
-    resumeMetaAdsCampaign,
-    resumeLinkedInAdsCampaign
-} from '@/lib/platforms'
+import { getPlatformConnector } from '@/lib/platform-connector'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,84 +11,57 @@ export const dynamic = 'force-dynamic'
  */
 export async function POST(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const session = await auth()
         if (!session?.user?.id) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+            return NextResponse.json({ ok: false, error: { code: 'UNAUTHORIZED', message: 'Authentication required' } }, { status: 401 })
         }
 
-        const campaignId = params.id
+        const { id: campaignId } = await params
 
-        // Get campaign with platform info
-        const campaign = await prisma.campaign.findUnique({
-            where: { id: campaignId },
-            include: { platform: true }
+        const campaign = await prisma.campaign.findFirst({
+            where: { id: campaignId, userId: session.user.id },
+            include: { platform: true },
         })
 
-        if (!campaign || campaign.userId !== session.user.id) {
-            return NextResponse.json({ error: 'Campaign not found' }, { status: 404 })
+        if (!campaign) {
+            return NextResponse.json({ ok: false, error: { code: 'NOT_FOUND', message: 'Campaign not found' } }, { status: 404 })
         }
 
-        if (campaign.status === 'active') {
-            return NextResponse.json({
-                success: true,
-                message: 'Campaign already active',
-                campaign
-            })
+        if (campaign.status === 'active' || campaign.status === 'running') {
+            return NextResponse.json({ ok: true, data: { campaign, message: 'Campaign is already active' } })
         }
 
-        // Resume on actual platform
-        let platformResult
-        if (campaign.platform && campaign.externalId) {
-            const platformType = campaign.platform.name.toLowerCase()
-
+        // Sync with platform connector
+        let platformResult: any = null
+        if (campaign.externalId) {
+            const platformKey = campaign.platformName || campaign.platform?.name || 'mock'
+            const connector = getPlatformConnector(platformKey)
             try {
-                if (platformType.includes('google')) {
-                    platformResult = await resumeGoogleAdsCampaign(
-                        campaign.platform.id,
-                        campaign.externalId
-                    )
-                } else if (platformType.includes('meta')) {
-                    platformResult = await resumeMetaAdsCampaign(
-                        campaign.platform.id,
-                        campaign.externalId
-                    )
-                } else if (platformType.includes('linkedin')) {
-                    platformResult = await resumeLinkedInAdsCampaign(
-                        campaign.platform.id,
-                        campaign.externalId
-                    )
-                }
-            } catch (platformError: any) {
-                console.error('[Resume Campaign] Platform error:', platformError)
-                // Continue with DB update even if platform fails
+                platformResult = await connector.resumeCampaign(campaign.externalId)
+            } catch (syncError: any) {
+                console.warn('[Resume Campaign] Platform sync warning:', syncError.message)
             }
         }
 
-        // Update in database
         const updatedCampaign = await prisma.campaign.update({
             where: { id: campaignId },
-            data: {
-                status: 'active',
-                updatedAt: new Date()
-            },
-            include: {
-                platform: { select: { name: true, accountName: true } }
-            }
+            data: { status: 'active' },
+            include: { platform: { select: { name: true, accountName: true } } },
         })
 
         return NextResponse.json({
-            success: true,
-            message: 'Campaign resumed successfully',
-            campaign: updatedCampaign,
-            platformResult
+            ok: true,
+            data: {
+                campaign: updatedCampaign,
+                message: 'Campaign resumed successfully',
+                platformResult,
+            },
         })
     } catch (error: any) {
         console.error('[Resume Campaign] Error:', error)
-        return NextResponse.json({
-            error: error.message || 'Failed to resume campaign'
-        }, { status: 500 })
+        return NextResponse.json({ ok: false, error: { code: 'INTERNAL', message: error.message } }, { status: 500 })
     }
 }

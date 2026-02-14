@@ -1,233 +1,175 @@
-export const dynamic = 'force-dynamic'
-import { NextResponse } from "next/server"
-import { createServerClient } from "@supabase/ssr"
-import { cookies } from "next/headers"
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 
-// Helper function to evaluate triggers
-async function evaluateTrigger(automation: any, supabase: any) {
+export const dynamic = "force-dynamic";
+
+/**
+ * GET /api/cron/automations
+ * Evaluates all active automations for all users.
+ */
+export async function GET(req: NextRequest) {
   try {
-    const { triggerType, triggerConfig } = automation
+    const authHeader = req.headers.get("authorization");
+    const cronSecret = process.env.CRON_SECRET;
 
-    if (triggerType === 'metric_threshold') {
-      // Fetch current campaign metrics
-      const { data: analytics, error } = await supabase
-        .from('analytics')
-        .select('*')
-        .eq('campaign_id', triggerConfig.campaignId)
-        .order('metric_date', { ascending: false })
-        .limit(1)
-        .single()
+    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+    }
 
-      if (error || !analytics) {
-        return false
+    console.log("[Cron] Starting system-wide automation evaluation");
+
+    const activeAutomations = await prisma.automation.findMany({
+      where: {
+        isActive: true,
+      },
+      include: {
+        user: true,
       }
+    });
 
-      const metric = analytics[triggerConfig.metric] || 0
-      const { operator, value } = triggerConfig
+    console.log(`[Cron] Evaluating ${activeAutomations.length} active automations`);
 
-      switch (operator) {
-        case 'below':
-          return metric < value
-        case 'above':
-          return metric > value
-        case 'equals':
-          return Math.abs(metric - value) < 0.01
-        default:
-          return false
-      }
-    }
+    const results = [];
 
-    if (triggerType === 'time_based') {
-      // Check if last execution was more than X minutes ago
-      const lastExecuted = automation.last_executed ? new Date(automation.last_executed) : null
-      const now = new Date()
-      const minutesAgo = triggerConfig.intervalMinutes || 60
-
-      if (!lastExecuted) {
-        return true // First time running
-      }
-
-      const timeSinceLastExecution = (now.getTime() - lastExecuted.getTime()) / (1000 * 60)
-      return timeSinceLastExecution >= minutesAgo
-    }
-
-    return false
-  } catch (error) {
-    console.error('[v0] Error evaluating trigger:', error)
-    return false
-  }
-}
-
-// Helper function to execute actions
-async function executeAction(automation: any, supabase: any) {
-  try {
-    const { actionType, actionConfig } = automation
-
-    if (actionType === 'send_alert') {
-      // Send email alert
-      const user = automation.user
-      const message = actionConfig.message || 'Automation triggered'
-
-      console.log('[v0] Sending alert to', user.email, ':', message)
-
-      // In production, integrate with Resend or similar
-      // For now, just log
-      return { success: true, action: 'send_alert' }
-    }
-
-    if (actionType === 'pause_campaign') {
-      // Pause campaign on platform
-      console.log('[v0] Pausing campaign', actionConfig.campaignId)
-      // Integration with platform APIs would go here
-      return { success: true, action: 'pause_campaign' }
-    }
-
-    if (actionType === 'adjust_budget') {
-      // Adjust budget
-      const newBudget = actionConfig.newBudget || 0
-      console.log('[v0] Adjusting budget to', newBudget)
-      return { success: true, action: 'adjust_budget', newBudget }
-    }
-
-    if (actionType === 'generate_report') {
-      // Generate and send report
-      console.log('[v0] Generating report for campaign', actionConfig.campaignId)
-      return { success: true, action: 'generate_report' }
-    }
-
-    return { success: false }
-  } catch (error) {
-    console.error('[v0] Error executing action:', error)
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
-  }
-}
-
-export async function GET(request: Request) {
-  try {
-    // Verify cron secret
-    const authHeader = request.headers.get('authorization')
-    const cronSecret = process.env.CRON_SECRET || 'test-secret'
-
-    if (authHeader !== `Bearer ${cronSecret}`) {
-      console.error('[v0] Invalid cron secret')
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    console.log('[v0] Running automations check at', new Date().toISOString())
-
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll()
-          },
-          setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              cookieStore.set(name, value, options)
-            })
-          },
-        },
-      }
-    )
-
-    // Get all active automations
-    const { data: automations, error } = await supabase
-      .from('automations')
-      .select(`
-        *,
-        user:user_id(id, email, name)
-      `)
-      .eq('active', true)
-
-    if (error) {
-      console.error('[v0] Error fetching automations:', error)
-      return NextResponse.json({ success: false, error: error.message }, { status: 500 })
-    }
-
-    console.log('[v0] Found', automations?.length || 0, 'active automations')
-
-    const results = []
-
-    for (const automation of automations || []) {
+    for (const automation of activeAutomations) {
       try {
-        // Evaluate trigger
-        const shouldTrigger = await evaluateTrigger(automation, supabase)
-
-        if (shouldTrigger) {
-          console.log('[v0] Automation', automation.id, 'triggered')
-
-          // Execute action
-          const actionResult = await executeAction(automation, supabase)
-
-          // Log execution
-          const { error: logError } = await supabase.from('automation_logs').insert({
-            automation_id: automation.id,
-            triggered: true,
-            action: automation.actionType,
-            result: actionResult,
-            executed_at: new Date().toISOString(),
-          })
-
-          if (logError) {
-            console.error('[v0] Error logging automation execution:', logError)
-          }
-
-          // Update last executed
-          const { error: updateError } = await supabase
-            .from('automations')
-            .update({
-              last_executed: new Date().toISOString(),
-              execution_count: (automation.execution_count || 0) + 1,
-            })
-            .eq('id', automation.id)
-
-          if (updateError) {
-            console.error('[v0] Error updating automation:', updateError)
-          }
-
-          results.push({
-            automationId: automation.id,
-            triggered: true,
-            action: automation.actionType,
-            ...actionResult,
-          })
-        }
-      } catch (error) {
-        console.error('[v0] Error processing automation', automation.id, ':', error)
-
-        // Log failure
-        await supabase.from('automation_logs').insert({
-          automation_id: automation.id,
-          triggered: false,
-          error: error instanceof Error ? error.message : 'Unknown error',
-          executed_at: new Date().toISOString(),
-        })
-
-        results.push({
-          automationId: automation.id,
-          triggered: false,
-          error: error instanceof Error ? error.message : 'Unknown error',
-        })
+        // Evaluate the automation (calling the helper)
+        const result = await evaluateAutomation(automation.id);
+        results.push({ automationId: automation.id, ...result });
+      } catch (err: any) {
+        console.error(`[Cron] Automation ${automation.id} failed:`, err.message);
+        results.push({ automationId: automation.id, success: false, error: err.message });
       }
     }
-
-    console.log('[v0] Automations check complete. Results:', results.length)
 
     return NextResponse.json({
-      success: true,
-      processed: automations?.length || 0,
-      triggered: results.filter((r: any) => r.triggered).length,
-      results,
-    })
-  } catch (error) {
-    console.error('[v0] Cron job error:', error)
+      ok: true,
+      data: {
+        totalEvaluated: activeAutomations.length,
+        results,
+      },
+    });
+  } catch (error: any) {
+    console.error("[Cron] Global automation error:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { ok: false, error: error.message },
       { status: 500 }
-    )
+    );
   }
 }
 
+/**
+ * Evaluates a single automation and executes actions if trigger is met
+ * This logic should ideally be shared with the manual run endpoint
+ */
+async function evaluateAutomation(automationId: string) {
+  // Fetch automation with user context
+  const automation = await prisma.automation.findUnique({
+    where: { id: automationId },
+  });
+
+  if (!automation) return { success: false, reason: "Automation not found" };
+
+  // Fetch relevant campaigns for this user
+  const campaigns = await prisma.campaign.findMany({
+    where: {
+      userId: automation.userId,
+      status: 'active'
+    },
+  });
+
+  let triggeredCount = 0;
+  const actionsTaken = [];
+
+  for (const campaign of campaigns) {
+    let triggered = false;
+    const trigger = automation.trigger as any;
+
+    switch (automation.triggerType) {
+      case "ROAS_DROP":
+        if (campaign.roas != null && campaign.roas < (trigger.threshold || 1.5)) {
+          triggered = true;
+        }
+        break;
+      case "BUDGET_EXHAUST":
+        // Simple mock trigger for demonstration
+        if (campaign.totalSpend > (campaign.dailyBudget || 0) * 0.95) {
+          triggered = true;
+        }
+        break;
+      // ... other trigger types
+    }
+
+    if (triggered) {
+      // Execute Action
+      triggeredCount++;
+      const actionResult = await executeAction(automation, campaign);
+      actionsTaken.push(actionResult);
+    }
+  }
+
+  // Update automation metadata
+  if (triggeredCount > 0) {
+    await prisma.automation.update({
+      where: { id: automationId },
+      data: {
+        lastRun: new Date(),
+        runCount: { increment: 1 },
+      },
+    });
+  }
+
+  return {
+    success: true,
+    triggeredCount,
+    actionsTaken
+  };
+}
+
+async function executeAction(automation: any, campaign: any) {
+  try {
+    switch (automation.actionType) {
+      case "PAUSE_CAMPAIGN":
+        await prisma.campaign.update({
+          where: { id: campaign.id },
+          data: { status: "paused" },
+        });
+
+        // Log action
+        await prisma.automationLog.create({
+          data: {
+            automationId: automation.id,
+            actionTaken: `Paused campaign: ${campaign.name}`,
+            success: true,
+            impact: "Saved potential wasted spend due to low ROAS",
+          },
+        });
+        return { campaignId: campaign.id, action: "pause", success: true };
+
+      case "INCREASE_BUDGET":
+        const action = automation.action as any;
+        const multiplier = action.multiplier || 1.2;
+        const newBudget = (campaign.dailyBudget || 50) * multiplier;
+
+        await prisma.campaign.update({
+          where: { id: campaign.id },
+          data: { dailyBudget: newBudget },
+        });
+
+        await prisma.automationLog.create({
+          data: {
+            automationId: automation.id,
+            actionTaken: `Increased budget for ${campaign.name} to $${newBudget.toFixed(2)}`,
+            success: true,
+            impact: "Scaling high-performing campaign",
+          },
+        });
+        return { campaignId: campaign.id, action: "budget_increase", success: true };
+
+      default:
+        return { campaignId: campaign.id, action: automation.actionType, success: false, reason: "Unhandled action type" };
+    }
+  } catch (error: any) {
+    return { campaignId: campaign.id, success: false, error: error.message };
+  }
+}

@@ -4,8 +4,8 @@ export const OAUTH_CONFIG = {
     google: {
         authUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
         tokenUrl: 'https://oauth2.googleapis.com/token',
-        clientId: process.env.GOOGLE_ADS_CLIENT_ID!,
-        clientSecret: process.env.GOOGLE_ADS_CLIENT_SECRET!,
+        clientId: (process.env.GOOGLE_ADS_CLIENT_ID || ''),
+        clientSecret: (process.env.GOOGLE_ADS_CLIENT_SECRET || ''),
         redirectUri: `${process.env.NEXT_PUBLIC_APP_URL}/api/oauth/google/callback`,
         scopes: [
             'https://www.googleapis.com/auth/adwords',
@@ -16,8 +16,8 @@ export const OAUTH_CONFIG = {
     meta: {
         authUrl: 'https://www.facebook.com/v18.0/dialog/oauth',
         tokenUrl: 'https://graph.facebook.com/v18.0/oauth/access_token',
-        clientId: process.env.META_APP_ID!,
-        clientSecret: process.env.META_APP_SECRET!,
+        clientId: (process.env.META_APP_ID || ''),
+        clientSecret: (process.env.META_APP_SECRET || ''),
         redirectUri: `${process.env.NEXT_PUBLIC_APP_URL}/api/oauth/meta/callback`,
         scopes: [
             'ads_management',
@@ -31,8 +31,8 @@ export const OAUTH_CONFIG = {
     linkedin: {
         authUrl: 'https://www.linkedin.com/oauth/v2/authorization',
         tokenUrl: 'https://www.linkedin.com/oauth/v2/accessToken',
-        clientId: process.env.LINKEDIN_CLIENT_ID!,
-        clientSecret: process.env.LINKEDIN_CLIENT_SECRET!,
+        clientId: (process.env.LINKEDIN_CLIENT_ID || ''),
+        clientSecret: (process.env.LINKEDIN_CLIENT_SECRET || ''),
         redirectUri: `${process.env.NEXT_PUBLIC_APP_URL}/api/oauth/linkedin/callback`,
         scopes: [
             'r_ads',

@@ -1,140 +1,125 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { auth } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
+
 export const dynamic = 'force-dynamic'
-import { createServerClient } from "@supabase/ssr"
-import { cookies } from "next/headers"
-import { NextResponse } from "next/server"
 
-export async function GET(req: Request) {
+// ============================================
+// GET — List all creatives for the user
+// ============================================
+export async function GET(request: NextRequest) {
   try {
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll: () => cookieStore.getAll(),
-          setAll: (cookiesToSet: any[]) => {
-            cookiesToSet.forEach(({ name, value, options }: any) =>
-              cookieStore.set(name, value, options)
-            )
-          },
-        },
-      },
-    )
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    const session = await auth()
+    if (!session?.user?.id) {
+      return NextResponse.json({ ok: false, error: { code: 'UNAUTHORIZED', message: 'Authentication required' } }, { status: 401 })
     }
 
-    // Mock creatives data - replace with actual database query
-    const creatives = [
-      {
-        id: "1",
-        name: "Summer Sale Banner",
-        headline: "50% Off Everything",
-        description: "Summer clearance sale with massive discounts",
-        platform: "facebook",
-        status: "active",
-        imageUrl: "https://via.placeholder.com/300x200",
-        performance: {
-          impressions: 15420,
-          clicks: 892,
-          ctr: "5.78%",
-          conversions: 45,
-          spend: 234.50,
-          trend: "up"
-        },
-        createdAt: new Date().toISOString()
-      },
-      {
-        id: "2",
-        name: "Product Launch Video",
-        headline: "Introducing Our New Collection",
-        description: "Exciting new product launch video campaign",
-        platform: "instagram",
-        status: "active",
-        imageUrl: "https://via.placeholder.com/300x200",
-        performance: {
-          impressions: 8750,
-          clicks: 412,
-          ctr: "4.71%",
-          conversions: 28,
-          spend: 156.75,
-          trend: "up"
-        },
-        createdAt: new Date().toISOString()
-      },
-      {
-        id: "3",
-        name: "Google Search Ad",
-        headline: "Best Deals Online",
-        description: "Search campaign for best deals and offers",
-        platform: "google",
-        status: "paused",
-        imageUrl: null,
-        performance: {
-          impressions: 23100,
-          clicks: 1155,
-          ctr: "5.00%",
-          conversions: 67,
-          spend: 445.25,
-          trend: "down"
-        },
-        createdAt: new Date().toISOString()
-      }
-    ]
+    const creatives = await prisma.creative.findMany({
+      where: { userId: session.user.id },
+      include: { campaign: { select: { id: true, name: true, status: true } } },
+      orderBy: { createdAt: 'desc' },
+    })
 
-    return NextResponse.json({ creatives })
-  } catch (error) {
-    console.error("[v0] Get creatives error:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    return NextResponse.json({ ok: true, data: { creatives } })
+  } catch (error: any) {
+    console.error('[API] GET /api/creatives error:', error)
+    return NextResponse.json({ ok: false, error: { code: 'INTERNAL', message: error.message } }, { status: 500 })
   }
 }
 
-export async function POST(req: Request) {
+// ============================================
+// POST — Create a creative (manual, not AI gen)
+// ============================================
+export async function POST(request: NextRequest) {
   try {
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll: () => cookieStore.getAll(),
-          setAll: (cookiesToSet: any[]) => {
-            cookiesToSet.forEach(({ name, value, options }: any) =>
-              cookieStore.set(name, value, options)
-            )
-          },
-        },
+    const session = await auth()
+    if (!session?.user?.id) {
+      return NextResponse.json({ ok: false, error: { code: 'UNAUTHORIZED', message: 'Authentication required' } }, { status: 401 })
+    }
+
+    const body = await request.json()
+    const { name, headline, bodyText, ctaText, type, format, campaignId, imageUrl } = body
+
+    if (!name || !type || !format) {
+      return NextResponse.json({ ok: false, error: { code: 'VALIDATION', message: 'Name, type, and format are required' } }, { status: 400 })
+    }
+
+    const creative = await prisma.creative.create({
+      data: {
+        userId: session.user.id,
+        name,
+        headline,
+        bodyText,
+        ctaText,
+        type: type || 'image',
+        format: format || 'feed',
+        imageUrl: imageUrl || null,
+        campaignId: campaignId || null,
+        status: 'draft',
+        aiGenerated: false,
       },
-    )
+    })
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
-    const body = await req.json()
-    
-    // Create creative logic here
-    const newCreative = {
-      id: Date.now().toString(),
-      ...body,
-      userId: user.id,
-      createdAt: new Date().toISOString(),
-      status: "active"
-    }
-
-    return NextResponse.json({ creative: newCreative })
-  } catch (error) {
-    console.error("[v0] Create creative error:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    return NextResponse.json({ ok: true, data: { creative } })
+  } catch (error: any) {
+    console.error('[API] POST /api/creatives error:', error)
+    return NextResponse.json({ ok: false, error: { code: 'INTERNAL', message: error.message } }, { status: 500 })
   }
 }
 
+// ============================================
+// PATCH — Update a creative
+// ============================================
+export async function PATCH(request: NextRequest) {
+  try {
+    const session = await auth()
+    if (!session?.user?.id) {
+      return NextResponse.json({ ok: false, error: { code: 'UNAUTHORIZED', message: 'Authentication required' } }, { status: 401 })
+    }
+
+    const body = await request.json()
+    const { id, ...updates } = body
+
+    if (!id) {
+      return NextResponse.json({ ok: false, error: { code: 'VALIDATION', message: 'Creative ID is required' } }, { status: 400 })
+    }
+
+    const creative = await prisma.creative.update({
+      where: { id, userId: session.user.id },
+      data: updates,
+    })
+
+    return NextResponse.json({ ok: true, data: { creative } })
+  } catch (error: any) {
+    console.error('[API] PATCH /api/creatives error:', error)
+    return NextResponse.json({ ok: false, error: { code: 'INTERNAL', message: error.message } }, { status: 500 })
+  }
+}
+
+// ============================================
+// DELETE — Delete a creative
+// ============================================
+export async function DELETE(request: NextRequest) {
+  try {
+    const session = await auth()
+    if (!session?.user?.id) {
+      return NextResponse.json({ ok: false, error: { code: 'UNAUTHORIZED', message: 'Authentication required' } }, { status: 401 })
+    }
+
+    const { searchParams } = new URL(request.url)
+    const id = searchParams.get('id')
+
+    if (!id) {
+      return NextResponse.json({ ok: false, error: { code: 'VALIDATION', message: 'Creative ID required' } }, { status: 400 })
+    }
+
+    await prisma.creative.delete({
+      where: { id, userId: session.user.id },
+    })
+
+    return NextResponse.json({ ok: true })
+  } catch (error: any) {
+    console.error('[API] DELETE /api/creatives error:', error)
+    return NextResponse.json({ ok: false, error: { code: 'INTERNAL', message: error.message } }, { status: 500 })
+  }
+}

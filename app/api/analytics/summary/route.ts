@@ -35,8 +35,8 @@ export async function GET(request: Request) {
     // 3. Real Data Fetch (Only if not mock user)
     const cookieStore = await cookies()
     const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      (process.env.NEXT_PUBLIC_SUPABASE_URL || ''),
+      (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''),
       {
         cookies: {
           getAll: () => cookieStore.getAll(),

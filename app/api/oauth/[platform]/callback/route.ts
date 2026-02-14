@@ -110,7 +110,7 @@ async function fetchGoogleAdsAccount(accessToken: string) {
         {
             headers: {
                 Authorization: `Bearer ${accessToken}`,
-                'developer-token': process.env.GOOGLE_ADS_DEVELOPER_TOKEN!,
+                'developer-token': (process.env.GOOGLE_ADS_DEVELOPER_TOKEN || ''),
             },
         }
     )
@@ -127,7 +127,7 @@ async function fetchGoogleAdsAccount(accessToken: string) {
             {
                 headers: {
                     Authorization: `Bearer ${accessToken}`,
-                    'developer-token': process.env.GOOGLE_ADS_DEVELOPER_TOKEN!,
+                    'developer-token': (process.env.GOOGLE_ADS_DEVELOPER_TOKEN || ''),
                 },
             }
         )

@@ -40,15 +40,15 @@ export default function LeadsPage() {
     setIsLoading(true)
     try {
       const res = await fetch("/api/leads")
-      const data = await res.json()
-      if (data.success) {
-        setLeads(data.leads)
+      const json = await res.json()
+      if (json.ok) {
+        setLeads(json.data.leads)
       } else {
-        toast.error(data.error || "Failed to fetch leads")
+        toast.error(json.error?.message || "Failed to fetch leads")
       }
     } catch (error) {
       console.error("Leads Fetch Error:", error)
-      toast.error("Bridge connection refused")
+      toast.error("Network connection failure")
     } finally {
       setIsLoading(false)
     }
@@ -60,7 +60,7 @@ export default function LeadsPage() {
 
   const handleCreateLead = async () => {
     if (!newLead.name || !newLead.email) {
-      toast.error("Identity indices (Name/Email) required")
+      toast.error("Name and Email are required")
       return
     }
 
@@ -70,21 +70,18 @@ export default function LeadsPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          action: "add",
-          data: {
-            ...newLead,
-            estimatedValue: newLead.value ? parseFloat(newLead.value.replace(/[$,]/g, "")) : 0
-          }
+          ...newLead,
+          estimatedValue: newLead.value ? parseFloat(newLead.value.replace(/[$,]/g, "")) : 0
         })
       })
-      const data = await res.json()
-      if (data.success) {
+      const json = await res.json()
+      if (json.ok) {
         toast.success(`Entity ${newLead.name} synchronized to CRM`)
         setNewLead({ name: "", email: "", company: "", value: "", phone: "" })
         setIsAddModalOpen(false)
         fetchLeads()
       } else {
-        toast.error(data.error || "Persistence failure")
+        toast.error(json.error?.message || "Persistence failure")
       }
     } catch (error) {
       toast.error("Network bridge error")
@@ -97,23 +94,23 @@ export default function LeadsPage() {
     const file = e.target.files?.[0]
     if (!file) return
 
-    toast.info("Ingesting file structure...")
+    toast.info("Ingesting data stream...")
     const reader = new FileReader()
     reader.onload = async (event) => {
       const csvData = event.target?.result as string
       try {
-        const res = await fetch("/api/leads", {
+        const res = await fetch("/api/leads/import", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "import", data: { csvData } })
+          body: JSON.stringify({ action: "execute", csvData })
         })
-        const data = await res.json()
-        if (data.success) {
-          toast.success(`Success: ${data.imported} leads integrated`)
+        const json = await res.json()
+        if (json.ok) {
+          toast.success(`Success: ${json.data.results.imported} leads integrated`)
           fetchLeads()
           setIsImportModalOpen(false)
         } else {
-          toast.error("Import synthesis failed")
+          toast.error(json.error?.message || "Import synthesis failed")
         }
       } catch (err) {
         toast.error("Data ingestion error")

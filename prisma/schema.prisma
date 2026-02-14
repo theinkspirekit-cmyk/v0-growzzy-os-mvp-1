@@ -13,21 +13,95 @@ datasource db {
 // ============================================
 
 model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  password     String
+  name         String?
+  image        String?
+  emailVerified DateTime?
+  resetToken    String?
+  resetTokenExp DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  platforms      Platform[]
+  leads          Lead[]
+  campaigns      Campaign[]
+  automations    Automation[]
+  reports        Report[]
+  creatives      Creative[]
+  conversations  Conversation[]
+  workspaces     WorkspaceMember[]
+  sessions       Session[]
+  accounts       Account[]
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expires      DateTime
+
+  @@index([userId])
+}
+
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String
+  user               User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String? @db.Text
+  access_token       String? @db.Text
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String? @db.Text
+  session_state      String?
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ============================================
+// WORKSPACES & MULTI-TENANCY
+// ============================================
+
+model Workspace {
   id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
-  name      String?
+  name      String
+  slug      String   @unique
+  ownerId   String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Relations
-  platforms     Platform[]
-  leads         Lead[]
-  campaigns     Campaign[]
-  automations   Automation[]
-  reports       Report[]
-  creatives     Creative[]
-  conversations Conversation[]
+  members   WorkspaceMember[]
+
+  @@index([ownerId])
+}
+
+model WorkspaceMember {
+  id          String    @id @default(cuid())
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspaceId String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  role        String    @default("editor") // admin, editor, viewer
+
+  @@unique([workspaceId, userId])
+  @@index([userId])
+  @@index([workspaceId])
 }
 
 // ============================================
@@ -38,18 +112,18 @@ model Platform {
   id           String   @id @default(cuid())
   userId       String
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   name         String   // "Google Ads", "Meta Ads", "LinkedIn Ads"
   accountId    String   // Platform-specific account ID
   accountName  String?
-  
+
   accessToken  String   @db.Text
   refreshToken String?  @db.Text
   expiresAt    DateTime?
-  
+
   isActive     Boolean  @default(true)
   lastSynced   DateTime?
-  
+
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -69,30 +143,50 @@ model Analytics {
   id         String   @id @default(cuid())
   platformId String
   platform   Platform @relation(fields: [platformId], references: [id], onDelete: Cascade)
-  
+
   metricDate DateTime
-  
+
   impressions  Int      @default(0)
   clicks       Int      @default(0)
   conversions  Int      @default(0)
   leads        Int      @default(0)
-  
+
   spend        Float    @default(0)
   revenue      Float    @default(0)
-  
+
   ctr          Float?
   cpc          Float?
   roas         Float?
-  
+
   // Additional metrics
-  costPerLead  Float?
+  costPerLead    Float?
   conversionRate Float?
-  
+
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   @@unique([platformId, metricDate])
   @@index([platformId, metricDate])
+}
+
+// Raw events table for analytics ingestion
+model AnalyticsEvent {
+  id           String   @id @default(cuid())
+  userId       String
+  platform     String   // "meta", "google", "linkedin", etc.
+  campaignId   String?
+  date         DateTime
+  impressions  Int      @default(0)
+  clicks       Int      @default(0)
+  spend        Float    @default(0)
+  conversions  Int      @default(0)
+  revenue      Float    @default(0)
+  leads        Int      @default(0)
+  metadata     Json?
+  createdAt    DateTime @default(now())
+
+  @@index([userId, platform, date])
+  @@index([campaignId, date])
 }
 
 // ============================================
@@ -103,38 +197,39 @@ model Lead {
   id        String   @id @default(cuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   // Basic Info
   name      String
   email     String
   phone     String?
   company   String?
   position  String?
-  
+
   // Lead Details
   source    String?  // "Google Ads", "Meta Ads", "LinkedIn", "Manual", "Import"
   status    String   @default("new") // "new", "contacted", "qualified", "proposal", "won", "lost"
-  
+
   // AI Scoring
   aiScore   Int?     // 0-100
   aiInsights String? @db.Text
-  
+
   // Value
   estimatedValue Float?
   actualValue    Float?
-  
+
   // Tracking
   lastActivity   DateTime?
   nextFollowUp   DateTime?
-  
+
   // Custom Fields (JSON)
   customFields   Json?
-  
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([userId, status])
   @@index([email])
+  @@index([userId, createdAt])
 }
 
 // ============================================
@@ -145,39 +240,41 @@ model Campaign {
   id         String   @id @default(cuid())
   userId     String
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   platformId String?
   platform   Platform? @relation(fields: [platformId], references: [id], onDelete: SetNull)
-  
+
   // Campaign Details
   name       String
   objective  String?  // "awareness", "traffic", "conversions", "leads"
-  status     String   @default("draft") // "draft", "active", "paused", "ended"
-  
+  status     String   @default("draft") // "draft", "active", "paused", "ended", "running"
+
   // Targeting
   targeting  Json?    // Audience, keywords, etc.
-  
+
   // Budget
-  dailyBudget Float?
-  totalBudget Float?
-  
+  dailyBudget  Float?
+  totalBudget  Float?
+  budgetType   String?  // "daily", "lifetime", "total"
+
   // Dates
   startDate  DateTime?
   endDate    DateTime?
-  
+
   // External IDs (from ad platforms)
-  externalId String?  // Campaign ID from Google/Meta/LinkedIn
-  
+  externalId   String?  // Campaign ID from Google/Meta/LinkedIn
+  platformName String?  // "meta", "google", "linkedin", "tiktok"
+
   // Performance (cached from Analytics)
   totalSpend    Float @default(0)
   totalRevenue  Float @default(0)
   totalLeads    Int   @default(0)
   roas          Float?
-  
+
   // AI Insights
   aiHealth      String?  // "excellent", "good", "fair", "poor"
   aiRecommendations Json?
-  
+
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -186,6 +283,7 @@ model Campaign {
 
   @@index([userId, status])
   @@index([platformId])
+  @@index([userId, createdAt])
 }
 
 // ============================================
@@ -196,32 +294,32 @@ model Creative {
   id         String   @id @default(cuid())
   userId     String
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   campaignId String?
   campaign   Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
-  
+
   // Creative Details
   name       String
   type       String   // "image", "video", "carousel", "text"
   format     String   // "feed", "story", "search", "display"
-  
+
   // Content
   headline   String?
   bodyText   String?  @db.Text
   ctaText    String?
-  
+
   // Media
   imageUrl   String?
   videoUrl   String?
-  
+
   // AI Generation
   aiGenerated Boolean @default(false)
   aiScore     Int?    // Predicted conversion score
   aiPrompt    String? @db.Text
-  
+
   // Performance
-  status      String  @default("draft") // "draft", "active", "paused"
-  
+  status      String  @default("draft") // "draft", "active", "paused", "published", "scheduled"
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -237,18 +335,18 @@ model Automation {
   id          String   @id @default(cuid())
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   name        String
   description String?
   triggerType String   // "ROAS_DROP", "CPA_SPIKE", "BUDGET_EXHAUST", "CTR_LOW", "TIME_BASED"
-  trigger     Json     
+  trigger     Json
   actionType  String   // "PAUSE_CAMPAIGN", "INCREASE_BUDGET", "NOTIFY_SLACK", "GENERATE_REPORT"
-  action      Json     
-  
+  action      Json
+
   isActive    Boolean  @default(false)
   lastRun     DateTime?
   runCount    Int      @default(0)
-  
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -261,12 +359,12 @@ model AutomationLog {
   id           String     @id @default(cuid())
   automationId String
   automation   Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
-  
+
   runTime      DateTime   @default(now())
   actionTaken  String
   result       String?    @db.Text
   success      Boolean
-  impact       String?    
+  impact       String?
 
   @@index([automationId])
 }
@@ -279,28 +377,62 @@ model Report {
   id          String   @id @default(cuid())
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   name        String
-  type        String   // "performance", "lead_gen", "revenue", "executive"
-  format      String   @default("pdf") 
-  
-  platforms   String[] 
-  filters     Json?    
-  schedule    Json?    
-  
+  type        String   // "performance", "lead_gen", "revenue", "executive", "campaign", "platform"
+  format      String   @default("pdf")
+
+  platforms   String[]
+  filters     Json?
+  schedule    Json?    // e.g. {cron: "0 9 * * MON", emails: ["..."]}
+  config      Json?
+
   startDate   DateTime
   endDate     DateTime
-  
-  data        Json?    
+
+  data        Json?    // General report data
+  metrics     Json?    // Detailed metrics object (ReportMetrics)
+  insights    Json?    // AI insights object (AIReportInsights)
+  recommendations Json? // Action plan / Recommendations (ActionPlan)
   aiSummary   String?  @db.Text
   fileUrl     String?
-  
-  status      String   @default("pending") 
-  
+
+  status      String   @default("pending") // "pending", "generating", "completed", "failed", "scheduled"
+  lastRunAt   DateTime?
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   @@index([userId])
+  @@index([userId, status])
+}
+
+// ============================================
+// ANALYTICS EVENTS
+// ============================================
+
+model AnalyticsEvent {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  platform    String   // "meta", "google", "linkedin"
+  campaignId  String?
+  date        DateTime @default(now())
+
+  impressions Int      @default(0)
+  clicks      Int      @default(0)
+  conversions Int      @default(0)
+  spend       Float    @default(0)
+  revenue     Float    @default(0)
+
+  metadata    Json?
+
+  createdAt   DateTime @default(now())
+
+  @@index([userId, date])
+  @@index([userId, platform])
+  @@index([campaignId])
 }
 
 // ============================================
@@ -311,10 +443,10 @@ model Conversation {
   id        String   @id @default(cuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   title     String?
-  messages  Json     // Array of {role: "user"|"assistant", content: string}
-  
+  messages  Json     // Array of {role: "user"|"assistant", content: string, actions?: []}
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

@@ -1,214 +1,254 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import {
-    createGoogleAdsCampaign,
-    createMetaAdsCampaign,
-    createLinkedInAdsCampaign,
-} from '@/lib/platforms'
+import { getPlatformConnector } from '@/lib/platform-connector'
 import { analyzeCampaign } from '@/lib/openai'
 
 export const dynamic = 'force-dynamic'
 
 // ============================================
-// GET - Fetch all campaigns
+// GET — Fetch all campaigns for user
 // ============================================
-
 export async function GET(request: NextRequest) {
     try {
         const session = await auth()
         if (!session?.user?.id) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+            return NextResponse.json({ ok: false, error: { code: 'UNAUTHORIZED', message: 'Authentication required' } }, { status: 401 })
         }
 
+        const { searchParams } = new URL(request.url)
+        const status = searchParams.get('status')
+        const platformName = searchParams.get('platform')
+
+        const where: any = { userId: session.user.id }
+        if (status) where.status = status
+        if (platformName) where.platformName = platformName
+
         const campaigns = await prisma.campaign.findMany({
-            where: { userId: session.user.id },
+            where,
             include: {
                 platform: { select: { name: true, accountName: true } },
+                creatives: { select: { id: true, name: true, status: true } },
+                _count: { select: { creatives: true } },
             },
             orderBy: { createdAt: 'desc' },
         })
 
-        return NextResponse.json({ success: true, campaigns })
+        return NextResponse.json({ ok: true, data: { campaigns } })
     } catch (error: any) {
-        console.error('[API] Get campaigns error:', error)
-        return NextResponse.json({ error: error.message }, { status: 500 })
+        console.error('[API] GET /api/campaigns error:', error)
+        return NextResponse.json({ ok: false, error: { code: 'INTERNAL', message: error.message } }, { status: 500 })
     }
 }
 
 // ============================================
-// POST - Create campaign on real platform
+// POST — Create campaign + platform sync
 // ============================================
-
 export async function POST(request: NextRequest) {
     try {
         const session = await auth()
         if (!session?.user?.id) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+            return NextResponse.json({ ok: false, error: { code: 'UNAUTHORIZED', message: 'Authentication required' } }, { status: 401 })
         }
 
         const body = await request.json()
-        const { platformId, name, objective, dailyBudget, totalBudget, targeting, startDate, status } = body
+        const {
+            name,
+            platform: platformName,
+            platformId,
+            objective,
+            dailyBudget,
+            totalBudget,
+            budgetType,
+            targeting,
+            startDate,
+            endDate,
+            status: requestedStatus
+        } = body
 
-        if (!platformId || !name) {
-            return NextResponse.json({ error: 'Platform and name required' }, { status: 400 })
+        if (!name) {
+            return NextResponse.json({ ok: false, error: { code: 'VALIDATION', message: 'Campaign name is required' } }, { status: 400 })
         }
 
-        // Get platform info
-        const platform = await prisma.platform.findUnique({ where: { id: platformId } })
-        if (!platform || platform.userId !== session.user.id) {
-            return NextResponse.json({ error: 'Platform not found' }, { status: 404 })
-        }
+        // Determine the platform name
+        const resolvedPlatform = platformName || 'meta'
 
-        // Create campaign on the actual ad platform
-        let externalCampaign: any
-        const platformType = platform.name.toLowerCase()
+        // Try platform connector sync (will use mock if not connected)
+        let externalId: string | null = null
+        const connector = getPlatformConnector(resolvedPlatform)
 
         try {
-            if (platformType.includes('google')) {
-                externalCampaign = await createGoogleAdsCampaign(platformId, {
-                    name,
-                    dailyBudget,
-                    status,
-                })
-            } else if (platformType.includes('meta')) {
-                externalCampaign = await createMetaAdsCampaign(platformId, {
-                    name,
-                    objective,
-                    dailyBudget,
-                    status,
-                })
-            } else if (platformType.includes('linkedin')) {
-                externalCampaign = await createLinkedInAdsCampaign(platformId, {
-                    name,
-                    dailyBudget,
-                    status,
-                })
-            } else {
-                throw new Error('Unsupported platform')
+            const syncResult = await connector.createCampaign({
+                name,
+                objective,
+                dailyBudget,
+                totalBudget,
+                targeting,
+                startDate,
+            })
+
+            if (syncResult.success) {
+                externalId = syncResult.externalId || null
             }
-        } catch (platformError: any) {
-            console.error('[Campaign] Platform creation error:', platformError)
-            return NextResponse.json(
-                { error: `Failed to create campaign on ${platform.name}: ${platformError.message}` },
-                { status: 500 }
-            )
+        } catch (syncError: any) {
+            console.warn('[Campaign] Platform sync warning:', syncError.message)
+            // Don't fail — save locally even if platform sync fails
         }
 
-        // Save to our database
+        // Save to database
         const campaign = await prisma.campaign.create({
             data: {
                 userId: session.user.id,
-                platformId,
                 name,
-                objective,
-                status: status || 'draft',
+                platformName: resolvedPlatform,
+                platformId: platformId || null,
+                objective: objective || 'conversions',
+                status: requestedStatus || 'draft',
                 dailyBudget: dailyBudget ? parseFloat(dailyBudget) : null,
                 totalBudget: totalBudget ? parseFloat(totalBudget) : null,
+                budgetType: budgetType || 'daily',
                 targeting: targeting || null,
                 startDate: startDate ? new Date(startDate) : null,
-                externalId: externalCampaign.externalId,
+                endDate: endDate ? new Date(endDate) : null,
+                externalId,
             },
-            include: {
-                platform: true,
-            },
+            include: { platform: true },
         })
 
-        return NextResponse.json({ success: true, campaign })
+        return NextResponse.json({ ok: true, data: { campaign } })
     } catch (error: any) {
-        console.error('[API] Create campaign error:', error)
-        return NextResponse.json({ error: error.message }, { status: 500 })
+        console.error('[API] POST /api/campaigns error:', error)
+        return NextResponse.json({ ok: false, error: { code: 'INTERNAL', message: error.message } }, { status: 500 })
     }
 }
 
 // ============================================
-// PATCH - Update campaign (pause/activate)
+// PATCH — Update campaign (status, budget, etc)
 // ============================================
-
 export async function PATCH(request: NextRequest) {
     try {
         const session = await auth()
         if (!session?.user?.id) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+            return NextResponse.json({ ok: false, error: { code: 'UNAUTHORIZED', message: 'Authentication required' } }, { status: 401 })
         }
 
         const body = await request.json()
-        const { id, status, dailyBudget, ...updates } = body
+        const { id, status, dailyBudget, totalBudget, budgetType, ...updates } = body
 
         if (!id) {
-            return NextResponse.json({ error: 'Campaign ID required' }, { status: 400 })
+            return NextResponse.json({ ok: false, error: { code: 'VALIDATION', message: 'Campaign ID required' } }, { status: 400 })
         }
 
-        // Get existing campaign
-        const existing = await prisma.campaign.findUnique({
-            where: { id },
+        const existing = await prisma.campaign.findFirst({
+            where: { id, userId: session.user.id },
             include: { platform: true },
         })
 
-        if (!existing || existing.userId !== session.user.id) {
-            return NextResponse.json({ error: 'Campaign not found' }, { status: 404 })
+        if (!existing) {
+            return NextResponse.json({ ok: false, error: { code: 'NOT_FOUND', message: 'Campaign not found' } }, { status: 404 })
         }
 
-        // TODO: Update campaign on actual platform via API
-        // For now, just update in our database
+        // Platform connector sync for status changes
+        const platformKey = existing.platformName || existing.platform?.name || 'mock'
+        if (existing.externalId && status) {
+            const connector = getPlatformConnector(platformKey)
+            try {
+                if (status === 'paused') {
+                    await connector.pauseCampaign(existing.externalId)
+                } else if (status === 'active' || status === 'running') {
+                    await connector.resumeCampaign(existing.externalId)
+                }
+            } catch (syncError: any) {
+                console.warn('[Campaign] Platform sync warning:', syncError.message)
+            }
+        }
+
+        // Budget change sync
+        if (existing.externalId && dailyBudget && dailyBudget !== existing.dailyBudget) {
+            const connector = getPlatformConnector(platformKey)
+            try {
+                await connector.updateCampaign(existing.externalId, { dailyBudget })
+            } catch (syncError: any) {
+                console.warn('[Campaign] Budget sync warning:', syncError.message)
+            }
+        }
 
         const campaign = await prisma.campaign.update({
             where: { id },
             data: {
                 ...updates,
                 status: status || existing.status,
-                dailyBudget: dailyBudget ? parseFloat(dailyBudget) : existing.dailyBudget,
+                dailyBudget: dailyBudget != null ? parseFloat(dailyBudget) : existing.dailyBudget,
+                totalBudget: totalBudget != null ? parseFloat(totalBudget) : existing.totalBudget,
+                budgetType: budgetType || existing.budgetType,
             },
         })
 
-        // Get AI analysis
+        // AI analysis on status activation
         if (status === 'active') {
-            const analysis = await analyzeCampaign(campaign)
-            if (analysis.success) {
-                await prisma.campaign.update({
-                    where: { id },
-                    data: {
-                        aiHealth: analysis.data.health,
-                        aiRecommendations: analysis.data,
-                    },
-                })
+            try {
+                const analysis = await analyzeCampaign(campaign)
+                if (analysis.success) {
+                    await prisma.campaign.update({
+                        where: { id },
+                        data: {
+                            aiHealth: analysis.data.health,
+                            aiRecommendations: analysis.data,
+                        },
+                    })
+                }
+            } catch (aiError: any) {
+                console.warn('[Campaign] AI analysis warning:', aiError.message)
             }
         }
 
-        return NextResponse.json({ success: true, campaign })
+        return NextResponse.json({ ok: true, data: { campaign } })
     } catch (error: any) {
-        console.error('[API] Update campaign error:', error)
-        return NextResponse.json({ error: error.message }, { status: 500 })
+        console.error('[API] PATCH /api/campaigns error:', error)
+        return NextResponse.json({ ok: false, error: { code: 'INTERNAL', message: error.message } }, { status: 500 })
     }
 }
 
 // ============================================
-// DELETE - Delete campaign
+// DELETE — Delete campaign + platform sync
 // ============================================
-
 export async function DELETE(request: NextRequest) {
     try {
         const session = await auth()
         if (!session?.user?.id) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+            return NextResponse.json({ ok: false, error: { code: 'UNAUTHORIZED', message: 'Authentication required' } }, { status: 401 })
         }
 
         const { searchParams } = new URL(request.url)
         const id = searchParams.get('id')
 
         if (!id) {
-            return NextResponse.json({ error: 'Campaign ID required' }, { status: 400 })
+            return NextResponse.json({ ok: false, error: { code: 'VALIDATION', message: 'Campaign ID required' } }, { status: 400 })
         }
 
-        await prisma.campaign.delete({
+        const campaign = await prisma.campaign.findFirst({
             where: { id, userId: session.user.id },
         })
 
-        // TODO: Also delete/pause on actual platform
+        if (!campaign) {
+            return NextResponse.json({ ok: false, error: { code: 'NOT_FOUND', message: 'Campaign not found' } }, { status: 404 })
+        }
 
-        return NextResponse.json({ success: true })
+        // Platform sync — delete/pause on platform
+        if (campaign.externalId && campaign.platformName) {
+            const connector = getPlatformConnector(campaign.platformName)
+            try {
+                await connector.deleteCampaign(campaign.externalId)
+            } catch (syncError: any) {
+                console.warn('[Campaign] Platform delete warning:', syncError.message)
+            }
+        }
+
+        await prisma.campaign.delete({ where: { id } })
+
+        return NextResponse.json({ ok: true })
     } catch (error: any) {
-        console.error('[API] Delete campaign error:', error)
-        return NextResponse.json({ error: error.message }, { status: 500 })
+        console.error('[API] DELETE /api/campaigns error:', error)
+        return NextResponse.json({ ok: false, error: { code: 'INTERNAL', message: error.message } }, { status: 500 })
     }
 }

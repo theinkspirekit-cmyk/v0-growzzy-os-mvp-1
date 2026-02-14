@@ -33,7 +33,7 @@ export async function POST(req: Request) {
         email,
         password: hashedPassword,
         name,
-        emailVerified: true // Set to true by default for now to match current flow
+        emailVerified: new Date() // Set to now by default for now to match current flow
       }
     })
 

@@ -1,4 +1,4 @@
-import { generateText } from "ai";
+import openai from "@/lib/openai";
 import type { ReportMetrics } from "./report-metrics";
 
 export interface ReportRecommendation {
@@ -99,16 +99,18 @@ Return ONLY this JSON object, no markdown, no additional text:
 }`;
 
   try {
-    const response = await generateText({
-      model: "openai/gpt-4-turbo",
-      prompt,
-      maxTokens: 3000,
+    const response = await openai.chat.completions.create({
+      model: "gpt-4-turbo",
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 3000,
+      temperature: 0.3,
     });
 
     console.log("[v0] OpenAI response received, parsing JSON");
 
     // Extract JSON from response
-    const jsonMatch = response.text.match(/\{[\s\S]*\}/);
+    const responseText = response.choices[0]?.message?.content || "";
+    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       throw new Error("No JSON found in OpenAI response");
     }

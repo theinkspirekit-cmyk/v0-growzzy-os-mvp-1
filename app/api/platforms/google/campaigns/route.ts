@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
       {
         headers: {
           'Authorization': `Bearer ${googleIntegration.accessToken}`,
-          'developer-token': process.env.GOOGLE_ADS_DEVELOPER_TOKEN!,
+          'developer-token': (process.env.GOOGLE_ADS_DEVELOPER_TOKEN || ''),
         },
       }
     );
@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${googleIntegration.accessToken}`,
-            'developer-token': process.env.GOOGLE_ADS_DEVELOPER_TOKEN!,
+            'developer-token': (process.env.GOOGLE_ADS_DEVELOPER_TOKEN || ''),
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({

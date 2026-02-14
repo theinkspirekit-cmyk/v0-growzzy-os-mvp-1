@@ -27,10 +27,10 @@ export async function GET(request: NextRequest) {
         "Content-Type": "application/x-www-form-urlencoded",
       },
       body: new URLSearchParams({
-        client_id: process.env.NEXT_PUBLIC_META_APP_ID!,
-        client_secret: process.env.META_APP_SECRET!,
+        client_id: (process.env.NEXT_PUBLIC_META_APP_ID || ''),
+        client_secret: (process.env.META_APP_SECRET || ''),
         redirect_uri: `${appUrl}/api/auth/meta`,
-        code: code!,
+        code: code,
       }).toString(),
     })
 

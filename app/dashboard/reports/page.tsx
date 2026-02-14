@@ -47,8 +47,15 @@ export default function ReportsPage() {
     setIsLoading(true)
     try {
       const res = await fetch("/api/reports")
-      const data = await res.json()
-      if (data.success) setReports(data.reports)
+      const json = await res.json()
+      if (json.ok) {
+        setReports(json.data.reports)
+      } else {
+        toast.error(json.error?.message || "Failed to fetch reports")
+      }
+    } catch (error) {
+      console.error("Reports Fetch Error:", error)
+      toast.error("Network connection failure")
     } finally {
       setIsLoading(false)
     }
@@ -63,12 +70,16 @@ export default function ReportsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newReport)
       })
-      const data = await res.json()
-      if (data.success) {
+      const json = await res.json()
+      if (json.ok) {
         toast.success("Strategic Report Synthesized")
         setIsNewModalOpen(false)
         fetchReports()
+      } else {
+        toast.error(json.error?.message || "Synthesis failed")
       }
+    } catch (error) {
+      toast.error("Network bridge error")
     } finally {
       setIsGenerating(false)
     }
@@ -78,58 +89,38 @@ export default function ReportsPage() {
     if (!confirm("Delete this strategic record?")) return
     try {
       const res = await fetch(`/api/reports?id=${id}`, { method: "DELETE" })
-      if (res.ok) {
+      const json = await res.json()
+      if (json.ok) {
         setReports(prev => prev.filter(r => r.id !== id))
         toast.success("Record purged")
+      } else {
+        toast.error(json.error?.message || "Cleanup failed")
       }
     } catch (err) {
       toast.error("Cleanup failed")
     }
   }
 
-  const exportPDF = async (report: any) => {
-    // Dynamic import to avoid SSR issues
-    const { jsPDF } = await import("jspdf")
-    await import("jspdf-autotable")
+  const downloadReport = async (report: any) => {
+    toast.info("Preparing PDF transmission...")
+    try {
+      const res = await fetch(`/api/reports/${report.id}/download`)
+      if (!res.ok) throw new Error("Download failed")
 
-    const doc = new jsPDF() as any
+      const blob = await res.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${report.name.replace(/\s+/g, "-")}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
 
-    // Header
-    doc.setFontSize(22)
-    doc.text("GROWZZY OS STRATEGIC REPORT", 20, 30)
-    doc.setFontSize(12)
-    doc.setTextColor(100)
-    doc.text(`Title: ${report.name.toUpperCase()}`, 20, 40)
-    doc.text(`Generated: ${new Date(report.createdAt).toLocaleDateString()}`, 20, 48)
-    doc.text(`Range: ${new Date(report.startDate).toLocaleDateString()} - ${new Date(report.endDate).toLocaleDateString()}`, 20, 56)
-
-    // Summary
-    doc.setTextColor(0)
-    doc.setFontSize(16)
-    doc.text("AI EXECUTIVE SUMMARY", 20, 75)
-    doc.setFontSize(11)
-    const lines = doc.splitTextToSize(report.aiSummary || "Analysis pending...", 170)
-    doc.text(lines, 20, 85)
-
-    // Metrics Table
-    const tableData = [
-      ["Metric", "Value", "Index Status"],
-      ["Total Gross Spend", `$${report.data?.spend?.toLocaleString() || '0'}`, "Synchronized"],
-      ["Revenue Generated", `$${report.data?.revenue?.toLocaleString() || '0'}`, "Verified"],
-      ["Lead Ingestion", report.data?.leads?.toString() || '0', "Audited"],
-      ["Aggregated ROAS", `${report.data?.roas || '0'}x`, "Optimized"]
-    ]
-
-    doc.autoTable({
-      startY: 120,
-      head: [tableData[0]],
-      body: tableData.slice(1),
-      theme: 'grid',
-      headStyles: { fillStyle: '#111111', textColor: '#FFFFFF' }
-    })
-
-    doc.save(`${report.name}_strategic_analysis.pdf`)
-    toast.success("PDF Transmission Complete")
+      toast.success("PDF Transmission Complete")
+    } catch (err) {
+      toast.error("PDF download failed")
+    }
   }
 
   return (
@@ -240,7 +231,7 @@ export default function ReportsPage() {
                     </div>
                     <div className="flex items-center gap-3">
                       <button
-                        onClick={() => exportPDF(r)}
+                        onClick={() => downloadReport(r)}
                         className="h-12 px-8 bg-[#05090E] text-white rounded-xl hover:bg-neutral-800 transition-all flex items-center gap-3 text-[11px] font-bold uppercase tracking-widest shadow-lg shadow-[#05090E]/10"
                       >
                         <Download className="w-4 h-4" /> PDF TRANSMISSION

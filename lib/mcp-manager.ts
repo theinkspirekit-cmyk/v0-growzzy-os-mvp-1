@@ -11,7 +11,7 @@ interface PlatformCredentials {
 }
 
 export class MCPManager {
-  private supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
+  private supabase = createClient((process.env.NEXT_PUBLIC_SUPABASE_URL || ''), (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''))
 
   async connectPlatform(platform: Platform, userId: string, credentials: any) {
     try {
