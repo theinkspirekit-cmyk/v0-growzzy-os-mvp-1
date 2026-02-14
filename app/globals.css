@@ -37,6 +37,11 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-primary: var(--primary);
+  --color-dark-text: var(--dark-text);
+  --color-muted-text: var(--muted-text);
+  --color-primary-blue: var(--primary-blue);
+  --color-secondary-blue: var(--secondary-blue);
+  --color-accent-teal: var(--accent-teal);
   --color-surface-light: var(--surface-light);
   --color-surface-dark: var(--surface-dark);
   --color-input-bg: var(--input-bg);
