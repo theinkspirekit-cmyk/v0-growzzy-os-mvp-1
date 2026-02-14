@@ -21,6 +21,9 @@
   --color-text-primary: var(--text-primary);
   --color-text-secondary: var(--text-secondary);
   --color-text-tertiary: var(--text-tertiary);
+  --color-muted-100: var(--muted-100);
+  --color-muted-200: var(--muted-200);
+  --color-muted-600: var(--muted-600);
 
   --font-satoshi: "Satoshi", "satoshi Fallback", ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, Arial, sans-serif;
 
