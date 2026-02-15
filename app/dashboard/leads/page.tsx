@@ -12,12 +12,15 @@ import {
   MoreHorizontal,
   ArrowUpDown,
   Zap,
-  Loader2
+  Loader2,
+  FileSpreadsheet
 } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 // Import Server Actions
-import { createLead, getLeads, importLeads, syncLeadsToHub } from "@/app/actions/leads"
+import { createLead, getLeads, importLeadsBulk, syncLeadsToHub } from "@/app/actions/leads"
+// Excel Client Lib
+import * as XLSX from "xlsx"
 
 export default function LeadsPage() {
   const [leads, setLeads] = useState<any[]>([])
@@ -86,12 +89,28 @@ export default function LeadsPage() {
     const file = e.target.files?.[0]
     if (!file) return
 
-    const toastId = toast.loading("Processing CSV...")
-    const reader = new FileReader()
-    reader.onload = async (event) => {
-      const csvData = event.target?.result as string
-      try {
-        const result = await importLeads(csvData)
+    const toastId = toast.loading("Processing File...")
+
+    try {
+      const reader = new FileReader()
+      reader.onload = async (event) => {
+        const data = event.target?.result
+        if (!data) return
+
+        // Parse File (Excel or CSV)
+        const workbook = XLSX.read(data, { type: 'binary' })
+        const sheetName = workbook.SheetNames[0]
+        const sheet = workbook.Sheets[sheetName]
+        const jsonData = XLSX.utils.sheet_to_json(sheet)
+
+        if (jsonData.length === 0) {
+          toast.error("File appears empty", { id: toastId })
+          return
+        }
+
+        // Send to Server
+        const result = await importLeadsBulk(jsonData)
+
         if (result.success) {
           toast.success(result.message, { id: toastId })
           refreshLeads()
@@ -99,11 +118,13 @@ export default function LeadsPage() {
         } else {
           toast.error(result.error || "Import failed", { id: toastId })
         }
-      } catch (err) {
-        toast.error("Import failed", { id: toastId })
       }
+      reader.readAsBinaryString(file)
+
+    } catch (err) {
+      console.error(err)
+      toast.error("Failed to parse file. Please ensure it is a valid Excel or CSV file.", { id: toastId })
     }
-    reader.readAsText(file)
   }
 
   const filteredLeads = leads.filter(l =>
@@ -127,13 +148,13 @@ export default function LeadsPage() {
               onClick={() => setIsImportModalOpen(true)}
               className="btn btn-secondary h-8"
             >
-              <Upload className="w-3.5 h-3.5" /> Import
+              <Upload className="w-3.5 h-3.5 mr-1" /> Import
             </button>
             <button
               onClick={() => setIsAddModalOpen(true)}
               className="btn btn-primary h-8"
             >
-              <Plus className="w-3.5 h-3.5" /> Add Lead
+              <Plus className="w-3.5 h-3.5 mr-1" /> Add Lead
             </button>
           </div>
         </div>
@@ -303,16 +324,16 @@ export default function LeadsPage() {
                 <h3 className="font-semibold text-[14px]">Import Leads</h3>
               </div>
               <div className="p-8 flex flex-col items-center justify-center space-y-4">
-                <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-primary">
-                  <Upload className="w-6 h-6" />
+                <div className="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center text-green-600">
+                  <FileSpreadsheet className="w-6 h-6" />
                 </div>
                 <div className="text-center">
-                  <p className="font-medium text-[14px]">Upload CSV File</p>
-                  <p className="text-[12px] text-text-tertiary mt-1">Drag and drop or click to browse</p>
+                  <p className="font-medium text-[14px]">Upload Spreadsheet</p>
+                  <p className="text-[12px] text-text-tertiary mt-1">Supports .csv, .xlsx, .xls</p>
                 </div>
                 <input
                   type="file"
-                  accept=".csv"
+                  accept=".csv, .xlsx, .xls"
                   onChange={handleImport}
                   className="hidden"
                   id="csvUpload"

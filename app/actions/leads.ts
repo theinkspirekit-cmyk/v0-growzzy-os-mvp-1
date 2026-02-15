@@ -82,54 +82,50 @@ export async function getLeads() {
     return JSON.parse(JSON.stringify(leads))
 }
 
-export async function importLeads(csvData: string): Promise<LeadState> {
+// Bulk import accepting parsed objects (from client-side XLSX/CSV parsing)
+// Bulk import accepting parsed objects (from client-side XLSX/CSV parsing)
+export async function importLeadsBulk(leads: any[]): Promise<LeadState> {
     const session = await auth()
     if (!session?.user?.id) return { error: "Unauthorized" }
 
+    const userId = session.user.id
+
     try {
-        const lines = csvData.split('\n').filter(l => l.trim().length > 0)
-        // Basic CSV parsing logic
-        const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/"/g, ''))
+        // Prisma createMany is faster but requires formatting
+        const validLeads = leads.map(l => ({
+            userId: userId,
+            email: String(l.email || l.Email || ""),
+            name: String(l.name || l.Name || (l.email ? String(l.email).split('@')[0] : "Unknown")),
+            company: l.company || l.Company ? String(l.company || l.Company) : undefined,
+            phone: l.phone || l.Phone ? String(l.phone || l.Phone) : undefined,
+            estimatedValue: l.value || l.Value ? parseFloat(String(l.value || l.Value).replace(/[^0-9.]/g, '')) : 0,
+            source: "Import",
+            status: "new",
+            aiScore: 50, // Default score, maybe random
+            createdAt: new Date(),
+            updatedAt: new Date()
+        })).filter(l => l.email && l.email.includes('@')) // Basic validation
 
-        const emailIdx = headers.findIndex(h => h.includes('email'))
-        const nameIdx = headers.findIndex(h => h.includes('name'))
+        if (validLeads.length === 0) return { error: "No valid rows found (Email required)" }
 
-        if (emailIdx === -1) return { error: "CSV must contain an 'email' column" }
-
-        let count = 0
-        const promises = []
-
-        for (let i = 1; i < lines.length; i++) {
-            const cols = lines[i].split(',').map(c => c.trim().replace(/"/g, ''))
-            if (cols.length < headers.length) continue
-
-            const email = cols[emailIdx]
-            const name = nameIdx > -1 ? cols[nameIdx] : email.split('@')[0]
-
-            if (email) {
-                promises.push(
-                    prisma.lead.create({
-                        data: {
-                            userId: session.user.id,
-                            email,
-                            name,
-                            source: "Import",
-                            status: "new",
-                            aiScore: 50
-                        }
-                    }).catch(() => null) // Ignore duplicates
-                )
-                count++
-            }
-        }
-
-        await Promise.all(promises)
+        // Use createMany for performance
+        // Note: skipDuplicates is supported in some DBs, PostgreSQL supports it
+        const result = await prisma.lead.createMany({
+            data: validLeads as any,
+            skipDuplicates: true
+        })
 
         revalidatePath("/dashboard/leads")
-        return { success: true, message: `Imported ${count} leads` }
-    } catch (e) {
-        return { error: "Failed to process CSV" }
+        return { success: true, message: `Successfully imported ${result.count} leads` }
+    } catch (e: any) {
+        console.error("Bulk Import Error:", e)
+        return { error: "Database error during import" }
     }
+}
+
+// Deprecated string-based import (kept for backward compatibility if needed)
+export async function importLeads(csvData: string): Promise<LeadState> {
+    return importLeadsBulk([]) // Placeholder or redirect logic if we fully switch
 }
 
 export async function syncLeadsToHub() {

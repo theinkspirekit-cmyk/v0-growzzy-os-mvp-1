@@ -396,160 +396,81 @@ const ContentEngagement = ({ data }: { data: any }) => (
 
 
 export default function ReportsPage() {
-  // State for the generator
-  const [view, setView] = useState<'config' | 'report'>('config')
   const [isGenerating, setIsGenerating] = useState(false)
-
-  // Configuration State
-  const [config, setConfig] = useState({
-    title: "Executive Weekly Summary",
-    period: "Last 30 Days",
-    template: "summary", // summary | growth | content
-    company: "WARDIERE INC."
-  })
-
-  // Generated Real-time Data State
   const [reportData, setReportData] = useState<any>(null)
 
-  const handleGenerate = async () => {
+  // Configuration State
+  const [timeHorizon, setTimeHorizon] = useState("Last 30 Days")
+
+  const handleGenerate = () => {
     setIsGenerating(true)
-    const toastId = toast.loading("Synthesizing Intelligence Report...")
+    const toastId = toast.loading("Initializing Neural Audit Protocol...")
 
-    // Simulate API call to fetch real data based on config
-    // In a real app, this would be: await fetch('/api/reports/generate', { body: config })
     setTimeout(() => {
-      // Generate pseudo-real data based on selection
       setReportData({
-        companyName: config.company,
-        reportTitle: config.title,
-        chartData: generateRevenueData(1.2), // Randomize slightly
-        date: new Date().toISOString()
+        companyName: "GROWZZY INC.",
+        reportTitle: "Executive Intelligence Audit",
+        date: new Date().toISOString(),
+        timeHorizon,
+        // Mock consolidated data
+        summary: "Performance metrics indicate a 14.2% increase in cross-channel efficiency. Automated optimization protocols have successfully reduced CPA by $12.40 while maintaining steady conversion volume.",
+        chartData: generateRevenueData(1.4),
+        topMetric: "92/100",
+        growthRate: "14.2",
+        roi: "4.8x"
       })
-
       setIsGenerating(false)
-      setView('report')
-      toast.success("Report Generated Successfully", { id: toastId })
-    }, 1500)
+      toast.success("Audit Complete", { id: toastId })
+    }, 2500)
   }
 
   return (
     <DashboardLayout>
-      <div className="max-w-5xl mx-auto space-y-6">
+      <div className="max-w-6xl mx-auto space-y-8 font-satoshi pb-20">
 
-        {/* Header (Always Visible) */}
-        <div className="flex items-center justify-between border-b border-border pb-6">
-          <div>
-            <h1 className="text-[20px] font-semibold text-text-primary">Intelligence Hub</h1>
-            <p className="text-[13px] text-text-secondary">Automated PDF briefs and performance summaries.</p>
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-border pb-6">
+          <div className="space-y-1">
+            <h1 className="text-[24px] font-bold text-text-primary tracking-tight">Executive Intelligence</h1>
+            <div className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />
+              <p className="text-[11px] font-bold text-text-secondary uppercase tracking-wider">Automated Audit System</p>
+            </div>
           </div>
-          {view === 'report' && (
-            <div className="flex gap-2">
-              <button onClick={() => setView('config')} className="btn btn-secondary h-8 text-xs">
-                ← Back to Generator
+
+          {reportData && (
+            <div className="flex gap-3">
+              <button onClick={() => setReportData(null)} className="btn-secondary h-10 text-[12px]">
+                New Audit
               </button>
-              <button onClick={() => window.print()} className="btn btn-primary h-8 gap-2 text-xs">
+              <button onClick={() => window.print()} className="btn-primary h-10 text-[12px] gap-2">
                 <Download className="w-4 h-4" /> Export PDF
               </button>
             </div>
           )}
         </div>
 
-        {/* VIEW 1: CONFIGURATOR */}
-        {view === 'config' && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            {/* Visual Template Selector */}
-            <div className="lg:col-span-2 space-y-4">
-              <h3 className="text-sm font-medium text-text-secondary">Select Template Style</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {/* Option 1 */}
-                <div
-                  onClick={() => setConfig({ ...config, template: 'summary' })}
-                  className={cn(
-                    "cursor-pointer rounded-xl border-2 p-4 transition-all hover:shadow-md",
-                    config.template === 'summary' ? "border-orange-500 bg-orange-50/50" : "border-border bg-white hover:border-gray-300"
-                  )}
-                >
-                  <div className="aspect-[3/4] bg-white border border-gray-100 shadow-sm mb-3 rounded-md overflow-hidden p-2 relative">
-                    {/* Mini Preview */}
-                    <div className="w-full h-8 bg-orange-500 mb-2 rounded-sm" />
-                    <div className="w-2/3 h-2 bg-gray-200 mb-1 rounded-sm" />
-                    <div className="w-full h-2 bg-gray-100 rounded-sm" />
-                    <div className="absolute bottom-2 left-2 right-2 h-16 bg-gray-50 border border-gray-100" />
-                  </div>
-                  <h4 className="font-bold text-sm text-gray-900">Annual Budget</h4>
-                  <p className="text-xs text-gray-500">Clean, corporate, executive style.</p>
-                </div>
+        {!reportData ? (
+          /* CONFIGURATION VIEW */
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 animate-in fade-in slide-in-from-bottom-4 duration-500 items-center min-h-[500px]">
 
-                {/* Option 2 */}
-                <div
-                  onClick={() => setConfig({ ...config, template: 'growth' })}
-                  className={cn(
-                    "cursor-pointer rounded-xl border-2 p-4 transition-all hover:shadow-md",
-                    config.template === 'growth' ? "border-purple-500 bg-purple-50/50" : "border-border bg-white hover:border-gray-300"
-                  )}
-                >
-                  <div className="aspect-[3/4] bg-white border border-gray-100 shadow-sm mb-3 rounded-md overflow-hidden p-2 relative">
-                    <div className="w-full h-12 bg-purple-600 mb-2 rounded-sm" />
-                    <div className="grid grid-cols-2 gap-1 mb-2">
-                      <div className="h-8 bg-purple-100 rounded-sm" />
-                      <div className="h-8 bg-purple-100 rounded-sm" />
-                    </div>
-                    <div className="w-full h-12 bg-gray-100 rounded-sm" />
-                  </div>
-                  <h4 className="font-bold text-sm text-gray-900">Growth Opps</h4>
-                  <p className="text-xs text-gray-500">Vibrant, strategic, KPI-focused.</p>
-                </div>
-
-                {/* Option 3 */}
-                <div
-                  onClick={() => setConfig({ ...config, template: 'content' })}
-                  className={cn(
-                    "cursor-pointer rounded-xl border-2 p-4 transition-all hover:shadow-md",
-                    config.template === 'content' ? "border-[#BEF264] bg-gray-900" : "border-border bg-white hover:border-gray-300"
-                  )}
-                >
-                  <div className="aspect-[3/4] bg-[#111] border border-gray-800 shadow-sm mb-3 rounded-md overflow-hidden p-2 relative">
-                    <div className="w-full h-8 bg-transparent border-b border-gray-700 mb-2" />
-                    <div className="w-24 h-24 rounded-full border-4 border-[#BEF264] mx-auto mb-2" />
-                  </div>
-                  <h4 className={cn("font-bold text-sm", config.template === 'content' ? "text-white" : "text-gray-900")}>Engagement</h4>
-                  <p className={cn("text-xs", config.template === 'content' ? "text-gray-400" : "text-gray-500")}>Dark mode, neon, high contrast.</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Settings Panel */}
-            <div className="card p-6 space-y-6 h-fit">
-              <div className="flex items-center gap-2 mb-2">
-                <Settings2 className="w-4 h-4 text-text-tertiary" />
-                <h3 className="text-[13px] font-bold uppercase text-text-secondary">Report Configuration</h3>
-              </div>
-
+            <div className="space-y-8">
               <div className="space-y-4">
-                <div className="space-y-1">
-                  <label className="text-[11px] font-medium uppercase text-text-tertiary">Report Title</label>
-                  <input
-                    type="text"
-                    className="input"
-                    value={config.title}
-                    onChange={e => setConfig({ ...config, title: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[11px] font-medium uppercase text-text-tertiary">Company Name</label>
-                  <input
-                    type="text"
-                    className="input"
-                    value={config.company}
-                    onChange={e => setConfig({ ...config, company: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[11px] font-medium uppercase text-text-tertiary">Time Horizon</label>
+                <h2 className="text-[32px] font-bold text-text-primary leading-tight">
+                  Generate comprehensive <br /> performance audits in <br /> <span className="text-purple-600">seconds.</span>
+                </h2>
+                <p className="text-text-secondary text-lg leading-relaxed max-w-md">
+                  Our neural engine analyzes every touchpoint, spend metric, and creative performance signal to construct a boardroom-ready strategic document.
+                </p>
+              </div>
+
+              <div className="bg-white p-6 rounded-2xl border border-border shadow-sm max-w-md space-y-6">
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold text-text-secondary uppercase">Audit Time Horizon</label>
                   <select
-                    className="input"
-                    value={config.period}
-                    onChange={e => setConfig({ ...config, period: e.target.value })}
+                    value={timeHorizon}
+                    onChange={(e) => setTimeHorizon(e.target.value)}
+                    className="w-full h-12 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm font-medium outline-none focus:border-purple-500 transition-colors"
                   >
                     <option>Last 7 Days</option>
                     <option>Last 30 Days</option>
@@ -557,29 +478,145 @@ export default function ReportsPage() {
                     <option>Year to Date</option>
                   </select>
                 </div>
+
+                <button
+                  onClick={handleGenerate}
+                  disabled={isGenerating}
+                  className="w-full h-14 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold uppercase tracking-wider transition-all shadow-xl shadow-purple-600/20 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+                >
+                  {isGenerating ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Analyzing Data Streams...
+                    </>
+                  ) : (
+                    <>
+                      Generate Executive Audit <ChevronRight className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Visual Flair */}
+            <div className="relative hidden lg:block">
+              <div className="absolute inset-0 bg-purple-100 rounded-full blur-[100px] opacity-50" />
+              <div className="relative bg-white border border-gray-200 rounded-2xl p-6 shadow-2xl rotate-3 hover:rotate-0 transition-transform duration-700">
+                <div className="flex items-center gap-4 mb-6 border-b border-gray-100 pb-4">
+                  <div className="w-10 h-10 bg-purple-600 rounded-lg flex items-center justify-center text-white">
+                    <FileText className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="h-2 w-24 bg-gray-200 rounded mb-1" />
+                    <div className="h-2 w-16 bg-gray-100 rounded" />
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <div className="h-2 w-full bg-gray-100 rounded" />
+                  <div className="h-2 w-5/6 bg-gray-100 rounded" />
+                  <div className="h-2 w-4/6 bg-gray-100 rounded" />
+                </div>
+                <div className="mt-6 flex gap-4">
+                  <div className="flex-1 h-24 bg-purple-50 rounded-xl border border-purple-100" />
+                  <div className="flex-1 h-24 bg-gray-50 rounded-xl border border-gray-100" />
+                </div>
+              </div>
+            </div>
+
+          </div>
+        ) : (
+          /* REPORT VIEW (Consolidated) */
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
+
+            {/* 1. Executive Summary Card */}
+            <div className="bg-white rounded-3xl p-8 border border-gray-200 shadow-sm">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center text-purple-600">
+                  <Briefcase className="w-5 h-5" />
+                </div>
+                <h2 className="text-xl font-bold text-gray-900">Executive Summary</h2>
+              </div>
+              <p className="text-gray-600 leading-relaxed text-lg">
+                {reportData.summary}
+              </p>
+              <div className="grid grid-cols-3 gap-6 mt-8">
+                <div className="p-4 bg-gray-50 rounded-xl border border-gray-100 text-center">
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Audit Score</p>
+                  <p className="text-3xl font-black text-gray-900">{reportData.topMetric}</p>
+                </div>
+                <div className="p-4 bg-gray-50 rounded-xl border border-gray-100 text-center">
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Growth Velocity</p>
+                  <p className="text-3xl font-black text-purple-600">+{reportData.growthRate}%</p>
+                </div>
+                <div className="p-4 bg-gray-50 rounded-xl border border-gray-100 text-center">
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Blended ROI</p>
+                  <p className="text-3xl font-black text-gray-900">{reportData.roi}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* 2. Financial Performance */}
+            <div className="bg-white rounded-3xl p-8 border border-gray-200 shadow-sm">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center text-orange-600">
+                  <TrendingUp className="w-5 h-5" />
+                </div>
+                <h2 className="text-xl font-bold text-gray-900">Financial Trajectory</h2>
+              </div>
+              <div className="h-[300px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <RechartsLineChart data={reportData.chartData}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                    <XAxis dataKey="name" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+                    <Tooltip
+                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}
+                    />
+                    <Line type="monotone" dataKey="revenue" stroke="#7C3AED" strokeWidth={3} dot={{ r: 4, fill: '#7C3AED', strokeWidth: 2, stroke: '#fff' }} />
+                    <Line type="monotone" dataKey="forecast" stroke="#E5E7EB" strokeWidth={3} strokeDasharray="5 5" dot={false} />
+                  </RechartsLineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* 3. Strategic Recommendations (AI Generated) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-gradient-to-br from-purple-900 to-indigo-900 rounded-3xl p-8 text-white shadow-lg">
+                <h3 className="flex items-center gap-2 font-bold uppercase tracking-widest mb-6 text-purple-200 text-sm">
+                  <Target className="w-4 h-4" /> Primary Opportunities
+                </h3>
+                <ul className="space-y-4">
+                  <li className="flex gap-4">
+                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-200 font-bold text-xs border border-purple-500/50">1</span>
+                    <p className="text-sm leading-relaxed text-purple-50">Shift 15% of budget from Display to Video Reels for estimated 2.3x ROAS lift.</p>
+                  </li>
+                  <li className="flex gap-4">
+                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-200 font-bold text-xs border border-purple-500/50">2</span>
+                    <p className="text-sm leading-relaxed text-purple-50">Activate lookalike audience "High_LTV_Purchasers" on Meta.</p>
+                  </li>
+                  <li className="flex gap-4">
+                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-200 font-bold text-xs border border-purple-500/50">3</span>
+                    <p className="text-sm leading-relaxed text-purple-50">Refresh ad creative for "Summer Campaign" to combat fatigue (CTR -0.5%).</p>
+                  </li>
+                </ul>
               </div>
 
-              <button
-                onClick={handleGenerate}
-                disabled={isGenerating}
-                className="btn btn-primary w-full h-10 justify-center"
-              >
-                {isGenerating ? (
-                  <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Synthesizing Data...</span>
-                ) : (
-                  <span className="flex items-center gap-2"><FileText className="w-4 h-4" /> Generate Report</span>
-                )}
-              </button>
+              <div className="bg-white rounded-3xl p-8 border border-gray-200 shadow-sm flex flex-col justify-between">
+                <div>
+                  <h3 className="flex items-center gap-2 font-bold uppercase tracking-widest mb-6 text-gray-400 text-sm">
+                    <AlertTriangle className="w-4 h-4" /> Risk Mitigation
+                  </h3>
+                  <p className="text-gray-600 text-sm leading-relaxed mb-4">
+                    Current CPM volatility suggests a potential 10-15% cost increase in Q3. Recommendation: Lock in placement bids early or diversify platform spend.
+                  </p>
+                </div>
+                <div className="p-4 bg-orange-50 rounded-xl border border-orange-100 flex gap-3 text-orange-800 text-xs font-medium">
+                  <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                  <span>Action Required: Review bid caps on Google Search campaigns.</span>
+                </div>
+              </div>
             </div>
-          </div>
-        )}
 
-        {/* VIEW 2: RENDERED REPORT */}
-        {view === 'report' && (
-          <div className="min-h-screen pb-20 overflow-x-auto print:overflow-visible">
-            {config.template === 'summary' && <ReportSummary data={reportData} />}
-            {config.template === 'growth' && <GrowthOpportunities data={reportData} />}
-            {config.template === 'content' && <ContentEngagement data={reportData} />}
           </div>
         )}
 

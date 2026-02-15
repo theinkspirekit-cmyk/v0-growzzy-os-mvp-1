@@ -107,3 +107,28 @@ export async function deleteCreative(id: string) {
         return { error: "Delete failed" }
     }
 }
+
+export async function saveContent(data: { title: string, content: string, type: string }) {
+    const session = await auth()
+    if (!session?.user?.id) return { error: "Unauthorized" }
+
+    try {
+        const creative = await prisma.creative.create({
+            data: {
+                userId: session.user.id,
+                name: data.title,
+                type: "text",
+                format: data.type.toLowerCase().includes("video") ? "script" : "article",
+                bodyText: data.content,
+                aiGenerated: true,
+                status: "draft",
+                headline: data.title // Use title as headline for reference
+            }
+        })
+        revalidatePath("/dashboard/creatives")
+        return { success: true, creative: JSON.parse(JSON.stringify(creative)) }
+    } catch (e: any) {
+        console.error("Save Content Failed", e)
+        return { error: "Failed to save content" }
+    }
+}

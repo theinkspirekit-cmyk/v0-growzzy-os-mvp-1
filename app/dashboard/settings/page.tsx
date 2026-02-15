@@ -59,7 +59,7 @@ export default function SettingsPage() {
       const data = await res.json()
       if (data.success) setPlatforms(data.platforms)
     } catch (e) {
-      toast.error("Cloud bridge handshake failed")
+      toast.error("Failed to load platform connections")
     }
   }
 
@@ -69,7 +69,7 @@ export default function SettingsPage() {
 
   const connectPlatform = async (name: string) => {
     setIsLoading(true)
-    toast.info(`Initializing ${name} OAuth protocol...`)
+    toast.loading(`Connecting to ${name}...`)
 
     setTimeout(async () => {
       try {
@@ -78,13 +78,14 @@ export default function SettingsPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             name,
-            accountName: `${name} Production Node`,
+            accountName: `${name} Account`,
             accessToken: "fake-token",
             refreshToken: "fake-refresh"
           })
         })
         if (res.ok) {
-          toast.success(`${name} Bridge Established`)
+          toast.dismiss()
+          toast.success(`Connected to ${name}`)
           fetchPlatforms()
         }
       } finally {
@@ -94,13 +95,13 @@ export default function SettingsPage() {
   }
 
   const disconnectPlatform = async (id: string) => {
-    if (!confirm("Terminate this platform bridge?")) return
+    if (!confirm("Are you sure you want to disconnect this platform?")) return
     try {
       await fetch(`/api/platforms?id=${id}`, { method: 'DELETE' })
       setPlatforms(prev => prev.filter(p => p.id !== id))
-      toast.success("Bridge Terminated")
+      toast.success("Platform disconnected")
     } catch (e) {
-      toast.error("Cleanup failed")
+      toast.error("Failed to disconnect")
     }
   }
 
@@ -108,90 +109,73 @@ export default function SettingsPage() {
     switch (activeTab) {
       case "applications":
         return (
-          <div className="space-y-16 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
-              {[
-                { name: 'Google Ads', icon: Globe, color: '#1F57F5', desc: 'Unified Search & Display Engine' },
-                { name: 'Meta Ads', icon: Facebook, color: '#1F57F5', desc: 'Behavioral Social Architecture' },
-                { name: 'LinkedIn Ads', icon: Linkedin, color: '#1F57F5', desc: 'Enterprise B2B Targeting Segment' },
-              ].map(p => {
-                const isConnected = platforms.some(ep => ep.name.toLowerCase().includes(p.name.toLowerCase().split(' ')[0].toLowerCase()))
-                return (
-                  <div key={p.name} className="bg-white p-10 rounded-[3rem] border-2 border-[#F1F5F9] hover:border-[#1F57F5] transition-all duration-300 shadow-sm hover:shadow-2xl group flex flex-col justify-between min-h-[340px]">
-                    <div className="space-y-8">
-                      <div className="flex items-center justify-between">
-                        <div className="w-16 h-16 bg-[#F8FAFC] rounded-2xl flex items-center justify-center text-[#1F57F5] group-hover:scale-110 transition-transform">
-                          <p.icon className="w-8 h-8" />
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">Available Integrations</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {[
+                  { name: 'Google Ads', icon: Globe, color: 'text-blue-500', bg: 'bg-blue-50', desc: 'Search & Display Network' },
+                  { name: 'Meta Ads', icon: Facebook, color: 'text-blue-600', bg: 'bg-blue-50', desc: 'Facebook & Instagram' },
+                  { name: 'LinkedIn Ads', icon: Linkedin, color: 'text-blue-700', bg: 'bg-blue-50', desc: 'Professional Network' },
+                ].map(p => {
+                  const isConnected = platforms.some(ep => ep.name.toLowerCase().includes(p.name.toLowerCase().split(' ')[0].toLowerCase()))
+                  return (
+                    <div key={p.name} className="flex flex-col p-4 border border-gray-100 rounded-xl hover:shadow-md transition-shadow bg-white">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className={cn("w-12 h-12 rounded-lg flex items-center justify-center", p.bg, p.color)}>
+                          <p.icon className="w-6 h-6" />
                         </div>
-                        <div className={cn(
-                          "px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest flex items-center gap-2",
-                          isConnected ? "bg-[#00DDFF]/10 text-[#00DDFF]" : "bg-[#F8FAFC] text-[#A3A3A3] border border-[#F1F5F9]"
-                        )}>
-                          {isConnected ? <Check className="w-3 h-3" /> : null}
-                          {isConnected ? 'Synchronized' : 'Not Connected'}
-                        </div>
+                        {isConnected && <div className="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold uppercase rounded-full flex items-center gap-1"><Check className="w-3 h-3" /> Active</div>}
                       </div>
-                      <div className="text-left space-y-2">
-                        <h4 className="text-[20px] font-bold text-[#05090E]">{p.name}</h4>
-                        <p className="text-[14px] text-[#64748B] font-medium leading-relaxed">{p.desc}</p>
-                      </div>
+                      <h4 className="font-bold text-gray-900">{p.name}</h4>
+                      <p className="text-xs text-gray-500 mb-6">{p.desc}</p>
+
+                      <button
+                        disabled={isLoading || isConnected}
+                        onClick={() => connectPlatform(p.name)}
+                        className={cn(
+                          "mt-auto w-full py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors",
+                          isConnected
+                            ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                            : "bg-gray-900 text-white hover:bg-gray-800"
+                        )}
+                      >
+                        {isLoading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : isConnected ? "Connected" : "Connect"}
+                      </button>
                     </div>
-                    <button
-                      disabled={isLoading || isConnected}
-                      onClick={() => connectPlatform(p.name)}
-                      className={cn(
-                        "w-full h-14 rounded-2xl text-[12px] font-bold uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3",
-                        isConnected
-                          ? "bg-[#F8FAFC] text-[#A3A3A3] border-2 border-[#F1F5F9] cursor-not-allowed"
-                          : "bg-[#05090E] text-white hover:bg-[#1F57F5] shadow-lg shadow-[#05090E]/5"
-                      )}
-                    >
-                      {isLoading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : isConnected ? 'Operational Node Active' : `Establish Bridge`}
-                    </button>
-                  </div>
-                )
-              })}
+                  )
+                })}
+              </div>
             </div>
 
-            <div className="space-y-10 pt-8">
-              <div className="flex items-center justify-between border-b border-[#F1F5F9] pb-8">
-                <div className="flex items-center gap-4">
-                  <Activity className="w-6 h-6 text-[#1F57F5]" />
-                  <div className="text-left">
-                    <h3 className="text-[18px] font-bold text-[#05090E]">Active Connection Hub</h3>
-                    <p className="text-[12px] font-medium text-[#64748B] uppercase tracking-widest">Global Protocol Matrix</p>
+            <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+              <h3 className="text-lg font-bold text-gray-900 mb-6">Active Connections</h3>
+              <div className="space-y-4">
+                {platforms.length === 0 ? (
+                  <div className="text-center py-12 text-gray-400 border-2 border-dashed border-gray-100 rounded-xl">
+                    <Layers className="w-12 h-12 mx-auto mb-2 opacity-20" />
+                    <p className="text-sm">No active platform connections found.</p>
                   </div>
-                </div>
-                <div className="px-6 py-2 bg-[#F8FAFC] border border-[#F1F5F9] rounded-2xl">
-                  <span className="text-[12px] font-bold text-[#05090E] tracking-tight">{platforms.length} Autonomous Nodes Active</span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {platforms.map(p => (
-                  <div key={p.id} className="bg-white p-8 rounded-[2.5rem] border-2 border-[#F1F5F9] flex items-center justify-between hover:border-[#1F57F5] transition-all group shadow-sm">
-                    <div className="flex items-center gap-6">
-                      <div className="w-14 h-14 bg-gradient-to-tr from-[#05090E] to-[#1F57F5] rounded-2xl flex items-center justify-center text-white shadow-xl shadow-[#1F57F5]/10">
-                        <Zap className="w-6 h-6 text-[#00DDFF] fill-[#00DDFF]" />
+                ) : (
+                  platforms.map(p => (
+                    <div key={p.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center border border-gray-200 shadow-sm">
+                          <Zap className="w-5 h-5 text-yellow-500" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-gray-900">{p.accountName || p.name}</p>
+                          <p className="text-xs text-gray-500 font-mono">ID: {p.id.substring(0, 8)}...</p>
+                        </div>
                       </div>
-                      <div className="text-left space-y-1">
-                        <p className="text-[16px] font-bold text-[#05090E]">{p.accountName || p.name}</p>
-                        <p className="text-[10px] font-bold text-[#A3A3A3] uppercase tracking-[0.2em] font-mono">PROTOCOL_XID_{p.id.slice(-8)}</p>
-                      </div>
+                      <button
+                        onClick={() => disconnectPlatform(p.id)}
+                        className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
-                    <button
-                      onClick={() => disconnectPlatform(p.id)}
-                      className="p-3.5 text-[#A3A3A3] hover:text-[#F43F5E] hover:bg-[#F43F5E]/5 rounded-2xl transition-all"
-                    >
-                      <Trash2 className="w-5 h-5" />
-                    </button>
-                  </div>
-                ))}
-                {platforms.length === 0 && (
-                  <div className="col-span-2 py-32 rounded-[3rem] border-2 border-dashed border-[#F1F5F9] bg-[#F8FAFC]/50 flex flex-col items-center justify-center space-y-4 opacity-30">
-                    <Layers className="w-16 h-16" />
-                    <p className="text-[12px] font-bold uppercase tracking-[0.4em]">Zero Active Mission Bridges</p>
-                  </div>
+                  ))
                 )}
               </div>
             </div>
@@ -199,108 +183,83 @@ export default function SettingsPage() {
         )
       case "profile":
         return (
-          <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500 text-left">
-            <section className="space-y-12">
-              <div className="flex items-center gap-10 bg-[#F8FAFC] p-10 rounded-[3rem] border-2 border-[#F1F5F9]">
-                <div className="w-24 h-24 bg-[#05090E] rounded-[2rem] flex items-center justify-center text-[#1F57F5] text-3xl font-bold shadow-2xl shadow-[#05090E]/20 ring-4 ring-white">
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+              <h3 className="text-lg font-bold text-gray-900 mb-6">Personal Information</h3>
+              <div className="flex items-start gap-8">
+                <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 text-2xl font-bold border-4 border-white shadow-sm shrink-0">
                   MR
                 </div>
-                <div className="space-y-4">
-                  <button className="h-11 px-8 bg-white border-2 border-[#F1F5F9] text-[12px] font-bold uppercase tracking-widest rounded-xl hover:border-[#1F57F5] transition-all shadow-sm">Update Avatar</button>
-                  <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 rounded-full bg-[#00DDFF] animate-pulse" />
-                    <p className="text-[11px] text-[#A3A3A3] font-bold uppercase tracking-[0.25em]">Authorized Operator: Max Reynolds</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-gray-500 uppercase">Full Name</label>
+                    <input type="text" defaultValue="Max Reynolds" className="w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:border-blue-500 outline-none transition-colors" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-gray-500 uppercase">Email Address</label>
+                    <input type="email" defaultValue="max@growzzy.global" className="w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:border-blue-500 outline-none transition-colors" />
+                  </div>
+                  <div className="col-span-2">
+                    <button className="h-10 px-6 bg-blue-600 text-white text-xs font-bold uppercase tracking-wider rounded-lg hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/20">
+                      Save Changes
+                    </button>
                   </div>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-10">
-                <div className="space-y-3">
-                  <label className="text-[12px] font-bold text-[#64748B] uppercase tracking-[0.2em] pl-2">Operational Name</label>
-                  <input type="text" defaultValue="Max Reynolds" className="w-full h-16 px-8 bg-[#F8FAFC] border-2 border-[#F1F5F9] text-[16px] font-bold rounded-2xl focus:border-[#1F57F5] outline-none transition-all" />
-                </div>
-                <div className="space-y-3">
-                  <label className="text-[12px] font-bold text-[#64748B] uppercase tracking-[0.2em] pl-2">Neural Link (Email)</label>
-                  <input type="email" defaultValue="max@growzzy.global" className="w-full h-16 px-8 bg-[#F8FAFC] border-2 border-[#F1F5F9] text-[16px] font-bold rounded-2xl focus:border-[#1F57F5] outline-none transition-all" />
-                </div>
-              </div>
-              <button className="h-16 px-12 bg-[#1F57F5] text-white text-[13px] font-bold uppercase tracking-[0.3em] rounded-2xl shadow-xl shadow-[#1F57F5]/20 hover:bg-[#1A4AD1] transition-all active:scale-95">
-                Save Identity Changes
-              </button>
-            </section>
+            </div>
           </div>
-        );
+        )
       default:
         return (
-          <div className="py-40 text-center flex flex-col items-center space-y-6 opacity-10">
-            <Command className="w-20 h-20" />
-            <p className="text-[14px] font-bold uppercase tracking-[0.5em]">Protocol Staging Area</p>
+          <div className="h-64 flex flex-col items-center justify-center text-gray-400">
+            <Settings className="w-12 h-12 mb-4 opacity-20" />
+            <p className="text-sm">This section is currently under development.</p>
           </div>
-        );
+        )
     }
   }
 
   return (
     <DashboardLayout>
-      <div className="flex flex-col lg:flex-row min-h-[calc(100vh-88px)] bg-white font-satoshi relative">
-        {/* Navigation Sidebar */}
-        <div className="w-full lg:w-80 border-r border-[#F1F5F9] p-12 space-y-16">
-          <div className="space-y-4">
-            <h1 className="text-[36px] font-bold text-[#05090E] tracking-tight leading-none">Settings <br /> <span className="text-[#1F57F5]">Config</span></h1>
-            <p className="text-[11px] text-[#64748B] font-bold uppercase tracking-[0.3em]">Neural OS Control Center</p>
+      <div className="max-w-6xl mx-auto font-satoshi pb-20">
+        {/* Header */}
+        <div className="flex items-end justify-between mb-8 border-b border-gray-100 pb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
+            <p className="text-sm text-gray-500">Manage your workspace preferences and integrations.</p>
           </div>
+        </div>
 
-          <nav className="space-y-16">
+        <div className="flex flex-col lg:flex-row gap-8">
+          {/* Sidebar Navigation */}
+          <div className="w-full lg:w-64 flex-shrink-0 space-y-1">
             {SETTINGS_TABS.map((group) => (
-              <div key={group.category} className="space-y-6">
-                <h3 className="text-[11px] font-bold text-[#A3A3A3] pl-2 tracking-[0.4em] uppercase">{group.category}</h3>
-                <div className="space-y-3">
+              <div key={group.category} className="mb-6">
+                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 px-3">{group.category}</h3>
+                <div className="space-y-1">
                   {group.items.map((item) => (
                     <button
                       key={item.id}
                       onClick={() => setActiveTab(item.id)}
                       className={cn(
-                        "w-full flex items-center gap-5 px-6 py-4 rounded-2xl text-[12px] font-bold uppercase tracking-widest transition-all duration-300",
+                        "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
                         activeTab === item.id
-                          ? "bg-[#05090E] text-white shadow-2xl shadow-[#05090E]/20 scale-[1.05]"
-                          : "text-[#64748B] hover:text-[#05090E] hover:bg-[#F8FAFC]"
+                          ? "bg-gray-100 text-gray-900"
+                          : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
                       )}
                     >
-                      <item.icon className={cn("w-5 h-5", activeTab === item.id ? "text-[#1F57F5]" : "text-[#A3A3A3]")} />
+                      <item.icon className={cn("w-4 h-4", activeTab === item.id ? "text-blue-600" : "text-gray-400")} />
                       {item.label}
                     </button>
                   ))}
                 </div>
               </div>
             ))}
-          </nav>
-
-          <div className="pt-20">
-            <div className="bg-[#F8FAFC] p-8 rounded-[2.5rem] border-2 border-[#F1F5F9] space-y-4">
-              <ShieldCheck className="w-8 h-8 text-[#00DDFF]" />
-              <p className="text-[13px] font-bold text-[#05090E] uppercase tracking-wider leading-tight">Secure Management Environment</p>
-              <p className="text-[11px] text-[#A3A3A3] font-medium leading-relaxed">All infrastructure changes are executed via AES-256 encrypted protocols.</p>
-            </div>
           </div>
-        </div>
 
-        {/* Content Area */}
-        <div className="flex-1 p-16 lg:p-24 overflow-y-auto pb-40">
-          <div className="max-w-6xl mx-auto space-y-16">
-            <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-[#F1F5F9] pb-10 gap-8">
-              <div className="space-y-2 text-left">
-                <h2 className="text-[32px] font-bold text-[#05090E] tracking-tight uppercase">
-                  {activeTab.replace('-', ' ')}
-                </h2>
-                <div className="flex items-center gap-3">
-                  <div className="w-2 h-2 rounded-full bg-[#00DDFF] animate-pulse" />
-                  <p className="text-[12px] font-medium text-[#64748B] uppercase tracking-widest">Protocol status: synchronized and active</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="pt-4">
-              {renderContent()}
-            </div>
+          {/* Content Area */}
+          <div className="flex-1">
+            {renderContent()}
           </div>
         </div>
       </div>
