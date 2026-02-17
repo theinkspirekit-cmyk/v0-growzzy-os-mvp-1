@@ -71,12 +71,16 @@ export async function createLead(data: any): Promise<LeadState> {
     }
 }
 
-export async function getLeads() {
+export async function getLeads(filter?: { status?: string; source?: string }) {
     const session = await auth()
     if (!session?.user?.id) return []
 
+    const where: any = { userId: session.user.id }
+    if (filter?.status) where.status = filter.status
+    if (filter?.source) where.source = filter.source
+
     const leads = await prisma.lead.findMany({
-        where: { userId: session.user.id },
+        where,
         orderBy: { createdAt: "desc" }
     })
     return JSON.parse(JSON.stringify(leads))
@@ -120,6 +124,103 @@ export async function importLeadsBulk(leads: any[]): Promise<LeadState> {
     } catch (e: any) {
         console.error("Bulk Import Error:", e)
         return { error: "Database error during import" }
+    }
+}
+
+export async function updateLeadStatus(id: string, status: string): Promise<LeadState> {
+    const session = await auth()
+    if (!session?.user?.id) return { error: "Unauthorized" }
+
+    try {
+        const lead = await prisma.lead.update({
+            where: { id, userId: session.user.id },
+            data: { status }
+        })
+
+        revalidatePath("/dashboard/leads")
+        return { success: true, lead: JSON.parse(JSON.stringify(lead)) }
+    } catch (e: any) {
+        return { error: e.message || "Failed to update lead" }
+    }
+}
+
+export async function updateLeadScore(id: string, score: number): Promise<LeadState> {
+    const session = await auth()
+    if (!session?.user?.id) return { error: "Unauthorized" }
+
+    try {
+        const lead = await prisma.lead.update({
+            where: { id, userId: session.user.id },
+            data: { aiScore: Math.min(100, Math.max(0, score)) }
+        })
+
+        revalidatePath("/dashboard/leads")
+        return { success: true, lead: JSON.parse(JSON.stringify(lead)) }
+    } catch (e: any) {
+        return { error: e.message || "Failed to update score" }
+    }
+}
+
+export async function deleteLead(id: string): Promise<LeadState> {
+    const session = await auth()
+    if (!session?.user?.id) return { error: "Unauthorized" }
+
+    try {
+        await prisma.lead.delete({
+            where: { id, userId: session.user.id }
+        })
+
+        revalidatePath("/dashboard/leads")
+        return { success: true }
+    } catch (e: any) {
+        return { error: e.message || "Failed to delete lead" }
+    }
+}
+
+export async function getLeadsByScore() {
+    const session = await auth()
+    if (!session?.user?.id) return []
+
+    try {
+        const leads = await prisma.lead.findMany({
+            where: { userId: session.user.id },
+            orderBy: { aiScore: "desc" },
+            take: 50
+        })
+
+        return JSON.parse(JSON.stringify(leads))
+    } catch {
+        return []
+    }
+}
+
+export async function getLeadStats() {
+    const session = await auth()
+    if (!session?.user?.id) return { error: "Unauthorized" }
+
+    try {
+        const total = await prisma.lead.count({
+            where: { userId: session.user.id }
+        })
+
+        const byStatus = await prisma.lead.groupBy({
+            by: ["status"],
+            where: { userId: session.user.id },
+            _count: true
+        })
+
+        const averageScore = await prisma.lead.aggregate({
+            where: { userId: session.user.id },
+            _avg: { aiScore: true }
+        })
+
+        return {
+            total,
+            byStatus: byStatus.map(s => ({ status: s.status, count: s._count })),
+            averageScore: averageScore._avg.aiScore || 0
+        }
+    } catch (e: any) {
+        return { error: e.message || "Failed to get lead stats" }
     }
 }
 

@@ -111,3 +111,122 @@ export async function deleteAutomation(id: string) {
         return { error: "Delete failed" }
     }
 }
+
+export async function getAutomationDetails(id: string) {
+    const session = await auth()
+    if (!session?.user?.id) return { error: "Unauthorized" }
+
+    try {
+        const automation = await prisma.automation.findFirst({
+            where: { id, userId: session.user.id }
+        })
+
+        if (!automation) {
+            return { error: "Automation not found" }
+        }
+
+        // Get execution history
+        const executions = await prisma.automationExecution.findMany({
+            where: { automationId: id },
+            orderBy: { executedAt: "desc" },
+            take: 20
+        })
+
+        return {
+            automation: JSON.parse(JSON.stringify(automation)),
+            executions: JSON.parse(JSON.stringify(executions))
+        }
+    } catch (e: any) {
+        return { error: e.message || "Failed to fetch automation" }
+    }
+}
+
+export async function updateAutomationRules(id: string, rules: any) {
+    const session = await auth()
+    if (!session?.user?.id) return { error: "Unauthorized" }
+
+    try {
+        const automation = await prisma.automation.update({
+            where: { id, userId: session.user.id },
+            data: {
+                trigger: rules.trigger,
+                action: rules.action,
+                conditions: rules.conditions
+            }
+        })
+
+        revalidatePath("/dashboard/automations")
+        return { success: true, automation: JSON.parse(JSON.stringify(automation)) }
+    } catch (e: any) {
+        return { error: e.message || "Failed to update rules" }
+    }
+}
+
+export async function getAutomationStats() {
+    const session = await auth()
+    if (!session?.user?.id) return { error: "Unauthorized" }
+
+    try {
+        const automations = await prisma.automation.findMany({
+            where: { userId: session.user.id }
+        })
+
+        const activeCount = automations.filter(a => a.status === "active").length
+        const totalRuns = automations.reduce((sum, a) => sum + (a.runCount || 0), 0)
+
+        // Get executions for this month
+        const monthStart = new Date()
+        monthStart.setDate(1)
+
+        const monthExecutions = await prisma.automationExecution.count({
+            where: {
+                automation: { userId: session.user.id },
+                executedAt: { gte: monthStart }
+            }
+        })
+
+        return {
+            totalAutomations: automations.length,
+            activeAutomations: activeCount,
+            totalRuns,
+            monthExecutions,
+            savePercentage: 15 + Math.random() * 25 // Mock percentage
+        }
+    } catch (e: any) {
+        return { error: e.message || "Failed to fetch stats" }
+    }
+}
+
+export async function cloneAutomation(id: string) {
+    const session = await auth()
+    if (!session?.user?.id) return { error: "Unauthorized" }
+
+    try {
+        const original = await prisma.automation.findFirst({
+            where: { id, userId: session.user.id }
+        })
+
+        if (!original) {
+            return { error: "Automation not found" }
+        }
+
+        const cloned = await prisma.automation.create({
+            data: {
+                userId: session.user.id,
+                name: `${original.name} (Copy)`,
+                triggerType: original.triggerType,
+                actionType: original.actionType,
+                trigger: original.trigger,
+                action: original.action,
+                conditions: original.conditions,
+                status: "draft",
+                runCount: 0
+            }
+        })
+
+        revalidatePath("/dashboard/automations")
+        return { success: true, automation: JSON.parse(JSON.stringify(cloned)) }
+    } catch (e: any) {
+        return { error: e.message || "Failed to clone automation" }
+    }
+}

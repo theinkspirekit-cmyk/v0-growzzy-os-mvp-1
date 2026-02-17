@@ -132,3 +132,113 @@ export async function saveContent(data: { title: string, content: string, type: 
         return { error: "Failed to save content" }
     }
 }
+
+export async function updateCreative(id: string, data: any) {
+    const session = await auth()
+    if (!session?.user?.id) return { error: "Unauthorized" }
+
+    try {
+        const creative = await prisma.creative.update({
+            where: { id, userId: session.user.id },
+            data: {
+                name: data.name,
+                headline: data.headline,
+                bodyText: data.bodyText,
+                ctaText: data.ctaText
+            }
+        })
+
+        revalidatePath("/dashboard/creatives")
+        return { success: true, creative: JSON.parse(JSON.stringify(creative)) }
+    } catch (e: any) {
+        return { error: e.message || "Failed to update creative" }
+    }
+}
+
+export async function publishCreative(id: string) {
+    const session = await auth()
+    if (!session?.user?.id) return { error: "Unauthorized" }
+
+    try {
+        const creative = await prisma.creative.update({
+            where: { id, userId: session.user.id },
+            data: { status: "published" }
+        })
+
+        revalidatePath("/dashboard/creatives")
+        return { success: true, creative: JSON.parse(JSON.stringify(creative)) }
+    } catch (e: any) {
+        return { error: e.message || "Failed to publish creative" }
+    }
+}
+
+export async function getCreativesByPlatform(platform: string) {
+    const session = await auth()
+    if (!session?.user?.id) return []
+
+    try {
+        const creatives = await prisma.creative.findMany({
+            where: {
+                userId: session.user.id,
+                platform: platform
+            },
+            orderBy: { createdAt: "desc" }
+        })
+
+        return JSON.parse(JSON.stringify(creatives))
+    } catch {
+        return []
+    }
+}
+
+export async function getCreativesByStatus(status: string) {
+    const session = await auth()
+    if (!session?.user?.id) return []
+
+    try {
+        const creatives = await prisma.creative.findMany({
+            where: {
+                userId: session.user.id,
+                status: status
+            },
+            orderBy: { createdAt: "desc" }
+        })
+
+        return JSON.parse(JSON.stringify(creatives))
+    } catch {
+        return []
+    }
+}
+
+export async function getCreativePerformance(id: string) {
+    const session = await auth()
+    if (!session?.user?.id) return { error: "Unauthorized" }
+
+    try {
+        const creative = await prisma.creative.findFirst({
+            where: { id, userId: session.user.id }
+        })
+
+        if (!creative) {
+            return { error: "Creative not found" }
+        }
+
+        // Fetch performance metrics
+        const metrics = await prisma.performanceMetric.findMany({
+            where: {
+                userId: session.user.id,
+                entityId: id,
+                entityType: "creative"
+            },
+            orderBy: { periodDate: "desc" },
+            take: 30
+        })
+
+        return {
+            creative: JSON.parse(JSON.stringify(creative)),
+            metrics: JSON.parse(JSON.stringify(metrics))
+        }
+    } catch (e: any) {
+        return { error: e.message || "Failed to fetch performance" }
+    }
+}
