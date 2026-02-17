@@ -143,8 +143,12 @@ model Platform {
 
 model Analytics {
   id         String   @id @default(cuid())
-  platformId String
-  platform   Platform @relation(fields: [platformId], references: [id], onDelete: Cascade)
+
+  platformId String?
+  platform   Platform? @relation(fields: [platformId], references: [id], onDelete: Cascade)
+
+  campaignId String?
+  campaign   Campaign? @relation(fields: [campaignId], references: [id], onDelete: Cascade)
 
   metricDate DateTime
 
@@ -286,6 +290,7 @@ model Campaign {
 
   // Relations
   creatives  Creative[]
+  analytics  Analytics[]
 
   @@index([userId, status])
   @@index([platformId])

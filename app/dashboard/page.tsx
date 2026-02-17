@@ -240,8 +240,26 @@ export default function DashboardPage() {
             </div>
 
             <div className="p-4 border-t border-gray-100 bg-white">
-              <button onClick={() => router.push('/dashboard/assistant')} className="w-full h-11 bg-gray-900 text-white rounded-xl text-[11px] font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors shadow-lg shadow-gray-900/10 flex items-center justify-center gap-2">
-                <Zap className="w-4 h-4 text-yellow-400" /> Run Full Strategy Audit
+              <button
+                onClick={async () => {
+                  const toastId = toast.loading("Initializing Mission Control...")
+                  try {
+                    const res = await fetch('/api/ai/optimize', { method: 'POST' })
+                    if (!res.ok) throw new Error("Mission failed")
+                    const data = await res.json()
+                    toast.success(`Mission Complete: ${data.insightsCount || 0} insights generated`)
+                    toast.dismiss(toastId)
+                    if (data.reports) {
+                      setInsights(data.reports.flatMap((r: any) => r.insights))
+                    }
+                  } catch (e) {
+                    toast.error("Optimization Mission Failed")
+                    toast.dismiss(toastId)
+                  }
+                }}
+                className="w-full h-11 bg-gray-900 text-white rounded-xl text-[11px] font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors shadow-lg shadow-gray-900/10 flex items-center justify-center gap-2"
+              >
+                <Zap className="w-4 h-4 text-yellow-400" /> Execute Optimization Mission
               </button>
             </div>
           </div>
