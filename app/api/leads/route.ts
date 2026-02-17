@@ -49,7 +49,8 @@ export async function POST(request: NextRequest) {
         }
 
         const body = await request.json()
-        const { action, data } = body
+        const action = body.action || 'add'
+        const data = body.data || body
 
         // Single Lead Add
         if (action === 'add') {

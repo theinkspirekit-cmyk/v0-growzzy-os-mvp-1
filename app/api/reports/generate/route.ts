@@ -10,8 +10,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const body = await req.json()
-    const { title, period, sections } = body
+    const body = await req.json().catch(() => ({}))
+    const {
+      title = `Report - ${new Date().toLocaleDateString()}`,
+      period = "Last 30 Days",
+      sections = { overview: true, channels: true }
+    } = body
 
     // Create PDF Document
     const doc = new jsPDF()

@@ -1,6 +1,9 @@
-import Anthropic from "@anthropic-ai/sdk"
 
-const client = new Anthropic()
+import OpenAI from "openai"
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+})
 
 export async function generateAdCreatives(productData: {
   name: string
@@ -37,23 +40,44 @@ Use different copywriting frameworks:
 - Before-After-Bridge
 - Problem-Promise-Proof-Push
 
-Return as JSON array. Make each DIFFERENT, not just word swaps.`
+Return in this JSON format:
+{
+  "creatives": [
+    {
+      "primaryText": "...",
+      "headline": "...",
+      "description": "...",
+      "cta": "...",
+      "creativeIdea": "...",
+      "psychologicalTrigger": "...",
+      "score": 9
+    }
+  ]
+}
 
-    const message = await client.messages.create({
-      model: "claude-opus-4-1-20250805",
-      max_tokens: 2048,
+Make each DIFFERENT, not just word swaps.`
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
       messages: [
+        {
+          role: "system",
+          content: "You are an expert direct-response copywriter. Respond ONLY with the requested JSON."
+        },
         {
           role: "user",
           content: prompt,
         },
       ],
+      response_format: { type: "json_object" },
+      temperature: 0.8,
     })
 
-    const content = message.content[0]
-    if (content.type === "text") {
+    const content = response.choices[0]?.message?.content
+    if (content) {
       try {
-        return JSON.parse(content.text)
+        const parsed = JSON.parse(content)
+        return parsed.creatives || []
       } catch {
         console.error("[v0] Failed to parse creatives JSON")
         return []

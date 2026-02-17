@@ -1,58 +1,58 @@
-export const dynamic = 'force-dynamic'
+
+import { auth } from "@/lib/auth"
+import { prisma } from "@/lib/prisma"
 import { NextResponse } from "next/server"
-import { createServerClient } from "@supabase/ssr"
-import { cookies } from "next/headers"
+import { scoreLeads } from "@/lib/openai"
 
-export async function POST(req: Request) {
+export async function POST(request: Request) {
   try {
-    const formData = await req.json()
-    const cookieStore = await cookies()
-
-    const supabase = createServerClient(
-      (process.env.NEXT_PUBLIC_SUPABASE_URL || ''),
-      (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''),
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll()
-          },
-        },
-      },
-    )
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user?.id) {
+    const session = await auth()
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const { data: lead, error } = await supabase
-      .from("leads")
-      .insert([
-        {
-          user_id: user.id,
-          name: formData.name,
-          email: formData.email,
-          phone: formData.phone,
-          company: formData.company,
-          status: formData.status || "new",
-          value: formData.value || 0,
-          tags: formData.tags || [],
-          source: formData.source || "direct",
-        },
-      ])
-      .select()
+    const body = await request.json()
+    const { name, email, phone, company, position, source, estimatedValue } = body
 
-    if (error) throw error
+    if (!name || !email) {
+      return NextResponse.json({ error: "Name and email are required" }, { status: 400 })
+    }
 
-    console.log("[v0] Lead created:", lead)
+    const lead = await prisma.lead.create({
+      data: {
+        userId: session.user.id,
+        name,
+        email,
+        phone,
+        company,
+        position,
+        source: source || 'Manual',
+        estimatedValue: estimatedValue ? parseFloat(estimatedValue) : null,
+        status: 'new',
+      },
+    })
 
-    return NextResponse.json(lead[0])
+    // AI Score the lead
+    try {
+      const scoreResult = await scoreLeads([lead])
+      if (scoreResult.success && scoreResult.data.scores[0]) {
+        const aiData = scoreResult.data.scores[0]
+        await prisma.lead.update({
+          where: { id: lead.id },
+          data: {
+            aiScore: aiData.score,
+            aiInsights: aiData.reasoning,
+          },
+        })
+      }
+    } catch (aiError) {
+      console.warn("AI scoring failed for new lead, skipping.", aiError)
+    }
+
+    return NextResponse.json(lead)
+
   } catch (error: any) {
-    console.error("[v0] Error creating lead:", error)
+    console.error('[API] Create lead error:', error)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }
-

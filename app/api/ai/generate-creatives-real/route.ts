@@ -1,43 +1,23 @@
-export const dynamic = 'force-dynamic'
+
+import { auth } from "@/lib/auth"
+import { prisma } from "@/lib/prisma"
 import { NextResponse } from "next/server"
-import { createServerClient } from "@supabase/ssr"
-import { cookies } from "next/headers"
 import { generateAdCreatives } from "@/lib/creative-generator-service"
 
 export async function POST(request: Request) {
-  const cookieStore = await cookies()
-  const supabase = createServerClient(
-    (process.env.NEXT_PUBLIC_SUPABASE_URL || ''),
-    (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''),
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll()
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            cookieStore.set(name, value, options)
-          })
-        },
-      },
-    },
-  )
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
   try {
+    const session = await auth()
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
     const { productName, productDescription, benefits, targetAudience, campaignGoal, platform } = await request.json()
 
     if (!productName || !productDescription) {
       return NextResponse.json({ error: "Product name and description required" }, { status: 400 })
     }
 
+    // This service call presumably uses OpenAI under the hood
     const creatives = await generateAdCreatives({
       name: productName,
       description: productDescription,
@@ -47,29 +27,34 @@ export async function POST(request: Request) {
       platform: platform || "Meta",
     })
 
-    // Save to database
+    // Save to database via Prisma
+    const savedCreatives = []
     if (creatives.length > 0) {
       for (const creative of creatives) {
-        await supabase.from("ad_creatives").insert({
-          user_id: user.id,
-          name: `${productName} - ${creative.psychologicalTrigger || "Variation"}`,
-          type: "generated",
-          content: JSON.stringify(creative),
-          platform: platform || "meta",
-          status: "draft",
-          created_at: new Date().toISOString(),
+        const saved = await prisma.creative.create({
+          data: {
+            userId: session.user.id,
+            name: `${productName} - ${creative.psychologicalTrigger || "Variation"}`,
+            type: "generated",
+            headline: creative.headline,
+            bodyText: creative.primaryText || creative.description,
+            ctaText: creative.cta,
+            aiGenerated: true,
+            aiScore: creative.score || 85,
+            status: "draft",
+          },
         })
+        savedCreatives.push(saved)
       }
     }
 
     return NextResponse.json({
       success: true,
-      creatives: creatives,
-      count: creatives.length,
+      creatives: savedCreatives,
+      count: savedCreatives.length,
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error("[v0] Creative generation error:", error)
-    return NextResponse.json({ error: "Failed to generate creatives" }, { status: 500 })
+    return NextResponse.json({ error: error.message || "Failed to generate creatives" }, { status: 500 })
   }
 }
-

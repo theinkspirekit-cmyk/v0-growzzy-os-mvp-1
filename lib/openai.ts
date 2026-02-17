@@ -14,7 +14,7 @@ export async function chatWithAI(messages: { role: "user" | "assistant" | "syste
 
     try {
         const response = await openai.chat.completions.create({
-            model: "gpt-4-turbo-preview",
+            model: "gpt-4o",
             messages: messages as any,
             temperature: 0.7,
             max_tokens: 1500,
@@ -38,7 +38,7 @@ Data: ${JSON.stringify(analyticsData, null, 2)}
 Return in JSON: { insights: [{type, title, description, priority}], recommendations: [{title, description, impact}] }`
 
         const response = await openai.chat.completions.create({
-            model: "gpt-4-turbo-preview",
+            model: "gpt-4o",
             messages: [
                 { role: "system", content: "You are a senior marketing analyst specializing in multi-platform advertising optimization." },
                 { role: "user", content: prompt },
@@ -64,7 +64,7 @@ export async function generateAdCreative(params: any) {
 Return in JSON format: { creatives: [{headline, body, cta, visualSuggestion, predictionScore, reasoning}] }`
 
         const response = await openai.chat.completions.create({
-            model: "gpt-4-turbo-preview",
+            model: "gpt-4o",
             messages: [
                 { role: "system", content: "You are a world-class performance marketing copywriter." },
                 { role: "user", content: prompt },
@@ -90,7 +90,7 @@ export async function scoreLeads(leads: any[]) {
 Return JSON: { scores: [{id, score, reasoning, nextBestAction}] }`
 
         const response = await openai.chat.completions.create({
-            model: "gpt-4-turbo-preview",
+            model: "gpt-4o",
             messages: [{ role: "user", content: prompt }],
             response_format: { type: "json_object" },
             temperature: 0.2,
@@ -112,7 +112,7 @@ export async function generateReportSummary(reportData: any, type: string) {
     try {
         const prompt = `Generate a 3-paragraph executive summary for a ${type} report based on this data: ${JSON.stringify(reportData)}`
         const response = await openai.chat.completions.create({
-            model: "gpt-4-turbo-preview",
+            model: "gpt-4o",
             messages: [{ role: "user", content: prompt }],
             temperature: 0.5,
             max_tokens: 800,
@@ -135,7 +135,7 @@ export async function analyzeCampaign(campaign: any) {
 Return in JSON format: { health, recommendations, potentialRoas }`
 
         const response = await openai.chat.completions.create({
-            model: "gpt-4-turbo-preview",
+            model: "gpt-4o",
             messages: [
                 { role: "system", content: "You are a senior performance marketing analyst." },
                 { role: "user", content: prompt },

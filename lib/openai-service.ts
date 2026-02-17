@@ -94,7 +94,7 @@ Keep answers concise and professional.`
             }
 
             const response = await openai.chat.completions.create({
-                model: "gpt-4-turbo-preview",
+                model: "gpt-4o",
                 messages: [systemMessage, ...messages] as any,
                 tools: TOOLS,
                 tool_choice: "auto",
@@ -142,7 +142,7 @@ Provide insights in this JSON format:
 }`
 
             const response = await openai.chat.completions.create({
-                model: "gpt-4-turbo-preview",
+                model: "gpt-4o",
                 messages: [{ role: "user", content: prompt }],
                 response_format: { type: "json_object" },
                 temperature: 0.3,
@@ -196,7 +196,7 @@ Return JSON format:
 }`
 
             const response = await openai.chat.completions.create({
-                model: "gpt-4-turbo-preview",
+                model: "gpt-4o",
                 messages: [{ role: "user", content: prompt }],
                 response_format: { type: "json_object" },
                 temperature: 0.8,

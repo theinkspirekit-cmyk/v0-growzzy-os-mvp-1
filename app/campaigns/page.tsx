@@ -66,7 +66,8 @@ export default function CampaignsPage() {
       })
 
       if (response.ok) {
-        const newCampaign = await response.json()
+        const result = await response.json()
+        const newCampaign = result.data?.campaign || result
         setCampaigns([newCampaign, ...campaigns])
         setFormData({ name: '', platform: '', budget: '' })
       }

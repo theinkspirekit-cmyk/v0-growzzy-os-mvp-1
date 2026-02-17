@@ -33,7 +33,7 @@ export default function ReportsPage() {
         const reportsRes = await fetch(`/api/reports?userId=${data.user.id}`)
         if (reportsRes.ok) {
           const reportsData = await reportsRes.json()
-          setReports(reportsData.reports || [])
+          setReports(reportsData.data?.reports || reportsData.reports || [])
         }
       } catch (error) {
         console.error("[v0] Error:", error)
@@ -53,7 +53,12 @@ export default function ReportsPage() {
     try {
       const response = await fetch(`/api/reports/generate?userId=${user.id}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: `Performance Report - ${new Date().toLocaleDateString()}`,
+          period: 'Last 7 Days',
+          sections: { overview: true, channels: true }
+        })
       })
 
       if (response.ok) {
@@ -72,7 +77,7 @@ export default function ReportsPage() {
         const reportsRes = await fetch(`/api/reports?userId=${user.id}`)
         if (reportsRes.ok) {
           const reportsData = await reportsRes.json()
-          setReports(reportsData.reports || [])
+          setReports(reportsData.data?.reports || reportsData.reports || [])
         }
       } else {
         const errorData = await response.json()
@@ -237,18 +242,18 @@ export default function ReportsPage() {
                       </div>
                     )}
                     <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
+                      <Button
+                        variant="outline"
+                        size="sm"
                         className="flex items-center gap-2 bg-transparent opacity-0 group-hover:opacity-100 transition-opacity"
                         onClick={() => router.push(`/reports/${report.id}`)}
                       >
                         <Download className="w-4 h-4" />
                         <span className="hidden sm:inline">View</span>
                       </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         disabled={deletingId === report.id}
                         className="text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity"
                         onClick={() => handleDeleteReport(report.id)}
