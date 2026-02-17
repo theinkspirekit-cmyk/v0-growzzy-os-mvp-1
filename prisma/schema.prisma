@@ -37,6 +37,11 @@ model User {
   workspaces     WorkspaceMember[]
   sessions       Session[]
   accounts       Account[]
+  aiInsights     AIInsight[]
+  contentLibrary ContentLibrary[]
+  performanceMetrics PerformanceMetric[]
+  notificationPreferences NotificationPreference[]
+  webhookLogs    WebhookLog[]
 }
 
 model Session {
@@ -434,4 +439,128 @@ model Conversation {
   updatedAt DateTime @updatedAt
 
   @@index([userId])
+}
+
+// ============================================
+// AI INSIGHTS & RECOMMENDATIONS
+// ============================================
+
+model AIInsight {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  entityType   String   // "campaign", "lead", "creative", "account"
+  entityId     String   // Campaign ID, Lead ID, Creative ID, etc.
+
+  insightType  String   // "performance_issue", "opportunity", "risk", "trend"
+  title        String
+  description  String   @db.Text
+  recommendation String? @db.Text
+  confidence   Int?     // 0-100 confidence score
+
+  data         Json?    // Supporting metrics/data
+  actionable   Boolean  @default(true)
+
+  readAt       DateTime?
+  dismissedAt  DateTime?
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([userId, entityType])
+  @@index([userId, readAt])
+}
+
+model ContentLibrary {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name         String
+  category     String   // "headline", "copy", "cta", "subject_line", "video_script"
+  contentType  String   // "template", "example", "prompt"
+
+  content      String   @db.Text
+  context      Json?    // Tags, variables, metadata
+
+  tags         String[] // ["conversion", "e-commerce", "b2b"]
+  favorite     Boolean  @default(false)
+
+  usageCount   Int      @default(0)
+  lastUsedAt   DateTime?
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([userId, category])
+  @@index([userId, favorite])
+}
+
+model PerformanceMetric {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  entityType   String   // "campaign", "creative", "platform", "account"
+  entityId     String
+
+  metricName   String   // "ctr", "cpc", "roas", "cpa", "conversion_rate"
+  metricValue  Float
+  previousValue Float?  // For trend comparison
+  change       Float?   // Percentage change
+  changeDirection String? // "up", "down", "neutral"
+
+  period       String   // "daily", "weekly", "monthly"
+  periodDate   DateTime
+
+  benchmark    Float?   // Industry benchmark
+  target       Float?   // User's target
+
+  createdAt    DateTime @default(now())
+
+  @@unique([entityType, entityId, metricName, periodDate])
+  @@index([userId, entityType, periodDate])
+}
+
+model NotificationPreference {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  channel      String   // "email", "slack", "in-app"
+  eventType    String   // "automation_executed", "alert", "report_ready", "sync_failed"
+  enabled      Boolean  @default(true)
+
+  frequency    String?  // "immediate", "daily", "weekly"
+  quietHours   Json?    // {start: "20:00", end: "08:00"}
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([userId, channel, eventType])
+  @@index([userId])
+}
+
+model WebhookLog {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  eventType    String   // "campaign.created", "lead.scored", "automation.triggered"
+  platform     String?  // "meta", "google", "linkedin", etc.
+
+  payload      Json     // Full webhook payload
+  response     String?  @db.Text
+
+  statusCode   Int?
+  success      Boolean
+  error        String?  @db.Text
+
+  processedAt  DateTime?
+
+  createdAt    DateTime @default(now())
+
+  @@index([userId, eventType, createdAt])
+  @@index([userId, success])
 }
